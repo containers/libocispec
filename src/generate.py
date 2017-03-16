@@ -1,3 +1,4 @@
+#!/bin/python
 import os, sys, json
 
 class Node:
@@ -275,9 +276,12 @@ def generate(schema_json, header_name, header_file, c_file):
     generate_C_code(structs, header_name, c_file)
 
 if __name__ == "__main__":
-    with open("config-schema.json") as f:
-        schema_json = json.loads(f.read())
-    header = sys.argv[1]
-    c_source = sys.argv[2]
+    schema_file = sys.argv[1]
+    header = sys.argv[2]
+    c_source = sys.argv[3]
+
     with open(header, "w") as header_file, open(c_source, "w") as c_file:
+        os.chdir(os.path.dirname(schema_file))
+        with open(os.path.basename(schema_file)) as schema:
+            schema_json = json.loads(schema.read())
         generate(schema_json, header, header_file, c_file)
