@@ -43,6 +43,7 @@ main (int argc, char *argv[])
     exit (3);
 
   oci_container_container *container = make_oci_container_container (tree);
-  printf ("DATA %x %s %s %d\n", container, container->hostname, container->process->cwd, container->process->user->uid);
+  printf ("DATA1 %x %s %s %d\n", container, container->hostname, container->process->cwd, container->process->user->uid);
+  printf ("DATA2 %zu %x\n", container->mounts_len, container->mounts[0].destination);
   return 0;
 }

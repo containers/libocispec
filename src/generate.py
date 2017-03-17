@@ -107,15 +107,12 @@ def generate_C_parse(obj, c_file):
                 c_file.write('    {\n')
                 read_value_generator(c_file, 2, 'get_val (tree, "%s", yajl_t_string)' % i.origname, "ret->%s" % i.origname, i.typ)
                 c_file.write('    }\n')
-            if is_numeric_type(i.typ):
+            elif is_numeric_type(i.typ):
                 c_file.write('    {\n')
                 read_value_generator(c_file, 2, 'get_val (tree, "%s", yajl_t_number)' % i.origname, "ret->%s" % i.origname, i.typ)
                 c_file.write('    }\n')
-            if i.typ == 'object':
+            elif i.typ == 'object':
                 typename = make_name(i.name)
-                c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object));\n' % (i.origname, typename, i.origname))
-            elif i.typ == 'array' and i.subtypobj:
-                typename = make_name_array(i.name)
                 c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object));\n' % (i.origname, typename, i.origname))
             elif i.typ == 'array':
                 typename = make_name_array(i.name)
@@ -123,6 +120,7 @@ def generate_C_parse(obj, c_file):
                 c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' % (i.origname))
                 c_file.write('        if (tmp != NULL) {\n')
                 c_file.write('            size_t i;\n')
+                c_file.write('            ret->%s_len = YAJL_GET_ARRAY (tmp)->len;\n' % (i.origname))
                 c_file.write('            ret->%s = malloc (YAJL_GET_ARRAY (tmp)->len * sizeof (*ret->%s));\n' % (i.origname, i.origname))
                 c_file.write('            for (i = 0; i < YAJL_GET_ARRAY (tmp)->len; i++) {\n')
                 c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
@@ -135,7 +133,14 @@ def generate_C_parse(obj, c_file):
     c_file.write("}\n\n")
 
 def read_value_generator(c_file, level, src, dest, typ):
-    if typ == 'string':
+    if is_compound_object(typ):
+        if typ == 'object':
+            typename = make_name(dest)
+        elif typ == 'array':
+            typename = make_name_array(dest)
+        #FIXMEc_file.write('%sif (%s)\n' % ('    ' * level, src))
+        #print('%s%s = make_%s (%s);\n' % ('    ' * (level + 1), typename, src, dest))
+    elif typ == 'string':
         c_file.write('%sif (%s)\n' % ('    ' * level, src))
         c_file.write('%s%s = strdup (YAJL_GET_STRING (%s));\n' % ('    ' * (level + 1), dest, src))
     elif is_numeric_type(typ):
@@ -177,15 +182,13 @@ def generate_C_free(obj, c_file):
             if i.subobj is not None:
                 c_typ = c_typ + "_element"
             cleanup_code = """    if (ptr->%s) {
-        %s *it = ptr->%s;
-        while (it) {
-            free (*it);
-            it++;
-        }
+        size_t i;
+        for (i = 0; i < ptr->%s; i++)
+            free (ptr->%s[i]);
     }
-""" % (i.origname, c_typ, i.origname)
+""" % (i.origname, i.origname + "_len", i.origname)
             c_file.write(cleanup_code)
-        else:
+        else: # not array
             c_typ = get_pointer(i.name, i.typ)
             if c_typ == None:
                 continue
@@ -207,6 +210,7 @@ def append_type_C_header(obj, header):
                 if i.subtypobj is not None:
                     c_typ = make_name_array(i.name)
                 header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
+                header.write("    size_t %s;\n" % (i.origname + "_len"))
             else:
                 c_typ = make_pointer(i.name, i.typ) or c_types_mapping[i.typ]
                 header.write("    %s%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
@@ -223,6 +227,7 @@ def append_type_C_header(obj, header):
                 else:
                     c_typ = make_pointer(i.name, i.subtyp) or c_types_mapping[i.subtyp]
                 header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
+                header.write("    size_t %s;\n" % (i.origname + "_len"))
             else:
                 c_typ = make_pointer(i.name, i.typ) or c_types_mapping[i.typ]
                 header.write("    %s%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
@@ -375,9 +380,12 @@ if __name__ == "__main__":
     schema_file = sys.argv[1]
     header = sys.argv[2]
     c_source = sys.argv[3]
-
-    with open(header, "w") as header_file, open(c_source, "w") as c_file:
+    oldcwd = os.getcwd()
+    with open(header + ".tmp", "w") as header_file, open(c_source + ".tmp", "w") as c_file:
         os.chdir(os.path.dirname(schema_file))
         with open(os.path.basename(schema_file)) as schema:
             schema_json = json.loads(schema.read())
         generate(schema_json, header, header_file, c_file)
+    os.chdir(oldcwd)
+    os.rename(header + ".tmp", header)
+    os.rename(c_source + ".tmp", c_source)
