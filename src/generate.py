@@ -2,7 +2,6 @@
 import os, sys, json
 
 class Node:
-
     def validate_name(self, name):
         if name == "linux":
             return "os_linux"
@@ -12,6 +11,7 @@ class Node:
             return "os_solaris"
         return name
     def __init__(self, name, typ, children, subtyp=None, subtypobj=None):
+        self.origname = name
         self.name = self.validate_name(name)
         self.typ = typ
         self.children = children
@@ -41,13 +41,19 @@ c_types_mapping = {
     "ArrayOfStrings" : "string_cells *",
 }
 
+def make_name_array(name):
+    return "oci_container_%s_element" % name
+
 def make_name(name):
     return "oci_container_%s" % name
-    
+
 def make_pointer(name, typ):
     if typ != 'object':
         return None
     return "%s *" % make_name(name)
+
+def is_compound_object(typ):
+    return typ in ['object', 'array']
 
 def get_pointer(name, typ):
     ptr = make_pointer(name, typ)
@@ -60,24 +66,71 @@ def get_pointer(name, typ):
     return None
 
 def append_C_code(obj, c_file):
-    if obj.typ != 'object' and obj.typ != 'array':
+    generate_C_parse(obj, c_file)
+    generate_C_free(obj, c_file)
+
+def generate_C_parse(obj, c_file):
+    if not is_compound_object(obj.typ):
+        return
+    if obj.typ == 'object':
+        typename = make_name(obj.name)
+    elif obj.typ == 'array':
+        typename = make_name_array(obj.name)
+        objs = obj.subtypobj
+        if objs is None:
+            return
+
+    c_file.write("%s *make_%s (yajl_val tree) {\n" % (typename, typename))
+    c_file.write("    %s *ret = NULL;\n" % (typename))
+    c_file.write("    if (tree == NULL)\n")
+    c_file.write("        return ret;\n")
+    c_file.write("    ret = malloc (sizeof (*ret));\n")
+
+    if obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
+        nodes = obj.children if obj.typ == 'object' else obj.subtypobj
+        for i in nodes:
+            if i.typ == 'object':
+                typename = make_name(i.name)
+                c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object));\n' % (i.name, typename, i.origname))
+            elif i.typ == 'array' and i.subtypobj:
+                typename = make_name_array(i.name)
+                c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object));\n' % (i.name, typename, i.origname))
+            elif i.typ == 'array':
+                typename = make_name_array(i.name)
+                c_file.write('    {\n')
+                c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' % (i.origname))
+                c_file.write('        if (tmp != NULL) {\n')
+                c_file.write('            size_t i;\n')
+                c_file.write('            ret->%s = malloc (YAJL_GET_ARRAY (tmp)->len * sizeof (*ret->%s));\n' % (i.name, i.name))
+                c_file.write('            for (i = 0; i < YAJL_GET_ARRAY (tmp)->len; i++) {\n')
+                c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
+                # FIXME - handle types
+                c_file.write('                ret->%s[i] = YAJL_GET_NUMBER (tmpsub);\n' % i.name)
+                c_file.write('            }\n')
+                c_file.write('        }\n')
+                c_file.write('    }\n')
+
+    c_file.write("}\n\n")
+
+def generate_C_free(obj, c_file):
+    if not is_compound_object(obj.typ):
         return
 
     typename = make_name(obj.name)
     if obj.typ == 'object':
         objs = obj.children
-        c_file.write("void free_%s(%s *ptr) {\n" % (typename, typename))
+        c_file.write("void free_%s (%s *ptr) {\n" % (typename, typename))
     if obj.typ == 'array':
         objs = obj.subtypobj
         if objs is None:
             return
         typename = typename + "_element"
-        c_file.write("void free_%s(%s *ptr) {\n" % (typename, typename))
+        c_file.write("void free_%s (%s *ptr) {\n" % (typename, typename))
 
     for i in objs:
         if i.typ == 'array':
             if i.subtypobj is not None:
-                free_func = make_name(i.name) + "_element"
+                free_func = make_name_array(i.name)
                 c_file.write("    if (ptr->%s)\n" % i.name)
                 c_file.write("        free_%s (ptr->%s);\n\n" % (free_func, i.name))
 
@@ -105,7 +158,7 @@ def append_C_code(obj, c_file):
 """ % (i.name, i.name)
             c_file.write(cleanup_code)
     c_file.write("}\n\n")
-    
+
 def append_type_C_header(obj, header):
     if obj.typ == 'array':
         if not obj.subtypobj:
@@ -115,20 +168,21 @@ def append_type_C_header(obj, header):
             if i.typ == 'array':
                 c_typ = make_pointer(i.name, i.subtyp) or c_types_mapping[i.subtyp]
                 if i.subtypobj is not None:
-                    c_typ = make_name(i.name) + "_element"
+                    c_typ = make_name_array(i.name)
                 header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.name))
             else:
                 c_typ = make_pointer(i.name, i.typ) or c_types_mapping[i.typ]
                 header.write("    %s%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.name))
-        typename = make_name(obj.name) + "_element"
+        typename = make_name_array(obj.name)
         header.write("} %s;\n\n" % typename)
-        header.write("void free_%s(%s *ptr);\n\n" % (typename, typename))
+        header.write("void free_%s(%s *ptr);\n" % (typename, typename))
+        header.write("%s *make_%s(yajl_val val);\n\n" % (typename, typename))
     elif obj.typ == 'object':
         header.write("typedef struct {\n")
         for i in obj.children:
             if i.typ == 'array':
                 if i.subtypobj is not None:
-                    c_typ = make_name(i.name) + "_element"
+                    c_typ = make_name_array(i.name)
                 else:
                     c_typ = make_pointer(i.name, i.subtyp) or c_types_mapping[i.subtyp]
                 header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.name))
@@ -138,7 +192,8 @@ def append_type_C_header(obj, header):
 
         typename = make_name(obj.name)
         header.write("} %s;\n" % typename)
-        header.write("void free_%s(%s *ptr);\n\n" % (typename, typename))
+        header.write("void free_%s(%s *ptr);\n" % (typename, typename))
+        header.write("%s *make_%s(yajl_val val);\n\n" % (typename, typename))
 
 def get_ref(src, ref):
     f, r = ref.split("#/")
@@ -251,8 +306,8 @@ def generate_C_header(structs, header):
     header.write("# define SCHEMA_H\n\n")
     header.write("# include <sys/types.h>\n")
     header.write("# include <stdbool.h>\n")
+    header.write("# include <yajl/yajl_tree.h>\n")
     header.write("# include <stdint.h>\n\n")
-
     header.write("typedef struct {\n    char *key;\n    char *value;\n} string_cells;\n\n")
 
     for i in structs:
@@ -263,15 +318,32 @@ def generate_C_code(structs, header_name, c_file):
     c_file.write("// autogenerated file\n")
     c_file.write('#include <stdlib.h>\n')
     c_file.write('#include "%s"\n\n' % header_name)
+    c_file.write('yajl_val get_val(yajl_val tree, const char *name, yajl_type type) {\n')
+    c_file.write('    const char *path[] = { name };\n')
+    c_file.write('    return yajl_tree_get (tree, path, type);\n')
+    c_file.write('}\n')
 
     for i in structs:
         append_C_code(i, c_file)
+
+def recurse(tree, depth=0):
+    if tree is None:
+        return
+    if tree.subtypobj:
+        name = make_name_array(tree.name)
+    else:
+        name = make_name(tree.name)
+    print("%s|--> %s(%s)" % ("|  " * (depth), tree.name, tree.typ))
+    if tree.children:
+        for i in tree.children:
+            recurse(i, depth + 1)
 
 def generate(schema_json, header_name, header_file, c_file):
     tree = scan_main(schema_json)
     # we could do this in scan_main, but let's work on tree that is easier
     # to access.
     structs = flatten(tree, [])
+    recurse(tree)
     generate_C_header(structs, header_file)
     generate_C_code(structs, header_name, c_file)
 
