@@ -17,21 +17,32 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config.h"
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "spec.h"
 
 int
 main (int argc, char *argv[])
 {
-  JsonNode *rootval;
-  JsonObject *root;
-  GError *gerror = NULL;
-  struct context *context;
-  char **bwrap_argv = NULL;
-  JsonParser *parser;
-  GOptionContext *opt_context;
-  int block_fd[2];
-  int info_fd[2];
-  int sync_fd[2];
-  return EXIT_FAILURE;
+  size_t rd;
+  yajl_val tree;
+  FILE *config;
+  char *file_data = malloc (1024 * 1024);
+  char errbuf[1024];
+
+  config = fopen ("config.json", "r+");
+  if (config == NULL)
+    exit (1);
+  rd = fread(file_data, 1, 1024 * 1024 - 1, config);
+  if (rd < 0)
+    exit (2);
+  fclose (config);
+
+  tree = yajl_tree_parse (file_data, errbuf, sizeof(errbuf));
+  if (tree == NULL)
+    exit (3);
+
+  oci_container_container *container = make_oci_container_container (tree);
+  printf ("DATA %x %s %s %d\n", container, container->hostname, container->process->cwd, container->process->user->uid);
+  return 0;
 }
