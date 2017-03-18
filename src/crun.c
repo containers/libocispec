@@ -43,7 +43,10 @@ main (int argc, char *argv[])
     exit (3);
 
   oci_container_container *container = make_oci_container_container (tree);
-  printf ("DATA1 %x %s %s %d\n", container, container->hostname, container->process->cwd, container->process->user->uid);
-  printf ("DATA2 %zu %x\n", container->mounts_len, container->mounts[0].destination);
+  printf ("%x %s %s %d\n", container, container->hostname, container->process->cwd, container->process->user->uid);
+  printf ("%zu %s\n", container->mounts_len, container->mounts[0]->destination);
+  printf ("args %s\n", container->process->args[0]);
+  printf ("maskedPaths %p\n", container->linux->namespaces);
+  free_oci_container_container (container);
   return 0;
 }

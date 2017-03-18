@@ -45,8 +45,7 @@ c_types_mapping = {
     "uint64" : "uint64_t",
     "UID" : "uid_t",
     "GID" : "gid_t",
-    "mapStringString" : "string_cells *",
-    "ArrayOfStrings" : "string_cells *",
+    "mapStringString" : "string_cells *"
 }
 
 def make_name_array(name):
@@ -114,7 +113,7 @@ def generate_C_parse(obj, c_file):
             elif i.typ == 'object':
                 typename = make_name(i.name)
                 c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object));\n' % (i.origname, typename, i.origname))
-            elif i.typ == 'array':
+            elif i.typ == 'array' and i.subtypobj:
                 typename = make_name_array(i.name)
                 c_file.write('    {\n')
                 c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' % (i.origname))
@@ -124,7 +123,20 @@ def generate_C_parse(obj, c_file):
                 c_file.write('            ret->%s = malloc (YAJL_GET_ARRAY (tmp)->len * sizeof (*ret->%s));\n' % (i.origname, i.origname))
                 c_file.write('            for (i = 0; i < YAJL_GET_ARRAY (tmp)->len; i++) {\n')
                 c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
-                read_value_generator(c_file, 4, "tmpsub", "ret->%s[i]" % i.origname, i.subtyp)
+                c_file.write('                ret->%s[i] = make_%s (tmpsub);\n' % (i.origname, typename))
+                c_file.write('            }\n')
+                c_file.write('        }\n')
+                c_file.write('    }\n')
+            elif i.typ == 'array':
+                c_file.write('    {\n')
+                c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' % (i.origname))
+                c_file.write('        if (tmp != NULL) {\n')
+                c_file.write('            size_t i;\n')
+                c_file.write('            ret->%s_len = YAJL_GET_ARRAY (tmp)->len;\n' % (i.origname))
+                c_file.write('            ret->%s = malloc (YAJL_GET_ARRAY (tmp)->len * sizeof (*ret->%s));\n' % (i.origname, i.origname))
+                c_file.write('            for (i = 0; i < YAJL_GET_ARRAY (tmp)->len; i++) {\n')
+                c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
+                read_value_generator(c_file, 4, 'tmpsub', "ret->%s[i]" % i.origname, i.subtyp)
                 c_file.write('            }\n')
                 c_file.write('        }\n')
                 c_file.write('    }\n')
@@ -133,14 +145,7 @@ def generate_C_parse(obj, c_file):
     c_file.write("}\n\n")
 
 def read_value_generator(c_file, level, src, dest, typ):
-    if is_compound_object(typ):
-        if typ == 'object':
-            typename = make_name(dest)
-        elif typ == 'array':
-            typename = make_name_array(dest)
-        #FIXMEc_file.write('%sif (%s)\n' % ('    ' * level, src))
-        #print('%s%s = make_%s (%s);\n' % ('    ' * (level + 1), typename, src, dest))
-    elif typ == 'string':
+    if typ == 'string':
         c_file.write('%sif (%s)\n' % ('    ' * level, src))
         c_file.write('%s%s = strdup (YAJL_GET_STRING (%s));\n' % ('    ' * (level + 1), dest, src))
     elif is_numeric_type(typ):
@@ -173,8 +178,12 @@ def generate_C_free(obj, c_file):
         if i.typ == 'array':
             if i.subtypobj is not None:
                 free_func = make_name_array(i.name)
-                c_file.write("    if (ptr->%s)\n" % i.origname)
-                c_file.write("        free_%s (ptr->%s);\n\n" % (free_func, i.origname))
+                c_file.write("    if (ptr->%s) {\n" % i.origname)
+                c_file.write("        size_t i;\n")
+                c_file.write("        for (i = 0; i < ptr->%s_len; i++)\n" % i.origname)
+                c_file.write("            free_%s (ptr->%s[i]);\n" % (free_func, i.origname))
+                c_file.write("        free (ptr->%s);\n" % i.origname)
+                c_file.write("    }\n")
 
             c_typ = get_pointer(i.name, i.subtypobj)
             if c_typ == None:
@@ -209,7 +218,11 @@ def append_type_C_header(obj, header):
                 c_typ = make_pointer(i.name, i.subtyp) or c_types_mapping[i.subtyp]
                 if i.subtypobj is not None:
                     c_typ = make_name_array(i.name)
-                header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
+
+                if not is_compound_object(i.subtyp):
+                    header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
+                else:
+                    header.write("    %s%s**%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
                 header.write("    size_t %s;\n" % (i.origname + "_len"))
             else:
                 c_typ = make_pointer(i.name, i.typ) or c_types_mapping[i.typ]
@@ -226,7 +239,10 @@ def append_type_C_header(obj, header):
                     c_typ = make_name_array(i.name)
                 else:
                     c_typ = make_pointer(i.name, i.subtyp) or c_types_mapping[i.subtyp]
-                header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
+                if not is_compound_object(i.subtyp):
+                    header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
+                else:
+                    header.write("    %s%s**%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
                 header.write("    size_t %s;\n" % (i.origname + "_len"))
             else:
                 c_typ = make_pointer(i.name, i.typ) or c_types_mapping[i.typ]
@@ -297,6 +313,10 @@ def resolve_type(name, src, cur):
             children = scan_list(name, src, cur['anyOf'])
         else:
             children = scan_properties(name, src, cur) if 'properties' in cur else None
+    elif typ == 'ArrayOfStrings':
+        typ = 'array'
+        subtyp = 'string'
+        children = subtypobj = None
     else:
         children = None
 
