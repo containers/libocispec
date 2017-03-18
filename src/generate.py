@@ -140,6 +140,21 @@ def generate_C_parse(obj, c_file):
                 c_file.write('            }\n')
                 c_file.write('        }\n')
                 c_file.write('    }\n')
+            elif i.typ == 'mapStringString':
+                c_file.write('    {\n')
+                c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_object);\n' % (i.origname))
+                c_file.write('        if (tmp != NULL) {\n')
+                c_file.write('            size_t i;\n')
+                c_file.write('            ret->%s = malloc (sizeof (*ret->%s));\n' % (i.origname, i.origname))
+                c_file.write('            ret->%s->len = YAJL_GET_OBJECT (tmp)->len;\n' % (i.origname))
+                c_file.write('            ret->%s->keys = malloc (YAJL_GET_OBJECT (tmp)->len * sizeof (char *));\n' % (i.origname))
+                c_file.write('            ret->%s->values = malloc (YAJL_GET_OBJECT (tmp)->len * sizeof (char *));\n' % (i.origname))
+                c_file.write('            for (i = 0; i < YAJL_GET_OBJECT (tmp)->len; i++) {\n')
+                c_file.write('                ret->%s->keys[i] = strdup (YAJL_GET_OBJECT (tmp)->keys[i]);\n' % i.origname)
+                c_file.write('                ret->%s->values[i] = strdup (YAJL_GET_STRING(YAJL_GET_OBJECT (tmp)->values[i]));\n' % i.origname)
+                c_file.write('            }\n')
+                c_file.write('        }\n')
+                c_file.write('    }\n')
 
     c_file.write('    return ret;\n')
     c_file.write("}\n\n")
@@ -162,7 +177,6 @@ def read_value_generator(c_file, level, src, dest, typ):
 def generate_C_free(obj, c_file):
     if not is_compound_object(obj.typ):
         return
-
     typename = make_name(obj.name)
     if obj.typ == 'object':
         objs = obj.children
@@ -175,8 +189,22 @@ def generate_C_free(obj, c_file):
         c_file.write("void free_%s (%s *ptr) {\n" % (typename, typename))
 
     for i in objs:
-        if i.typ == 'array':
-            if i.subtypobj is not None:
+        if i.typ == 'mapStringString':
+            free_func = make_name_array(i.name)
+            c_file.write("    if (ptr->%s) {\n" % i.origname)
+            c_file.write("        free_cells (ptr->%s);\n" % (i.origname))
+            c_file.write("    }\n")
+        elif i.typ == 'array':
+            if i.subtyp == 'mapStringString':
+                free_func = make_name_array(i.name)
+                c_file.write("    if (ptr->%s) {\n" % i.origname)
+                c_file.write("        size_t i;\n")
+                c_file.write("        for (i = 0; i < ptr->%s_len; i++) {\n" % i.origname)
+                c_file.write("            free_cells (ptr->%s[i]);\n" % (i.origname))
+                c_file.write("        }\n")
+                c_file.write("        free (ptr->%s);\n" % i.origname)
+                c_file.write("    }\n")
+            elif i.subtypobj is not None:
                 free_func = make_name_array(i.name)
                 c_file.write("    if (ptr->%s) {\n" % i.origname)
                 c_file.write("        size_t i;\n")
@@ -369,7 +397,7 @@ def generate_C_header(structs, header):
     header.write("# include <yajl/yajl_tree.h>\n")
     header.write("# include <stdint.h>\n\n")
     header.write("# undef linux\n\n")
-    header.write("typedef struct {\n    char *key;\n    char *value;\n} string_cells;\n\n")
+    header.write("typedef struct {\n    char **keys;\n    char **values;\n    size_t len;\n} string_cells;\n\n")
 
     for i in structs:
         append_type_C_header(i, header_file)
@@ -383,7 +411,17 @@ def generate_C_code(structs, header_name, c_file):
     c_file.write('yajl_val get_val(yajl_val tree, const char *name, yajl_type type) {\n')
     c_file.write('    const char *path[] = { name, NULL };\n')
     c_file.write('    return yajl_tree_get (tree, path, type);\n')
-    c_file.write('}\n')
+    c_file.write('}\n\n')
+    c_file.write('void free_cells(string_cells *cells) {')
+    c_file.write("    if (cells) {\n")
+    c_file.write("        size_t i;\n")
+    c_file.write("        for (i = 0; i < cells->len; i++) {\n")
+    c_file.write("            free (cells->keys[i]);\n")
+    c_file.write("            free (cells->values[i]);\n")
+    c_file.write("        }\n")
+    c_file.write("        free (cells);\n")
+    c_file.write("    }\n")
+    c_file.write("}\n\n")
 
     for i in structs:
         append_C_code(i, c_file)

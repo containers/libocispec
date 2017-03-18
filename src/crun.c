@@ -47,6 +47,10 @@ main (int argc, char *argv[])
   printf ("%zu %s\n", container->mounts_len, container->mounts[0]->destination);
   printf ("args %s\n", container->process->args[0]);
   printf ("maskedPaths %p\n", container->linux->namespaces);
+
+  for (size_t i = 0; i < container->linux->sysctl->len; i++)
+    printf ("sysctl %s : %s\n", container->linux->sysctl->keys[i], container->linux->sysctl->values[i]);
+
   free_oci_container_container (container);
   return 0;
 }
