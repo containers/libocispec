@@ -42,6 +42,7 @@ main (int argc, char *argv[])
   if (tree == NULL)
     exit (3);
 
+  oci_parser_errfile = stderr;
   oci_container_container *container = make_oci_container_container (tree);
   printf ("%x %s %s %d\n", container, container->hostname, container->process->cwd, container->process->user->uid);
   printf ("%zu %s\n", container->mounts_len, container->mounts[0]->destination);
