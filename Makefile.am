@@ -16,7 +16,6 @@ src/spec.c: runtime-spec/schema/config-schema.json src/generate.py
 
 crun_SOURCES = \
 	src/crun.c \
-	src/safe-read-write.c \
 	$(NULL)
 
 crun_CFLAGS = $(AM_CFLAGS) $(JSON_GLIB_CFLAGS) $(GIO_UNIX_CFLAGS)
@@ -27,7 +26,7 @@ crun_LDADD = $(SELINUX_LIBS) $(YAJL_LIBS) libocispec.a
 TEST_EXTENSIONS = .conf
 CONF_LOG_COMPILER = $(top_srcdir)/tests/tests-runner
 
-EXTRA_DIST = autogen.sh src/safe-read-write.h src/spec.c
+EXTRA_DIST = autogen.sh src/spec.c
 
 EXTRA_DIST += $(TESTS:.conf=.conf.expected)
 EXTRA_DIST += $(TESTS:.conf=.conf.command)
