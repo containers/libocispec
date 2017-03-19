@@ -408,7 +408,7 @@ def generate_C_header(structs, header):
     header.write("# include <stdint.h>\n\n")
     header.write("# undef linux\n\n")
     header.write("typedef int oci_parser_error;\n")
-    header.write("# define OCI_PARSER_ERROR_REQUIRED_FIELD_NOT_PRESENT 1\n")
+    header.write("# define OCI_PARSER_ERROR_REQUIRED_FIELD_NOT_PRESENT 1\n\n")
     header.write("typedef struct {\n    char **keys;\n    char **values;\n    size_t len;\n} string_cells;\n\n")
 
     for i in structs:
