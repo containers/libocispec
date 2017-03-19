@@ -42,8 +42,13 @@ main (int argc, char *argv[])
   if (tree == NULL)
     exit (3);
 
-  oci_parser_errfile = stderr;
-  oci_container_container *container = make_oci_container_container (tree);
+  oci_parser_error err;
+  oci_container_container *container = make_oci_container_container (tree, &err);
+
+  if (container == NULL) {
+    printf ("error %d\n", err);
+    exit (4);
+  }
   printf ("%x %s %s %d\n", container, container->hostname, container->process->cwd, container->process->user->uid);
   printf ("%zu %s\n", container->mounts_len, container->mounts[0]->destination);
   printf ("args %s\n", container->process->args[0]);
@@ -53,5 +58,5 @@ main (int argc, char *argv[])
     printf ("sysctl %s : %s\n", container->linux->sysctl->keys[i], container->linux->sysctl->values[i]);
 
   free_oci_container_container (container);
-  return 0;
+  exit (0);
 }

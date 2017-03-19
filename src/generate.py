@@ -86,15 +86,16 @@ def generate_C_parse(obj, c_file):
     if not is_compound_object(obj.typ):
         return
     if obj.typ == 'object':
-        typename = make_name(obj.name)
+        obj_typename = typename = make_name(obj.name)
     elif obj.typ == 'array':
-        typename = make_name_array(obj.name)
+        obj_typename = typename = make_name_array(obj.name)
         objs = obj.subtypobj
         if objs is None:
             return
 
-    c_file.write("%s *make_%s (yajl_val tree) {\n" % (typename, typename))
+    c_file.write("%s *make_%s (yajl_val tree, oci_parser_error *err) {\n" % (typename, typename))
     c_file.write("    %s *ret = NULL;\n" % (typename))
+    c_file.write("    *err = 0;\n")
     c_file.write("    if (tree == NULL)\n")
     c_file.write("        return ret;\n")
     c_file.write("    ret = malloc (sizeof (*ret));\n")
@@ -117,7 +118,11 @@ def generate_C_parse(obj, c_file):
                 c_file.write('    }\n')
             elif i.typ == 'object':
                 typename = make_name(i.name)
-                c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object));\n' % (i.origname, typename, i.origname))
+                c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object), err);\n' % (i.origname, typename, i.origname))
+                c_file.write("    if (ret->%s == NULL && *err != 0) {\n" % i.origname)
+                c_file.write("        free_%s (ret);\n" % obj_typename)
+                c_file.write("        return NULL;\n")
+                c_file.write("    }\n")
             elif i.typ == 'array' and i.subtypobj:
                 typename = make_name_array(i.name)
                 c_file.write('    {\n')
@@ -128,7 +133,7 @@ def generate_C_parse(obj, c_file):
                 c_file.write('            ret->%s = malloc (YAJL_GET_ARRAY (tmp)->len * sizeof (*ret->%s));\n' % (i.origname, i.origname))
                 c_file.write('            for (i = 0; i < YAJL_GET_ARRAY (tmp)->len; i++) {\n')
                 c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
-                c_file.write('                ret->%s[i] = make_%s (tmpsub);\n' % (i.origname, typename))
+                c_file.write('                ret->%s[i] = make_%s (tmpsub, err);\n' % (i.origname, typename))
                 c_file.write('            }\n')
                 c_file.write('        }\n')
                 c_file.write('    }\n')
@@ -161,8 +166,10 @@ def generate_C_parse(obj, c_file):
                 c_file.write('        }\n')
                 c_file.write('    }\n')
         for i in required_to_check:
-            c_file.write('    if (oci_parser_errfile && ret->%s == NULL) {\n' % i.origname)
-            c_file.write('        fprintf (oci_parser_errfile, "%s required but missing\\n");\n' % i.origname)
+            c_file.write('    if (ret->%s == NULL) {\n' % i.origname)
+            c_file.write('        *err = OCI_PARSER_ERROR_REQUIRED_FIELD_NOT_PRESENT;\n')
+            c_file.write("        free_%s (ret);\n" % obj_typename)
+            c_file.write("        return NULL;\n")
             c_file.write('    }\n')
 
     c_file.write('    return ret;\n')
@@ -203,6 +210,7 @@ def generate_C_free(obj, c_file):
             c_file.write("    if (ptr->%s) {\n" % i.origname)
             c_file.write("        free_cells (ptr->%s);\n" % (i.origname))
             c_file.write("    }\n")
+            c_file.write("    free (ptr);\n")
         elif i.typ == 'array':
             if i.subtyp == 'mapStringString':
                 free_func = make_name_array(i.name)
@@ -211,7 +219,6 @@ def generate_C_free(obj, c_file):
                 c_file.write("        for (i = 0; i < ptr->%s_len; i++) {\n" % i.origname)
                 c_file.write("            free_cells (ptr->%s[i]);\n" % (i.origname))
                 c_file.write("        }\n")
-                c_file.write("        free (ptr->%s);\n" % i.origname)
                 c_file.write("    }\n")
             elif i.subtypobj is not None:
                 free_func = make_name_array(i.name)
@@ -227,22 +234,13 @@ def generate_C_free(obj, c_file):
                 continue
             if i.subobj is not None:
                 c_typ = c_typ + "_element"
-            cleanup_code = """    if (ptr->%s) {
-        size_t i;
-        for (i = 0; i < ptr->%s; i++)
-            free (ptr->%s[i]);
-    }
-""" % (i.origname, i.origname + "_len", i.origname)
-            c_file.write(cleanup_code)
+            c_file.write("    free_%s (ptr->%s);\n" % (c_typ, i.origname))
         else: # not array
-            c_typ = get_pointer(i.name, i.typ)
-            if c_typ == None:
-                continue
-            cleanup_code = """    if (ptr->%s) {
-        free (ptr->%s);
-    }
-""" % (i.origname, i.origname)
-            c_file.write(cleanup_code)
+            typename = make_name(i.name)
+            if i.typ == 'string':
+                c_file.write("    free (ptr->%s);\n" % (i.origname))
+            elif i.typ is 'object':
+                c_file.write("    free_%s (ptr->%s);\n" % (typename, i.origname))
     c_file.write("}\n\n")
 
 def append_type_C_header(obj, header):
@@ -267,7 +265,7 @@ def append_type_C_header(obj, header):
         typename = make_name_array(obj.name)
         header.write("} %s;\n\n" % typename)
         header.write("void free_%s(%s *ptr);\n" % (typename, typename))
-        header.write("%s *make_%s(yajl_val val);\n\n" % (typename, typename))
+        header.write("%s *make_%s(yajl_val val, oci_parser_error *err);\n\n" % (typename, typename))
     elif obj.typ == 'object':
         header.write("typedef struct {\n")
         for i in obj.children:
@@ -288,7 +286,7 @@ def append_type_C_header(obj, header):
         typename = make_name(obj.name)
         header.write("} %s;\n" % typename)
         header.write("void free_%s(%s *ptr);\n" % (typename, typename))
-        header.write("%s *make_%s(yajl_val val);\n\n" % (typename, typename))
+        header.write("%s *make_%s(yajl_val val, oci_parser_error *err);\n\n" % (typename, typename))
 
 def get_ref(src, ref):
     f, r = ref.split("#/")
@@ -409,7 +407,8 @@ def generate_C_header(structs, header):
     header.write("# include <yajl/yajl_tree.h>\n")
     header.write("# include <stdint.h>\n\n")
     header.write("# undef linux\n\n")
-    header.write("extern FILE *oci_parser_errfile;\n\n")
+    header.write("typedef int oci_parser_error;\n")
+    header.write("# define OCI_PARSER_ERROR_REQUIRED_FIELD_NOT_PRESENT 1\n")
     header.write("typedef struct {\n    char **keys;\n    char **values;\n    size_t len;\n} string_cells;\n\n")
 
     for i in structs:
@@ -427,7 +426,7 @@ def generate_C_code(structs, header_name, c_file):
     c_file.write('    const char *path[] = { name, NULL };\n')
     c_file.write('    return yajl_tree_get (tree, path, type);\n')
     c_file.write('}\n\n')
-    c_file.write('void free_cells(string_cells *cells) {')
+    c_file.write('void free_cells(string_cells *cells) {\n')
     c_file.write("    if (cells) {\n")
     c_file.write("        size_t i;\n")
     c_file.write("        for (i = 0; i < cells->len; i++) {\n")
