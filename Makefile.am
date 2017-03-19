@@ -13,6 +13,7 @@ libocispec_a_SOURCES = src/spec.c
 src/spec.c: runtime-spec/schema/config-schema.json src/generate.py
 	(cd src; ./generate.py ../runtime-spec/schema/config-schema.json spec.h spec.c)
 
+CLEANFILES += src/spec.h src/spec.c
 
 tests_test_1_SOURCES = tests/test-1.c
 tests_test_1_CFLAGS = -I$(builddir)/src
