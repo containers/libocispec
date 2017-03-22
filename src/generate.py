@@ -408,11 +408,13 @@ def generate_C_header(structs, header):
     header.write("# include <stdint.h>\n\n")
     header.write("# undef linux\n\n")
     header.write("typedef int oci_parser_error;\n")
-    header.write("# define OCI_PARSER_ERROR_REQUIRED_FIELD_NOT_PRESENT 1\n\n")
+    header.write("# define OCI_PARSER_ERROR_REQUIRED_FIELD_NOT_PRESENT 1\n")
+    header.write("# define OCI_PARSER_ERROR_CANNOT_READ_FILE 2\n")
+    header.write("# define OCI_PARSER_ERROR_CANNOT_PARSE_FILE 3\n\n")
     header.write("typedef struct {\n    char **keys;\n    char **values;\n    size_t len;\n} string_cells;\n\n")
-
     for i in structs:
         append_type_C_header(i, header_file)
+    header.write("oci_container_container *oci_parse_file (const char *filename, oci_parser_error *err);\n")
     header.write("#endif\n")
 
 def generate_C_code(structs, header_name, c_file):
@@ -420,6 +422,7 @@ def generate_C_code(structs, header_name, c_file):
     c_file.write('#include <stdlib.h>\n')
     c_file.write('#include <string.h>\n')
     c_file.write('#include <stdio.h>\n')
+    c_file.write('#include "read-file.h"\n')
     c_file.write('#include "%s"\n\n' % header_name)
     c_file.write("FILE *oci_parser_errfile;\n\n")
     c_file.write('yajl_val get_val(yajl_val tree, const char *name, yajl_type type) {\n')
@@ -446,6 +449,30 @@ def generate_C_code(structs, header_name, c_file):
     for i in structs:
         append_C_code(i, c_file)
 
+def generate_C_epilogue(c_file):
+    c_file.write("""\n
+oci_container_container *oci_parse_file (const char *filename, oci_parser_error *err) {
+    yajl_val tree;
+    size_t filesize;
+    char *content = read_file (filename, &filesize);
+    char errbuf[1024];
+    if (content == NULL) {
+        *err = OCI_PARSER_ERROR_CANNOT_READ_FILE;
+        return NULL;
+    }
+    tree = yajl_tree_parse (content, errbuf, sizeof(errbuf));
+    free (content);
+    if (tree == NULL) {
+        *err = OCI_PARSER_ERROR_CANNOT_PARSE_FILE;
+        return NULL;
+    }
+
+    oci_container_container *container = make_oci_container_container (tree, err);
+    yajl_tree_free (tree);
+    return container;
+}
+    """)
+
 def generate(schema_json, header_name, header_file, c_file):
     tree = scan_main(schema_json)
     # we could do this in scan_main, but let's work on tree that is easier
@@ -453,6 +480,7 @@ def generate(schema_json, header_name, header_file, c_file):
     structs = flatten(tree, [])
     generate_C_header(structs, header_file)
     generate_C_code(structs, header_name, c_file)
+    generate_C_epilogue(c_file)
 
 if __name__ == "__main__":
     schema_file = sys.argv[1]
