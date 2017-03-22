@@ -25,28 +25,9 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 int
 main (int argc, char *argv[])
 {
-  size_t rd;
-  yajl_val tree;
-  FILE *config;
-  char *file_data = malloc (1024 * 1024);
-  char errbuf[1024];
-
   printf("%s\n", getcwd(NULL,0));
-  config = fopen ("tests/config.nocwd.json", "r+");
-  if (config == NULL)
-    exit (1);
-  rd = fread(file_data, 1, 1024 * 1024 - 1, config);
-  if (rd < 0)
-    exit (2);
-  fclose (config);
-
-  tree = yajl_tree_parse (file_data, errbuf, sizeof(errbuf));
-  if (tree == NULL)
-    exit (3);
-
   oci_parser_error err;
-  oci_container_container *container = make_oci_container_container (tree, &err);
-
+  oci_container_container *container = oci_parse_file ("tests/config.nocwd.json", &err);
   if (container != NULL || err != OCI_PARSER_ERROR_REQUIRED_FIELD_NOT_PRESENT) {
     exit (4);
   }
