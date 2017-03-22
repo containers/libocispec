@@ -6,7 +6,7 @@ GITIGNOREFILES = build-aux/ gtk-doc.make config.h.in aclocal.m4
 
 noinst_LIBRARIES = libocispec.a
 
-libocispec_a_SOURCES = src/spec.c
+libocispec_a_SOURCES = src/spec.c src/read-file.c
 
 src/spec.c: runtime-spec/schema/config-schema.json src/generate.py
 	(cd src; ./generate.py ../runtime-spec/schema/config-schema.json spec.h spec.c)
@@ -30,7 +30,7 @@ TESTS = tests/test-1 tests/test-2
 TEST_EXTENSIONS = .conf
 CONF_LOG_COMPILER = $(top_srcdir)/tests/tests-runner
 
-EXTRA_DIST = autogen.sh src/spec.c
+EXTRA_DIST = autogen.sh src/spec.h src/read-file.h
 
 EXTRA_DIST += $(TESTS:.conf=.conf.expected)
 EXTRA_DIST += $(TESTS:.conf=.conf.command)
