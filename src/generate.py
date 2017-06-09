@@ -122,7 +122,7 @@ def generate_C_parse(obj, c_file):
         nodes = obj.children if obj.typ == 'object' else obj.subtypobj
 
         required_to_check = []
-        for i in nodes:
+        for i in (nodes or []):
             if obj.required and i.origname in obj.required and not is_numeric_type(i.typ):
                 required_to_check.append(i)
             if i.typ == 'string':
@@ -221,7 +221,7 @@ def generate_C_free(obj, c_file):
         typename = typename + "_element"
         c_file.write("void free_%s (%s *ptr) {\n" % (typename, typename))
 
-    for i in objs:
+    for i in (objs or []):
         if i.typ == 'mapStringString':
             free_func = make_name_array(i.name)
             c_file.write("    if (ptr->%s) {\n" % i.origname)
@@ -285,7 +285,7 @@ def append_type_C_header(obj, header):
         header.write("%s *make_%s(yajl_val val, oci_parser_error *err);\n\n" % (typename, typename))
     elif obj.typ == 'object':
         header.write("typedef struct {\n")
-        for i in obj.children:
+        for i in (obj.children or []):
             if i.typ == 'array':
                 if i.subtypobj is not None:
                     c_typ = make_name_array(i.name)
