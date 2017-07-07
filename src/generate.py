@@ -425,6 +425,7 @@ def generate_C_header(structs, header):
     header.write("# include <yajl/yajl_tree.h>\n")
     header.write("# include <stdint.h>\n\n")
     header.write("# undef linux\n\n")
+    header.write("# define LIBOCISPEC_OPTIONS_STRICT 1\n")
     header.write("typedef char * oci_parser_error;\n")
     header.write("typedef struct {\n    char **keys;\n    char **values;\n    size_t len;\n} string_cells;\n\n")
     for i in structs:
