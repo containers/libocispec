@@ -191,7 +191,7 @@ def generate_C_parse(obj, c_file):
 
         if obj.typ == 'object' and obj.children is not None:
             #O(2) complexity, but the objects should not really be big...
-            condition = " && ".join(['strcmp (tree->u.object.keys[i], "%s")' % i.origname for i in obj.children])
+            condition = " &&\n                ".join(['strcmp (tree->u.object.keys[i], "%s")' % i.origname for i in obj.children])
             c_file.write("""
     if (tree->type == yajl_t_object && (options & LIBOCISPEC_OPTIONS_STRICT)) {
         int i;
