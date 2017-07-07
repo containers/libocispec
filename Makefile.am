@@ -23,7 +23,11 @@ tests_test_2_SOURCES = tests/test-2.c
 tests_test_2_CFLAGS = -I$(builddir)/src
 tests_test_2_LDADD = $(SELINUX_LIBS) $(YAJL_LIBS) libocispec.a
 
-bin_PROGRAMS = tests/test-1 tests/test-2
+src_validate_SOURCES = src/validate.c
+src_validate_CFLAGS = -I$(builddir)/src
+src_validate_LDADD = $(SELINUX_LIBS) $(YAJL_LIBS) libocispec.a
+
+bin_PROGRAMS = src/validate tests/test-1 tests/test-2
 
 TESTS = tests/test-1 tests/test-2
 
