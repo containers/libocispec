@@ -29,7 +29,7 @@ main (int argc, char *argv[])
   oci_container_container *container = oci_parse_file ("tests/config.json", &err);
 
   if (container == NULL) {
-    printf ("error %d\n", err);
+    printf ("error %s\n", err);
     exit (1);
   }
   if (strcmp (container->hostname, "runc"))

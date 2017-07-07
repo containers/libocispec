@@ -27,7 +27,7 @@ main (int argc, char *argv[])
 {
   oci_parser_error err;
   oci_container_container *container = oci_parse_file ("tests/config.nocwd.json", &err);
-  if (container != NULL || err != OCI_PARSER_ERROR_REQUIRED_FIELD_NOT_PRESENT) {
+  if (container != NULL) {
     exit (4);
   }
   exit (0);
