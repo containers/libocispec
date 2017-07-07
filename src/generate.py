@@ -110,7 +110,7 @@ def generate_C_parse(obj, c_file):
         if objs is None:
             return
 
-    c_file.write("%s *make_%s (yajl_val tree, oci_parser_error *err) {\n" % (typename, typename))
+    c_file.write("%s *make_%s (yajl_val tree, int options, oci_parser_error *err) {\n" % (typename, typename))
     c_file.write("    %s *ret = NULL;\n" % (typename))
     c_file.write("    *err = 0;\n")
     c_file.write("    if (tree == NULL)\n")
@@ -135,7 +135,7 @@ def generate_C_parse(obj, c_file):
                 c_file.write('    }\n')
             elif i.typ == 'object':
                 typename = make_name(i.name)
-                c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object), err);\n' % (i.origname, typename, i.origname))
+                c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object), options, err);\n' % (i.origname, typename, i.origname))
                 c_file.write("    if (ret->%s == NULL && *err != 0) {\n" % i.origname)
                 c_file.write("        free_%s (ret);\n" % obj_typename)
                 c_file.write("        return NULL;\n")
@@ -150,7 +150,7 @@ def generate_C_parse(obj, c_file):
                 c_file.write('            ret->%s = safe_malloc (YAJL_GET_ARRAY (tmp)->len * sizeof (*ret->%s));\n' % (i.origname, i.origname))
                 c_file.write('            for (i = 0; i < YAJL_GET_ARRAY (tmp)->len; i++) {\n')
                 c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
-                c_file.write('                ret->%s[i] = make_%s (tmpsub, err);\n' % (i.origname, typename))
+                c_file.write('                ret->%s[i] = make_%s (tmpsub, options, err);\n' % (i.origname, typename))
                 c_file.write('            }\n')
                 c_file.write('        }\n')
                 c_file.write('    }\n')
@@ -282,7 +282,7 @@ def append_type_C_header(obj, header):
         typename = make_name_array(obj.name)
         header.write("} %s;\n\n" % typename)
         header.write("void free_%s(%s *ptr);\n" % (typename, typename))
-        header.write("%s *make_%s(yajl_val val, oci_parser_error *err);\n\n" % (typename, typename))
+        header.write("%s *make_%s(yajl_val val, int options, oci_parser_error *err);\n\n" % (typename, typename))
     elif obj.typ == 'object':
         header.write("typedef struct {\n")
         for i in (obj.children or []):
@@ -303,7 +303,7 @@ def append_type_C_header(obj, header):
         typename = make_name(obj.name)
         header.write("} %s;\n" % typename)
         header.write("void free_%s(%s *ptr);\n" % (typename, typename))
-        header.write("%s *make_%s(yajl_val val, oci_parser_error *err);\n\n" % (typename, typename))
+        header.write("%s *make_%s(yajl_val val, int options, oci_parser_error *err);\n\n" % (typename, typename))
 
 def get_ref(src, ref):
     f, r = ref.split("#/")
@@ -429,7 +429,7 @@ def generate_C_header(structs, header):
     header.write("typedef struct {\n    char **keys;\n    char **values;\n    size_t len;\n} string_cells;\n\n")
     for i in structs:
         append_type_C_header(i, header_file)
-    header.write("oci_container_container *oci_parse_file (const char *filename, oci_parser_error *err);\n")
+    header.write("oci_container_container *oci_parse_file (const char *filename, int options, oci_parser_error *err);\n")
     header.write("#endif\n")
 
 def generate_C_code(structs, header_name, c_file):
@@ -469,7 +469,7 @@ def generate_C_code(structs, header_name, c_file):
 
 def generate_C_epilogue(c_file):
     c_file.write("""\n
-oci_container_container *oci_parse_file (const char *filename, oci_parser_error *err) {
+oci_container_container *oci_parse_file (const char *filename, int options, oci_parser_error *err) {
     yajl_val tree;
     size_t filesize;
     *err = NULL;
@@ -486,7 +486,7 @@ oci_container_container *oci_parse_file (const char *filename, oci_parser_error 
         return NULL;
     }
 
-    oci_container_container *container = make_oci_container_container (tree, err);
+    oci_container_container *container = make_oci_container_container (tree, options, err);
     yajl_tree_free (tree);
     return container;
 }
