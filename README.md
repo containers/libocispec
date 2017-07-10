@@ -14,7 +14,7 @@ Parsing an OCI configuration file is easy as:
     oci_container_container *container = oci_parse_file ("config.json", NULL, &err);
 
     if (container == NULL)
-      exit (1);
+      exit (EXIT_FAILURE);
 
     /* Print the container hostname.  */
     if (container->hostname)

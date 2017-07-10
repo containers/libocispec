@@ -15,7 +15,7 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-#include "config.h"
+#include <config.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,5 +44,5 @@ main (int argc, char *argv[])
   if (err)
     error (EXIT_FAILURE, 0, "error in %s: %s", file, err);
 
-  exit (0);
+  exit (EXIT_SUCCESS);
 }
