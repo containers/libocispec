@@ -35,6 +35,7 @@ main (int argc, char *argv[])
     file = argv[1];
 
   ctx.options = LIBOCISPEC_OPTIONS_STRICT;
+  ctx.stderr = stderr;
 
   container = oci_parse_file (file, &ctx, &err);
   if (container)
