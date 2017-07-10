@@ -63,7 +63,6 @@ c_types_mapping = {
     "uint64" : "uint64_t",
     "UID" : "uid_t",
     "GID" : "gid_t",
-    "mapStringString" : "string_cells *"
 }
 
 def make_name_array(name):
@@ -73,7 +72,7 @@ def make_name(name):
     return "oci_container_%s" % name
 
 def make_pointer(name, typ):
-    if typ != 'object':
+    if typ != 'object' and typ != 'mapStringString':
         return None
     return "%s *" % make_name(name)
 
@@ -109,6 +108,10 @@ def generate_C_parse(obj, c_file):
         objs = obj.subtypobj
         if objs is None:
             return
+    elif obj.typ == 'mapStringString':
+        obj_typename = typename = make_name(obj.name)
+        objs = []
+
 
     c_file.write("%s *make_%s (yajl_val tree, struct libocispec_context *ctx, oci_parser_error *err) {\n" % (typename, typename))
     c_file.write("    %s *ret = NULL;\n" % (typename))
@@ -118,7 +121,9 @@ def generate_C_parse(obj, c_file):
     c_file.write("    ret = safe_malloc (sizeof (*ret));\n")
     c_file.write("    memset (ret, 0, sizeof (*ret));\n")
 
-    if obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
+    if obj.typ == 'mapStringString':
+        pass
+    elif obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
         nodes = obj.children if obj.typ == 'object' else obj.subtypobj
 
         required_to_check = []
@@ -171,15 +176,7 @@ def generate_C_parse(obj, c_file):
                 c_file.write('    {\n')
                 c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_object);\n' % (i.origname))
                 c_file.write('        if (tmp != NULL) {\n')
-                c_file.write('            size_t i;\n')
-                c_file.write('            ret->%s = safe_malloc (sizeof (*ret->%s));\n' % (i.origname, i.origname))
-                c_file.write('            ret->%s->len = YAJL_GET_OBJECT (tmp)->len;\n' % (i.origname))
-                c_file.write('            ret->%s->keys = safe_malloc (YAJL_GET_OBJECT (tmp)->len * sizeof (char *));\n' % (i.origname))
-                c_file.write('            ret->%s->values = safe_malloc (YAJL_GET_OBJECT (tmp)->len * sizeof (char *));\n' % (i.origname))
-                c_file.write('            for (i = 0; i < YAJL_GET_OBJECT (tmp)->len; i++) {\n')
-                c_file.write('                ret->%s->keys[i] = strdup (YAJL_GET_OBJECT (tmp)->keys[i]);\n' % i.origname)
-                c_file.write('                ret->%s->values[i] = strdup (YAJL_GET_STRING(YAJL_GET_OBJECT (tmp)->values[i]));\n' % i.origname)
-                c_file.write('            }\n')
+                c_file.write('            ret->%s = read_map_string_string (tmp);\n' % (i.origname))
                 c_file.write('        }\n')
                 c_file.write('    }\n')
         for i in required_to_check:
@@ -206,9 +203,11 @@ def generate_C_parse(obj, c_file):
     c_file.write("}\n\n")
 
 def read_value_generator(c_file, level, src, dest, typ):
-    if typ == 'string':
+    if typ == 'mapStringString':
+        c_file.write('%s%s = read_map_string_string (%s);\n' % ('    ' * (level), dest, src))
+    elif typ == 'string':
         c_file.write('%sif (%s)\n' % ('    ' * level, src))
-        c_file.write('%s%s = strdup (YAJL_GET_STRING (%s));\n' % ('    ' * (level + 1), dest, src))
+        c_file.write('%s%s = strdup (YAJL_GET_STRING (%s) ? : "");\n' % ('    ' * (level + 1), dest, src))
     elif is_numeric_type(typ):
         c_file.write('%sif (%s)\n' % ('    ' * level, src))
         if typ.startswith("uint"):
@@ -221,26 +220,27 @@ def read_value_generator(c_file, level, src, dest, typ):
 
 
 def generate_C_free(obj, c_file):
-    if not is_compound_object(obj.typ):
+    if not is_compound_object(obj.typ) and obj.typ != 'mapStringString':
         return
+
     typename = make_name(obj.name)
+    if obj.typ == 'mapStringString':
+        objs = []
     if obj.typ == 'object':
         objs = obj.children
-        c_file.write("void free_%s (%s *ptr) {\n" % (typename, typename))
-    if obj.typ == 'array':
+    elif obj.typ == 'array':
         objs = obj.subtypobj
         if objs is None:
             return
         typename = typename + "_element"
-        c_file.write("void free_%s (%s *ptr) {\n" % (typename, typename))
 
+    c_file.write("void free_%s (%s *ptr) {\n" % (typename, typename))
+    if obj.typ == 'mapStringString':
+        c_file.write("    free_cells (ptr);\n")
     for i in (objs or []):
         if i.typ == 'mapStringString':
-            free_func = make_name_array(i.name)
-            c_file.write("    if (ptr->%s) {\n" % i.origname)
-            c_file.write("        free_cells (ptr->%s);\n" % (i.origname))
-            c_file.write("    }\n")
-            c_file.write("    free (ptr);\n")
+            free_func = make_name(i.name)
+            c_file.write("    free_%s (ptr->%s);\n" % (free_func, i.origname))
         elif i.typ == 'array':
             if i.subtyp == 'mapStringString':
                 free_func = make_name_array(i.name)
@@ -274,7 +274,10 @@ def generate_C_free(obj, c_file):
     c_file.write("}\n\n")
 
 def append_type_C_header(obj, header):
-    if obj.typ == 'array':
+    if obj.typ == 'mapStringString':
+        typename = make_name(obj.name)
+        header.write("typedef string_cells %s;\n\n" % typename)
+    elif obj.typ == 'array':
         if not obj.subtypobj:
             return
         header.write("typedef struct {\n")
@@ -287,15 +290,15 @@ def append_type_C_header(obj, header):
                 if not is_compound_object(i.subtyp):
                     header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
                 else:
-                    header.write("    %s%s**%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
+                    header.write("    %s **%s;\n" % (c_typ, i.origname))
                 header.write("    size_t %s;\n" % (i.origname + "_len"))
             else:
                 c_typ = make_pointer(i.name, i.typ) or c_types_mapping[i.typ]
                 header.write("    %s%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
         typename = make_name_array(obj.name)
         header.write("} %s;\n\n" % typename)
-        header.write("void free_%s(%s *ptr);\n" % (typename, typename))
-        header.write("%s *make_%s(yajl_val val, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
+        header.write("void free_%s (%s *ptr);\n" % (typename, typename))
+        header.write("%s *make_%s (yajl_val val, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
     elif obj.typ == 'object':
         header.write("typedef struct {\n")
         for i in (obj.children or []):
@@ -304,7 +307,10 @@ def append_type_C_header(obj, header):
                     c_typ = make_name_array(i.name)
                 else:
                     c_typ = make_pointer(i.name, i.subtyp) or c_types_mapping[i.subtyp]
-                if not is_compound_object(i.subtyp):
+
+                if i.subtyp == 'mapStringString':
+                    header.write("    %s **%s;\n" % (make_name_array(i.name), i.origname))
+                elif not is_compound_object(i.subtyp):
                     header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
                 else:
                     header.write("    %s%s**%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
@@ -315,8 +321,8 @@ def append_type_C_header(obj, header):
 
         typename = make_name(obj.name)
         header.write("} %s;\n" % typename)
-        header.write("void free_%s(%s *ptr);\n" % (typename, typename))
-        header.write("%s *make_%s(yajl_val val, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
+        header.write("void free_%s (%s *ptr);\n" % (typename, typename))
+        header.write("%s *make_%s (yajl_val val, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
 
 def get_ref(src, ref):
     f, r = ref.split("#/")
@@ -357,7 +363,9 @@ def resolve_type(name, src, cur):
     subtyp = None
     subtypobj = None
     required = None
-    if typ == 'array':
+    if typ == 'mapStringString':
+        pass
+    elif typ == 'array':
         if 'allOf' in cur["items"]:
             children = scan_list(name, src, cur["items"]['allOf'])
             subtyp = children[0].typ
@@ -405,6 +413,7 @@ def scan_dict(name, schema, objs):
         node, _ = resolve_type(name.append(i), schema, objs[i])
         if node:
             obj.append(node)
+
     return obj
 
 def scan_properties(name, schema, props):
@@ -420,6 +429,11 @@ def flatten(tree, structs, visited={}):
     if tree.subtypobj is not None:
         for i in tree.subtypobj:
             flatten(i, structs, visited=visited)
+
+    if tree.typ == 'array' and tree.subtyp == 'mapStringString':
+        name = Name(tree.name + "_element")
+        node = Node(name, tree.subtyp, None)
+        flatten(node, structs, visited)
 
     id_ = "%s:%s" % (tree.name, tree.typ)
     if id_ not in visited.keys():
@@ -441,7 +455,7 @@ def generate_C_header(structs, header):
     header.write("# define LIBOCISPEC_OPTIONS_STRICT 1\n")
     header.write("typedef char * oci_parser_error;\n")
     header.write("typedef struct {\n    char **keys;\n    char **values;\n    size_t len;\n} string_cells;\n\n")
-    header.write("struct libocispec_context {\nint options;\nFILE *stderr;\n};\n")
+    header.write("struct libocispec_context {\n    int options;\n    FILE *stderr;\n};\n\n")
     for i in structs:
         append_type_C_header(i, header_file)
     header.write("oci_container_container *oci_parse_file (const char *filename, struct libocispec_context *ctx, oci_parser_error *err);\n")
@@ -462,7 +476,7 @@ def generate_C_code(structs, header_name, c_file):
     c_file.write('    const char *path[] = { name, NULL };\n')
     c_file.write('    return yajl_tree_get (tree, path, type);\n')
     c_file.write('}\n\n')
-    c_file.write('void free_cells(string_cells *cells) {\n')
+    c_file.write('void free_cells (string_cells *cells) {\n')
     c_file.write("    if (cells) {\n")
     c_file.write("        size_t i;\n")
     c_file.write("        for (i = 0; i < cells->len; i++) {\n")
@@ -478,6 +492,26 @@ def generate_C_code(structs, header_name, c_file):
     c_file.write("        abort ();\n")
     c_file.write("    return ret;\n")
     c_file.write("}\n\n")
+
+    c_file.write('string_cells *read_map_string_string (yajl_val src) {\n')
+    c_file.write('    string_cells *ret = NULL;\n')
+    c_file.write('    if (src != NULL) {\n')
+    c_file.write('        size_t i;\n')
+    c_file.write('        ret = safe_malloc (sizeof (string_cells));\n')
+    c_file.write('        ret->len = YAJL_GET_OBJECT (src)->len;\n')
+    c_file.write('        ret->keys = safe_malloc (YAJL_GET_OBJECT (src)->len * sizeof (char *));\n')
+    c_file.write('        ret->values = safe_malloc (YAJL_GET_OBJECT (src)->len * sizeof (char *));\n')
+    c_file.write('        for (i = 0; i < YAJL_GET_OBJECT (src)->len; i++) {\n')
+    c_file.write('            yajl_val srcsub = YAJL_GET_OBJECT (src)->values[i];\n')
+    c_file.write('            ret->keys[i] = strdup (YAJL_GET_OBJECT (src)->keys[i] ? : "");\n')
+    c_file.write('            if (srcsub)\n')
+    c_file.write('                ret->values[i] = strdup (YAJL_GET_STRING (srcsub) ? : "");\n')
+    c_file.write('            else\n')
+    c_file.write('                ret->values[i] = NULL;\n')
+    c_file.write('        }\n')
+    c_file.write('    }\n')
+    c_file.write('    return ret;\n')
+    c_file.write('}\n\n')
 
     for i in structs:
         append_C_code(i, c_file)
