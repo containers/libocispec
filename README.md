@@ -11,7 +11,7 @@ runtime-spec source repository.
 Parsing an OCI configuration file is easy as:
 
 ```c
-    oci_container_container *container = oci_parse_file ("config.json", &err);
+    oci_container_container *container = oci_parse_file ("config.json", NULL, &err);
 
     if (container == NULL)
       exit (1);

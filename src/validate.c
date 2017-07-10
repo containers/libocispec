@@ -29,11 +29,14 @@ main (int argc, char *argv[])
   oci_parser_error err;
   oci_container_container *container;
   const char *file = "config.json";
+  struct libocispec_context ctx;
 
   if (argc > 1)
     file = argv[1];
 
-  container = oci_parse_file (file, LIBOCISPEC_OPTIONS_STRICT, &err);
+  ctx.options = LIBOCISPEC_OPTIONS_STRICT;
+
+  container = oci_parse_file (file, &ctx, &err);
   if (container)
     free_oci_container_container (container);
 
