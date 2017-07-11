@@ -17,15 +17,15 @@ CLEANFILES += src/spec.h src/spec.c
 
 tests_test_1_SOURCES = tests/test-1.c
 tests_test_1_CFLAGS = -I$(builddir)/src
-tests_test_1_LDADD = $(SELINUX_LIBS) $(YAJL_LIBS) libocispec.a
+tests_test_1_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
 
 tests_test_2_SOURCES = tests/test-2.c
 tests_test_2_CFLAGS = -I$(builddir)/src
-tests_test_2_LDADD = $(SELINUX_LIBS) $(YAJL_LIBS) libocispec.a
+tests_test_2_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
 
 src_validate_SOURCES = src/validate.c
 src_validate_CFLAGS = -I$(builddir)/src
-src_validate_LDADD = $(SELINUX_LIBS) $(YAJL_LIBS) libocispec.a
+src_validate_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
 
 bin_PROGRAMS = src/validate tests/test-1 tests/test-2
 
