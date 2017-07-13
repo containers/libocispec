@@ -138,6 +138,10 @@ def generate_C_parse(obj, c_file):
                 c_file.write('    {\n')
                 read_value_generator(c_file, 2, 'get_val (tree, "%s", yajl_t_number)' % i.origname, "ret->%s" % i.origname, i.typ)
                 c_file.write('    }\n')
+            if i.typ == 'boolean':
+                c_file.write('    {\n')
+                read_value_generator(c_file, 2, 'get_val (tree, "%s", yajl_t_true)' % i.origname, "ret->%s" % i.origname, i.typ)
+                c_file.write('    }\n')
             elif i.typ == 'object':
                 typename = make_name(i.name)
                 c_file.write('    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object), ctx, err);\n' % (i.origname, typename, i.origname))
