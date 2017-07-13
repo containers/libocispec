@@ -185,7 +185,10 @@ def generate_C_parse(obj, c_file):
                 c_file.write('    }\n')
         for i in required_to_check:
             c_file.write('    if (ret->%s == NULL) {\n' % i.origname)
-            c_file.write('        int unused = asprintf (err, "Required field %%s not present", "%s");\n' % i.origname)
+            c_file.write('        if (asprintf (err, "Required field %%s not present", "%s") < 0) {\n' % i.origname)
+            c_file.write('            *err = "error allocating memory";\n')
+            c_file.write('            return NULL;\n')
+            c_file.write("        }\n")
             c_file.write("        free_%s (ret);\n" % obj_typename)
             c_file.write("        return NULL;\n")
             c_file.write('    }\n')
