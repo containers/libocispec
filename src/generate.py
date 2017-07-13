@@ -291,13 +291,13 @@ def append_type_C_header(obj, header):
                     header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
                 else:
                     header.write("    %s **%s;\n" % (c_typ, i.origname))
-                header.write("    size_t %s;\n" % (i.origname + "_len"))
+                header.write("    size_t %s;\n\n" % (i.origname + "_len"))
             else:
                 c_typ = make_pointer(i.name, i.typ) or c_types_mapping[i.typ]
                 header.write("    %s%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
         typename = make_name_array(obj.name)
-        header.write("} %s;\n\n" % typename)
-        header.write("void free_%s (%s *ptr);\n" % (typename, typename))
+        header.write("}\n%s;\n\n" % typename)
+        header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
         header.write("%s *make_%s (yajl_val val, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
     elif obj.typ == 'object':
         header.write("typedef struct {\n")
@@ -314,14 +314,14 @@ def append_type_C_header(obj, header):
                     header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
                 else:
                     header.write("    %s%s**%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
-                header.write("    size_t %s;\n" % (i.origname + "_len"))
+                header.write("    size_t %s;\n\n" % (i.origname + "_len"))
             else:
                 c_typ = make_pointer(i.name, i.typ) or c_types_mapping[i.typ]
-                header.write("    %s%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
+                header.write("    %s%s%s;\n\n" % (c_typ, " " if '*' not in c_typ else "", i.origname))
 
         typename = make_name(obj.name)
-        header.write("} %s;\n" % typename)
-        header.write("void free_%s (%s *ptr);\n" % (typename, typename))
+        header.write("}\n%s;\n\n" % typename)
+        header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
         header.write("%s *make_%s (yajl_val val, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
 
 def get_ref(src, ref):
