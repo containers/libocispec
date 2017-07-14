@@ -354,6 +354,13 @@ def get_ref(src, ref):
 
     return src, cur
 
+def merge(children):
+    subchildren = []
+    for i in children:
+        for j in i.children:
+            subchildren.append(j)
+    return subchildren
+
 def resolve_type(name, src, cur):
     if '$ref' in cur:
         src, cur = get_ref(src, cur['$ref'])
@@ -374,7 +381,7 @@ def resolve_type(name, src, cur):
         pass
     elif typ == 'array':
         if 'allOf' in cur["items"]:
-            children = scan_list(name, src, cur["items"]['allOf'])
+            children = merge(scan_list(name, src, cur["items"]['allOf']))
             subtyp = children[0].typ
             subtypobj = children
         elif 'anyOf' in cur["items"]:
@@ -389,7 +396,7 @@ def resolve_type(name, src, cur):
             return Node(name, typ, None, subtyp=item_type.typ, subtypobj=item_type.children), src
     elif typ == 'object':
         if 'allOf' in cur:
-            children = scan_list(name, src, cur['allOf'])
+            children = merge(scan_list(name, src, cur['allOf']))
         elif 'anyOf' in cur:
             children = scan_list(name, src, cur['anyOf'])
         else:

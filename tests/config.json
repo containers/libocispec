@@ -160,6 +160,37 @@
             "net.core.somaxconn": "256"
         },
         "resources": {
+            "blockIO": {
+                "weight": 10,
+                "leafWeight": 10,
+                "weightDevice": [
+                    {
+                        "major": 8,
+                        "minor": 0,
+                        "weight": 500,
+                        "leafWeight": 300
+                    },
+                    {
+                        "major": 8,
+                        "minor": 16,
+                        "weight": 500
+                    }
+                ],
+                "throttleReadBpsDevice": [
+                    {
+                        "major": 8,
+                        "minor": 0,
+                        "rate": 600
+                    }
+                ],
+                "throttleWriteIOPSDevice": [
+                    {
+                        "major": 8,
+                        "minor": 16,
+                        "rate": 300
+                    }
+                ]
+            },
             "devices": [
                 {
                     "allow": false,
