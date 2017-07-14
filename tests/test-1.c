@@ -50,6 +50,18 @@ main (int argc, char *argv[])
     exit (5);
   if (container->linux->resources->blockIO->weightDevice[0]->leafWeight != 300)
     exit (5);
+  if (container->linux->resources->blockIO->throttleReadBpsDevice[0]->major != 8)
+    exit (5);
+  if (container->linux->resources->blockIO->throttleReadBpsDevice[0]->minor != 0)
+    exit (5);
+  if (container->linux->resources->blockIO->throttleReadBpsDevice[0]->rate != 600)
+    exit (5);
+  if (container->linux->resources->blockIO->throttleWriteIopsDevice[0]->major != 8)
+    exit (5);
+  if (container->linux->resources->blockIO->throttleWriteIopsDevice[0]->minor != 16)
+    exit (5);
+  if (container->linux->resources->blockIO->throttleWriteIopsDevice[0]->rate != 300)
+    exit (5);
   free_oci_container_container (container);
   exit (0);
 }
