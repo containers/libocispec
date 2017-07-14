@@ -16,7 +16,6 @@ AC_PROG_SED
 AC_PROG_CC
 AM_PROG_CC_C_O
 
-PKG_CHECK_MODULES(GIO_UNIX, [gio-unix-2.0])
 PKG_CHECK_MODULES([YAJL], [yajl >= 2.0.0])
 
 AC_CHECK_LIB(seccomp, seccomp_rule_add)
