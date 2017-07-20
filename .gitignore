@@ -1,7 +1,7 @@
 *.o
 *.a
-src/spec.c
-src/spec.h
+src/oci_runtime_spec.c
+src/oci_runtime_spec.h
 Makefile
 Makefile.in
 aclocal.m4
@@ -25,4 +25,3 @@ tests/.deps/
 tests/.dirstamp
 tests/test-1
 tests/test-2
-
