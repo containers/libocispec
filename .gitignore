@@ -23,5 +23,10 @@ src/validate
 stamp-h1
 tests/.deps/
 tests/.dirstamp
+test-suite.log
+tests/test-1.log
+tests/test-1.trs
+tests/test-2.log
+tests/test-2.trs
 tests/test-1
 tests/test-2
