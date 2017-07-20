@@ -244,6 +244,7 @@ def generate_C_free(obj, c_file):
     c_file.write("void free_%s (%s *ptr) {\n" % (typename, typename))
     if obj.typ == 'mapStringString':
         c_file.write("    free_cells (ptr);\n")
+
     for i in (objs or []):
         if i.typ == 'mapStringString':
             free_func = make_name(i.name)
@@ -262,7 +263,7 @@ def generate_C_free(obj, c_file):
                 c_file.write("    if (ptr->%s) {\n" % i.origname)
                 c_file.write("        size_t i;\n")
                 c_file.write("        for (i = 0; i < ptr->%s_len; i++) {\n" % i.origname)
-                c_file.write("            free(ptr->%s[i]);\n" % (i.origname))
+                c_file.write("            free (ptr->%s[i]);\n" % (i.origname))
                 c_file.write("        }\n")
                 c_file.write("    }\n")
             elif i.subtypobj is not None:
@@ -285,8 +286,8 @@ def generate_C_free(obj, c_file):
             if i.typ == 'string':
                 c_file.write("    free (ptr->%s);\n" % (i.origname))
             elif i.typ == 'object':
-                c_file.write("    free_%s (ptr->%s);\n" % (typename, i.origname))
-    c_file.write('    free (ptr);\n');
+                c_file.write("    if (ptr->%s)\n" % (i.origname))
+                c_file.write("        free_%s (ptr->%s);\n" % (typename, i.origname))
     c_file.write("}\n\n")
 
 def append_type_C_header(obj, header):
