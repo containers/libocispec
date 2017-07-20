@@ -347,7 +347,7 @@ def append_type_C_header(obj, header):
         typename = make_name(obj.name)
         header.write("}\n%s;\n\n" % typename)
         header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
-        header.write("%s *make_%s (yajl_val val, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
+        header.write("%s *make_%s (yajl_val tree, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
 
 def get_ref(src, ref):
     f, r = ref.split("#/")
