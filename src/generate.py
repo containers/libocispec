@@ -296,6 +296,7 @@ def generate_C_free(obj, c_file):
                 c_file.write("    if (ptr->%s)\n" % (i.origname))
                 c_file.write("        free_%s (ptr->%s);\n" % (typename, i.origname))
                 c_file.write("    ptr->%s = NULL;\n" % (i.origname))
+    c_file.write("    free(ptr);\n")
     c_file.write("}\n\n")
 
 def append_type_C_header(obj, header):
