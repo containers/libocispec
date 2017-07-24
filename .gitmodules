@@ -1,3 +1,6 @@
 [submodule "runtime-spec"]
 	path = runtime-spec
 	url = https://github.com/opencontainers/runtime-spec
+[submodule "image-spec"]
+	path = image-spec
+	url = https://github.com/opencontainers/image-spec
