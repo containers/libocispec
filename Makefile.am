@@ -8,7 +8,8 @@ noinst_LIBRARIES = libocispec.a
 
 libocispec_a_SOURCES = src/oci_runtime_spec.c src/read-file.c \
 			src/oci_image_spec.c \
-			src/oci_image_index_spec.c
+			src/oci_image_index_spec.c \
+			src/oci_image_layout_spec.c
 
 src/oci_runtime_spec.c: runtime-spec/schema/config-schema.json src/generate.py
 	(cd src; ./generate.py ../runtime-spec/schema/config-schema.json oci_runtime_spec.h oci_runtime_spec.c container)
@@ -27,9 +28,16 @@ src/oci_image_index_spec.c: image-spec/schema/image-index-schema.json src/genera
 
 src/oci_image_index_spec.h: src/oci_image_index_spec.c
 
+
+src/oci_image_layout_spec.c: image-spec/schema/image-layout-schema.json src/generate.py
+	(cd src; ./generate.py ../image-spec/schema/image-layout-schema.json oci_image_layout_spec.h oci_image_layout_spec.c image_layout)
+
+src/oci_image_layout_spec.h: src/oci_image_layout_spec.c
+
 CLEANFILES += src/oci_runtime_spec.h src/oci_runtime_spec.c \
 		src/oci_image_spec.h src/oci_image_spec.c \
-		src/oci_image_index_spec.h src/oci_image_index_spec.c
+		src/oci_image_index_spec.h src/oci_image_index_spec.c \
+		src/oci_image_layout_spec.h src/oci_image_layout_spec.c
 
 tests_test_1_SOURCES = tests/test-1.c
 tests_test_1_CFLAGS = -I$(builddir)/src

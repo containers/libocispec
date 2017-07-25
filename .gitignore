@@ -6,6 +6,8 @@ src/oci_image_spec.c
 src/oci_image_spec.h
 src/oci_image_index_spec.c
 src/oci_image_index_spec.h
+src/oci_image_layout_spec.c
+src/oci_image_layout_spec.h
 Makefile
 Makefile.in
 aclocal.m4
