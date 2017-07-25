@@ -55,14 +55,20 @@ tests_test_4_SOURCES = tests/test-4.c
 tests_test_4_CFLAGS = -I$(builddir)/src
 tests_test_4_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
 
+tests_test_5_SOURCES = tests/test-5.c
+tests_test_5_CFLAGS = -I$(builddir)/src
+tests_test_5_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
+
 src_validate_SOURCES = src/validate.c
 src_validate_CFLAGS = -I$(builddir)/src
 src_validate_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
 
 bin_PROGRAMS = src/validate tests/test-1 tests/test-2 tests/test-3 \
-		tests/test-4
+		tests/test-4 \
+		tests/test-5
 
-TESTS = tests/test-1 tests/test-2 tests/test-3 tests/test-4
+TESTS = tests/test-1 tests/test-2 tests/test-3 tests/test-4 \
+		tests/test-5
 
 -include $(top_srcdir)/git.mk
 
