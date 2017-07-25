@@ -387,6 +387,12 @@ def resolve_type(name, src, cur):
     if 'patternProperties' in cur:
         # if a patternProperties, take the first value
         typ = cur['patternProperties'].values()[0]["type"]
+    elif "oneOf" in cur:
+        cur = cur['oneOf'][0]
+        if '$ref' in cur:
+            return resolve_type(name, src, cur)
+        else:
+            typ = cur['type']
     elif "type" in cur:
         typ = cur["type"]
     else:
