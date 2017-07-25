@@ -31,13 +31,17 @@ tests_test_2_SOURCES = tests/test-2.c
 tests_test_2_CFLAGS = -I$(builddir)/src
 tests_test_2_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
 
+tests_test_3_SOURCES = tests/test-3.c
+tests_test_3_CFLAGS = -I$(builddir)/src
+tests_test_3_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
+
 src_validate_SOURCES = src/validate.c
 src_validate_CFLAGS = -I$(builddir)/src
 src_validate_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
 
-bin_PROGRAMS = src/validate tests/test-1 tests/test-2
+bin_PROGRAMS = src/validate tests/test-1 tests/test-2 tests/test-3
 
-TESTS = tests/test-1 tests/test-2
+TESTS = tests/test-1 tests/test-2 tests/test-3
 
 -include $(top_srcdir)/git.mk
 
