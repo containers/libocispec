@@ -354,22 +354,27 @@ def append_type_C_header(obj, header, prefix):
         header.write("%s *make_%s (yajl_val tree, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
 
 def get_ref(src, ref):
-    f, r = ref.split("#/")
+    if '#/' in ref:
+        f, r = ref.split("#/")
+    else:
+        f = ref
+        r = ""
+
     if f == "":
         cur = src
     else:
         with open(f) as i:
             cur = src = json.loads(i.read())
-
-    for j in r.split('/'):
-        basic_types = [
-            "int8", "int16", "int32", "int64",
-            "uint8", "uint16", "uint32", "uint64", "UID", "GID",
-            "mapStringString", "ArrayOfStrings"
-        ]
-        if j in basic_types:
-            return src, {"type" : j}
-        cur = cur[j]
+    if r != "":
+        for j in r.split('/'):
+            basic_types = [
+                "int8", "int16", "int32", "int64",
+                "uint8", "uint16", "uint32", "uint64", "UID", "GID",
+                "mapStringString", "ArrayOfStrings"
+            ]
+            if j in basic_types:
+                return src, {"type" : j}
+            cur = cur[j]
 
     if 'type' not in cur and '$ref' in cur:
         return get_ref(src, cur['$ref'])
