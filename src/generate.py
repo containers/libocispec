@@ -490,7 +490,7 @@ def generate_C_header(structs, header):
     header.write("typedef struct {\n    char **keys;\n    char **values;\n    size_t len;\n} string_cells;\n\n")
     header.write("struct libocispec_context {\n    int options;\n    FILE *stderr;\n};\n\n")
     for i in structs:
-        append_type_C_header(i, header_file)
+        append_type_C_header(i, header)
     header.write("oci_container_container *oci_parse_file (const char *filename, struct libocispec_context *ctx, oci_parser_error *err);\n\n")
     header.write("#endif\n")
 
