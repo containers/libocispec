@@ -9,7 +9,7 @@ noinst_LIBRARIES = libocispec.a
 libocispec_a_SOURCES = src/oci_runtime_spec.c src/read-file.c
 
 src/oci_runtime_spec.c: runtime-spec/schema/config-schema.json src/generate.py
-	(cd src; ./generate.py ../runtime-spec/schema/config-schema.json oci_runtime_spec.h oci_runtime_spec.c)
+	(cd src; ./generate.py ../runtime-spec/schema/config-schema.json oci_runtime_spec.h oci_runtime_spec.c container)
 
 src/oci_runtime_spec.h: src/oci_runtime_spec.c
 

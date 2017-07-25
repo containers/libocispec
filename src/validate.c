@@ -37,7 +37,7 @@ main (int argc, char *argv[])
   ctx.options = LIBOCISPEC_OPTIONS_STRICT;
   ctx.stderr = stderr;
 
-  container = oci_parse_file (file, &ctx, &err);
+  container = oci_container_parse_file (file, &ctx, &err);
   if (container)
     free_oci_container_container (container);
 
