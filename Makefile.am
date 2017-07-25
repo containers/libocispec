@@ -7,7 +7,8 @@ GITIGNOREFILES = build-aux/ gtk-doc.make config.h.in aclocal.m4
 noinst_LIBRARIES = libocispec.a
 
 libocispec_a_SOURCES = src/oci_runtime_spec.c src/read-file.c \
-			src/oci_image_spec.c
+			src/oci_image_spec.c \
+			src/oci_image_index_spec.c
 
 src/oci_runtime_spec.c: runtime-spec/schema/config-schema.json src/generate.py
 	(cd src; ./generate.py ../runtime-spec/schema/config-schema.json oci_runtime_spec.h oci_runtime_spec.c container)
@@ -20,8 +21,15 @@ src/oci_image_spec.c: image-spec/schema/config-schema.json src/generate.py
 
 src/oci_image_spec.h: src/oci_image_spec.c
 
+
+src/oci_image_index_spec.c: image-spec/schema/image-index-schema.json src/generate.py
+	(cd src; ./generate.py ../image-spec/schema/image-index-schema.json oci_image_index_spec.h oci_image_index_spec.c image_index)
+
+src/oci_image_index_spec.h: src/oci_image_index_spec.c
+
 CLEANFILES += src/oci_runtime_spec.h src/oci_runtime_spec.c \
-		src/oci_image_spec.h src/oci_image_spec.c
+		src/oci_image_spec.h src/oci_image_spec.c \
+		src/oci_image_index_spec.h src/oci_image_index_spec.c
 
 tests_test_1_SOURCES = tests/test-1.c
 tests_test_1_CFLAGS = -I$(builddir)/src
@@ -49,7 +57,8 @@ TEST_EXTENSIONS = .conf
 CONF_LOG_COMPILER = $(top_srcdir)/tests/tests-runner
 
 EXTRA_DIST = autogen.sh src/oci_runtime_spec.h src/read-file.h \
-		src/oci_image_spec.h
+		src/oci_image_spec.h \
+		src/oci_image_index_spec.h
 
 EXTRA_DIST += $(TESTS:.conf=.conf.expected)
 EXTRA_DIST += $(TESTS:.conf=.conf.command)

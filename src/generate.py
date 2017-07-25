@@ -37,7 +37,10 @@ class Name:
 class Node:
     def __init__(self, name, typ, children, subtyp=None, subtypobj=None, required=None):
         self.name = name.name
-        self.origname = name.leaf or name.name
+        if (name.leaf):
+            self.origname = name.leaf.replace('.', '_')
+        else:
+            self.origname = name.name.replace('.', '_')
         self.typ = typ
         self.children = children
         self.subtyp = subtyp
