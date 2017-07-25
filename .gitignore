@@ -2,6 +2,9 @@
 *.a
 src/oci_runtime_spec.c
 src/oci_runtime_spec.h
+src/oci_image_spec.c
+src/oci_image_spec.h
+
 Makefile
 Makefile.in
 aclocal.m4
