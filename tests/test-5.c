@@ -1,4 +1,4 @@
-/* Copyright (C) 2017 Giuseppe Scrivano <giuseppe@scrivano.org>
+/* Copyright (C) 2017 Wang Long <w@laoqinren.net>
 
 libocispec is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,34 +15,26 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-#include <config.h>
+#include "config.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <error.h>
-#include "oci_runtime_spec.h"
+#include "oci_image_layout_spec.h"
 
 int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_container_container *container;
-  const char *file = "config.json";
-  struct libocispec_context ctx;
+  oci_image_layout_image_layout *image_layout = oci_image_layout_parse_file ("tests/image_layout_config.json", 0, &err);
 
-  if (argc > 1)
-    file = argv[1];
+  if (image_layout == NULL) {
+    printf ("error %s\n", err);
+    exit (1);
+  }
+  if (strcmp (image_layout->imageLayoutVersion, "1.0.0"))
+    exit (5);
 
-  ctx.options = LIBOCISPEC_OPTIONS_STRICT;
-  ctx.stderr = stderr;
-
-  container = oci_container_parse_file (file, &ctx, &err);
-  if (container)
-    free_oci_container_container (container);
-
-  if (err)
-    error (EXIT_FAILURE, 0, "error in %s: %s", file, err);
-
-  exit (EXIT_SUCCESS);
+  free_oci_image_layout_image_layout (image_layout);
+  exit (0);
 }
