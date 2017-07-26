@@ -50,6 +50,12 @@ main (int argc, char *argv[])
     exit (5);
   if (strcmp (image_index->manifests[0]->platform->os, "linux"))
     exit (5);
+  if (strcmp (image_index->manifests[0]->platform->os_version, "1.0.0"))
+    exit (5);
+  if (image_index->manifests[0]->platform->os_features_len != 2)
+    exit (5);
+  if (strcmp (image_index->manifests[0]->platform->os_features[1], "simple"))
+    exit (5);
   if (strcmp (image_index->manifests[0]->platform->architecture, "ppc64le"))
     exit (5);
 
