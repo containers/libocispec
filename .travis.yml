@@ -1,0 +1,14 @@
+language: c
+dist: trusty
+addons:
+  apt:
+    packages:
+      - automake
+      - autotools-dev
+      - libyajl-dev
+      - libseccomp-dev
+script:
+  - NOCONFIGURE=1 ./autogen.sh
+  - ./configure
+  - make -j 2
+  - make check
