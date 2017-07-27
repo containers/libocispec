@@ -18,6 +18,53 @@
 
 import os, sys, json
 
+'''
+This function transform "name" to "fixedname" which is conform to Linux Kernel Naming specification
+It has three steps, assume that we have name = "user_CPUCached"
+1. split "name" to an array by '_' and word that beginning with uppercase letter: ["user", "_", "C", "P", "U", "Cached"]
+2. binding single upper string "C" "P" and "U" to "CPU", we got new array: ["user", "_", "CPU", "Cached"]
+3. generate "fixedname" with above array one by one, all elements in the array are translated to lowercase,
+   and add '_' between adjacent elements only when fixedname[-1] != '_' and the following element not beginning with '_'
+Finally, fixedname = "user_cpu_cached"
+'''
+def transform_to_C_name(name):
+    fixedname = ""
+    subname = []
+    tmpindex = 0
+    length = len(name)
+    i = 0
+    while i < length:
+        if (name[i].isupper() or name[i] == '_'):
+            # split index found
+            if tmpindex != i:
+                subname.append(name[tmpindex:i])
+                tmpindex = i
+            # binding whole word
+            if (name[i].isupper()):
+                while (i != (length - 1) and name[i + 1].islower()):
+                    i = i + 1
+            subname.append(name[tmpindex:(i + 1)])
+            tmpindex = i + 1
+        i = i + 1
+
+    # append trailing lower string
+    if tmpindex != length:
+        subname.append(name[tmpindex:length])
+
+    sublength = len(subname)
+    i = 0
+    while i < sublength:
+        if (len(subname[i]) == 1 and subname[i].isupper()):
+            # binding single upper string
+            while(i != (sublength - 1) and len(subname[i + 1]) == 1 and subname[i + 1].isupper()):
+                i = i + 1
+                subname[i] = subname[i-1] + subname[i]
+        if (len(fixedname) != 0 and fixedname[-1] != '_' and subname[i][0] != '_'):
+            fixedname += '_'
+        fixedname += subname[i].lower()
+        i = i + 1
+    return fixedname
+
 class Name:
     def __init__(self, name, leaf=None):
         self.name = name
@@ -37,8 +84,9 @@ class Name:
 class Node:
     def __init__(self, name, typ, children, subtyp=None, subtypobj=None, required=None):
         self.name = name.name
+        self.name = transform_to_C_name(self.name.replace('.', '_'))
         self.origname = name.leaf or name.name
-        self.fixname = self.origname.replace('.', '_')
+        self.fixname = transform_to_C_name(self.origname.replace('.', '_'))
         self.typ = typ
         self.children = children
         self.subtyp = subtyp

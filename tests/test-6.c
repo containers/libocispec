@@ -32,9 +32,9 @@ main (int argc, char *argv[])
     printf ("error %s\n", err);
     exit (1);
   }
-  if (manifest->schemaVersion != 2)
+  if (manifest->schema_version != 2)
     exit (5);
-  if (strcmp (manifest->config->mediaType, "application/vnd.oci.image.config.v1+json"))
+  if (strcmp (manifest->config->media_type, "application/vnd.oci.image.config.v1+json"))
     exit (5);
   if (manifest->config->size != 1470)
     exit (5);
