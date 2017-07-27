@@ -11,4 +11,5 @@ script:
   - NOCONFIGURE=1 ./autogen.sh
   - ./configure
   - make -j 2
+  - make syntax-check
   - make check
