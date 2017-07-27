@@ -29,7 +29,7 @@ src/oci_image_layout_spec.c: image-spec/schema/image-layout-schema.json src/gene
 src/oci_image_manifest_spec.c: image-spec/schema/image-manifest-schema.json src/generate.py
 	$(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-manifest-schema.json src/oci_image_manifest_spec.h src/oci_image_manifest_spec.c image_manifest
 
-$(HEADER_FILES): %.h: %.c
+$(HEADER_FILES): %.h: %.c src/generate.py
 
 BUILT_SOURCES = $(HEADER_FILES) $(SOURCE_FILES)
 
