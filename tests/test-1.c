@@ -42,25 +42,25 @@ main (int argc, char *argv[])
     exit (5);
   if (strcmp (container->mounts[0]->destination, "/proc"))
     exit (5);
-  if (container->linux->resources->blockIO->weightDevice[0]->major != 8)
+  if (container->linux->resources->block_io->weight_device[0]->major != 8)
     exit (5);
-  if (container->linux->resources->blockIO->weightDevice[0]->minor != 0)
+  if (container->linux->resources->block_io->weight_device[0]->minor != 0)
     exit (5);
-  if (container->linux->resources->blockIO->weightDevice[0]->weight != 500)
+  if (container->linux->resources->block_io->weight_device[0]->weight != 500)
     exit (5);
-  if (container->linux->resources->blockIO->weightDevice[0]->leafWeight != 300)
+  if (container->linux->resources->block_io->weight_device[0]->leaf_weight != 300)
     exit (5);
-  if (container->linux->resources->blockIO->throttleReadBpsDevice[0]->major != 8)
+  if (container->linux->resources->block_io->throttle_read_bps_device[0]->major != 8)
     exit (5);
-  if (container->linux->resources->blockIO->throttleReadBpsDevice[0]->minor != 0)
+  if (container->linux->resources->block_io->throttle_read_bps_device[0]->minor != 0)
     exit (5);
-  if (container->linux->resources->blockIO->throttleReadBpsDevice[0]->rate != 600)
+  if (container->linux->resources->block_io->throttle_read_bps_device[0]->rate != 600)
     exit (5);
-  if (container->linux->resources->blockIO->throttleWriteIopsDevice[0]->major != 8)
+  if (container->linux->resources->block_io->throttle_write_iops_device[0]->major != 8)
     exit (5);
-  if (container->linux->resources->blockIO->throttleWriteIopsDevice[0]->minor != 16)
+  if (container->linux->resources->block_io->throttle_write_iops_device[0]->minor != 16)
     exit (5);
-  if (container->linux->resources->blockIO->throttleWriteIopsDevice[0]->rate != 300)
+  if (container->linux->resources->block_io->throttle_write_iops_device[0]->rate != 300)
     exit (5);
   free_oci_container_container (container);
   exit (0);

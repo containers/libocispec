@@ -40,17 +40,17 @@ main (int argc, char *argv[])
     exit (5);
   if (strcmp (image->architecture, "amd64"))
     exit (5);
-  if (strcmp (image->config->User, "1:1"))
+  if (strcmp (image->config->user, "1:1"))
     exit (5);
-  if (strcmp (image->config->Env[1], "FOO=docker_is_a_really"))
+  if (strcmp (image->config->env[1], "FOO=docker_is_a_really"))
     exit (5);
-  if (strcmp (image->config->Entrypoint[0], "/bin/sh"))
+  if (strcmp (image->config->entrypoint[0], "/bin/sh"))
     exit (5);
-  if (image->config->Volumes_len != 2)
+  if (image->config->volumes_len != 2)
     exit (5);
-  if (strcmp (image->config->Volumes[0], "/var/job-result-data"))
+  if (strcmp (image->config->volumes[0], "/var/job-result-data"))
     exit (5);
-  if (strcmp (image->config->Volumes[1], "/var/log/my-app-logs"))
+  if (strcmp (image->config->volumes[1], "/var/log/my-app-logs"))
     exit (5);
   free_oci_image_image (image);
   exit (0);

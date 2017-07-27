@@ -32,13 +32,13 @@ main (int argc, char *argv[])
     printf ("error %s\n", err);
     exit (1);
   }
-  if (image->config->Volumes_len != 0)
+  if (image->config->volumes_len != 0)
     exit (5);
-  if (image->config->Volumes != NULL)
+  if (image->config->volumes != NULL)
     exit (5);
-  if (image->config->ExposedPorts_len != 0)
+  if (image->config->exposed_ports_len != 0)
     exit (5);
-  if (image->config->ExposedPorts != NULL)
+  if (image->config->exposed_ports != NULL)
     exit (5);
   free_oci_image_image (image);
   exit (0);

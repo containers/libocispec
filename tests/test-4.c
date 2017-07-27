@@ -32,7 +32,7 @@ main (int argc, char *argv[])
     printf ("error %s\n", err);
     exit (1);
   }
-  if (image_index->schemaVersion != 2)
+  if (image_index->schema_version != 2)
     exit (5);
   if (image_index->annotations->len != 2)
     exit (5);
@@ -42,7 +42,7 @@ main (int argc, char *argv[])
     exit (5);
   if (strcmp (image_index->annotations->values[1], "value2"))
     exit (5);
-  if (strcmp (image_index->manifests[0]->mediaType, "application/vnd.oci.image.manifest.v1+json"))
+  if (strcmp (image_index->manifests[0]->media_type, "application/vnd.oci.image.manifest.v1+json"))
     exit (5);
   if (image_index->manifests[0]->size != 7143)
     exit (5);

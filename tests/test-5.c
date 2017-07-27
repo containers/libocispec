@@ -32,7 +32,7 @@ main (int argc, char *argv[])
     printf ("error %s\n", err);
     exit (1);
   }
-  if (strcmp (image_layout->imageLayoutVersion, "1.0.0"))
+  if (strcmp (image_layout->image_layout_version, "1.0.0"))
     exit (5);
 
   free_oci_image_layout_image_layout (image_layout);
