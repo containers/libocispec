@@ -705,7 +705,7 @@ oci_%s *oci_%s_parse_data (const char *jsondata, struct libocispec_context *ctx,
     }
     char errbuf[1024];
     if (jsondata == NULL) {
-        *err = strdup ("oci data can not be NULL");
+        *err = strdup ("oci data cannot be NULL");
         return NULL;
     }
     tree = yajl_tree_parse (jsondata, errbuf, sizeof(errbuf));
