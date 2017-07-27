@@ -235,7 +235,7 @@ def generate_C_parse(obj, c_file, prefix):
                 c_file.write('            ret->%s_len = YAJL_GET_OBJECT (tmp)->len;\n' % i.fixname)
                 c_file.write('            ret->%s = safe_malloc (YAJL_GET_OBJECT (tmp)->len * sizeof (*ret->%s));\n' % (i.fixname, i.fixname))
                 c_file.write('            for (i = 0; i < YAJL_GET_OBJECT (tmp)->len; i++) {\n')
-                c_file.write('                const char * key = YAJL_GET_OBJECT (tmp)->keys[i];\n')
+                c_file.write('                const char *key = YAJL_GET_OBJECT (tmp)->keys[i];\n')
                 c_file.write('                if (key) {\n')
                 c_file.write('                     ret->%s[i] = strdup(key) ? : "";\n' % i.fixname)
                 c_file.write('                }\n')
@@ -570,7 +570,7 @@ def generate_C_header(structs, header, prefix):
     header.write("# include <stdint.h>\n\n")
     header.write("# undef linux\n\n")
     header.write("# define LIBOCISPEC_OPTIONS_STRICT 1\n")
-    header.write("typedef char * oci_parser_error;\n")
+    header.write("typedef char *oci_parser_error;\n")
     header.write("typedef struct {\n    char **keys;\n    char **values;\n    size_t len;\n} string_cells;\n\n")
     header.write("struct libocispec_context {\n    int options;\n    FILE *stderr;\n};\n\n")
     for i in structs:

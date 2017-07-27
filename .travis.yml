@@ -12,4 +12,5 @@ script:
   - ./configure
   - make -j $(nproc)
   - make syntax-check
+  - make check
   - make distcheck
