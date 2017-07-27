@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python -Es
 #
 # libocispec - a C library for parsing OCI spec files.
 #
