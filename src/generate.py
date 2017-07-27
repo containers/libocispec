@@ -504,6 +504,8 @@ def generate_C_header(structs, header, prefix):
     for i in structs:
         append_type_C_header(i, header, prefix)
     header.write("oci_%s_%s *oci_%s_parse_file (const char *filename, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (prefix, prefix, prefix))
+    header.write("oci_%s_%s *oci_%s_parse_file_stream (FILE *stream, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (prefix, prefix, prefix))
+    header.write("oci_%s_%s *oci_%s_parse_data (const char *jsondata, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (prefix, prefix, prefix))
     header.write("#endif\n")
 
 def generate_C_code(structs, header_name, c_file, prefix):
@@ -585,11 +587,66 @@ oci_%s_%s *oci_%s_parse_file (const char *filename, struct libocispec_context *c
         return NULL;
     }
 
-    oci_%s_%s *container = make_oci_%s_%s (tree, ctx, err);
+    oci_%s_%s *%s = make_oci_%s_%s (tree, ctx, err);
     yajl_tree_free (tree);
-    return container;
+    return %s;
 }
-""" % (prefix, prefix, prefix, prefix, prefix, prefix, prefix))
+""" % (prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix))
+
+    c_file.write("""\n
+oci_%s_%s *oci_%s_parse_file_stream (FILE *stream, struct libocispec_context *ctx, oci_parser_error *err) {
+    yajl_val tree;
+    size_t filesize;
+    *err = NULL;
+    struct libocispec_context tmp_ctx;
+    if (!ctx) {
+       ctx = &tmp_ctx;
+       memset (&tmp_ctx, 0, sizeof (tmp_ctx));
+    }
+    char *content = fread_file (stream, &filesize);
+    char errbuf[1024];
+    if (content == NULL) {
+        *err = strdup ("cannot read the file");
+        return NULL;
+    }
+    tree = yajl_tree_parse (content, errbuf, sizeof(errbuf));
+    free (content);
+    if (tree == NULL) {
+        *err = strdup ("cannot parse the file");
+        return NULL;
+    }
+
+    oci_%s_%s *%s = make_oci_%s_%s (tree, ctx, err);
+    yajl_tree_free (tree);
+    return %s;
+}
+""" % (prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix))
+
+    c_file.write("""\n
+oci_%s_%s *oci_%s_parse_data (const char *jsondata, struct libocispec_context *ctx, oci_parser_error *err) {
+    yajl_val tree;
+    *err = NULL;
+    struct libocispec_context tmp_ctx;
+    if (!ctx) {
+       ctx = &tmp_ctx;
+       memset (&tmp_ctx, 0, sizeof (tmp_ctx));
+    }
+    char errbuf[1024];
+    if (jsondata == NULL) {
+        *err = strdup ("oci data can not be NULL");
+        return NULL;
+    }
+    tree = yajl_tree_parse (jsondata, errbuf, sizeof(errbuf));
+    if (tree == NULL) {
+        *err = strdup ("cannot parse the oci data");
+        return NULL;
+    }
+
+    oci_%s_%s *%s = make_oci_%s_%s (tree, ctx, err);
+    yajl_tree_free (tree);
+    return %s;
+}
+""" % (prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix))
 
 def generate(schema_json, header_name, header_file, c_file, prefix):
     tree = scan_main(schema_json, prefix)
