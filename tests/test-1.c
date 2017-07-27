@@ -26,7 +26,7 @@ int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_container_container *container = oci_container_parse_file ("tests/config.json", 0, &err);
+  oci_container *container = oci_container_parse_file ("tests/config.json", 0, &err);
 
   if (container == NULL) {
     printf ("error %s\n", err);
@@ -62,6 +62,6 @@ main (int argc, char *argv[])
     exit (5);
   if (container->linux->resources->block_io->throttle_write_iops_device[0]->rate != 300)
     exit (5);
-  free_oci_container_container (container);
+  free_oci_container (container);
   exit (0);
 }

@@ -26,7 +26,7 @@ int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_container_container *container = oci_container_parse_file ("tests/config.nocwd.json", 0, &err);
+  oci_container *container = oci_container_parse_file ("tests/config.nocwd.json", 0, &err);
   if (container != NULL) {
     exit (4);
   }
