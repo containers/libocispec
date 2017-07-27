@@ -26,7 +26,7 @@ int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_image *image = oci_image_parse_file ("tests/image_config.json", 0, &err);
+  oci_image *image = oci_image_parse_file ("tests/data/image_config.json", 0, &err);
 
   if (image == NULL) {
     printf ("error %s\n", err);
