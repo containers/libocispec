@@ -46,6 +46,12 @@ main (int argc, char *argv[])
     exit (5);
   if (strcmp (image->config->Entrypoint[0], "/bin/sh"))
     exit (5);
+  if (image->config->Volumes_len != 2)
+    exit (5);
+  if (strcmp (image->config->Volumes[0], "/var/job-result-data"))
+    exit (5);
+  if (strcmp (image->config->Volumes[1], "/var/log/my-app-logs"))
+    exit (5);
   free_oci_image_image (image);
   exit (0);
 }
