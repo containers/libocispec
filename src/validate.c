@@ -27,7 +27,7 @@ int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_container_container *container;
+  oci_container *container;
   const char *file = "config.json";
   struct libocispec_context ctx;
 
@@ -39,7 +39,7 @@ main (int argc, char *argv[])
 
   container = oci_container_parse_file (file, &ctx, &err);
   if (container)
-    free_oci_container_container (container);
+    free_oci_container (container);
 
   if (err)
     error (EXIT_FAILURE, 0, "error in %s: %s", file, err);

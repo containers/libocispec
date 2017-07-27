@@ -26,7 +26,7 @@ int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_image_index_image_index *image_index = oci_image_index_parse_file ("tests/image_index_config.json", 0, &err);
+  oci_image_index *image_index = oci_image_index_parse_file ("tests/image_index_config.json", 0, &err);
 
   if (image_index == NULL) {
     printf ("error %s\n", err);
@@ -59,6 +59,6 @@ main (int argc, char *argv[])
   if (strcmp (image_index->manifests[0]->platform->architecture, "ppc64le"))
     exit (5);
 
-  free_oci_image_index_image_index (image_index);
+  free_oci_image_index (image_index);
   exit (0);
 }

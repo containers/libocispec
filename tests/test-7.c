@@ -26,7 +26,7 @@ int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_image_image *image = oci_image_parse_file ("tests/image_config_mapstringobject.json", 0, &err);
+  oci_image *image = oci_image_parse_file ("tests/image_config_mapstringobject.json", 0, &err);
 
   if (image == NULL) {
     printf ("error %s\n", err);
@@ -40,6 +40,6 @@ main (int argc, char *argv[])
     exit (5);
   if (image->config->ExposedPorts != NULL)
     exit (5);
-  free_oci_image_image (image);
+  free_oci_image (image);
   exit (0);
 }

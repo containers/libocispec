@@ -26,7 +26,7 @@ int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_image_layout_image_layout *image_layout = oci_image_layout_parse_file ("tests/image_layout_config.json", 0, &err);
+  oci_image_layout *image_layout = oci_image_layout_parse_file ("tests/image_layout_config.json", 0, &err);
 
   if (image_layout == NULL) {
     printf ("error %s\n", err);
@@ -35,6 +35,6 @@ main (int argc, char *argv[])
   if (strcmp (image_layout->imageLayoutVersion, "1.0.0"))
     exit (5);
 
-  free_oci_image_layout_image_layout (image_layout);
+  free_oci_image_layout (image_layout);
   exit (0);
 }

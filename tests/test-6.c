@@ -26,7 +26,7 @@ int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_image_manifest_image_manifest *manifest = oci_image_manifest_parse_file ("tests/image_manifest.json", 0, &err);
+  oci_image_manifest *manifest = oci_image_manifest_parse_file ("tests/image_manifest.json", 0, &err);
 
   if (manifest == NULL) {
     printf ("error %s\n", err);
@@ -48,6 +48,6 @@ main (int argc, char *argv[])
     exit (5);
   if (strcmp(manifest->annotations->values[1], "value2"))
     exit (5);
-  free_oci_image_manifest_image_manifest (manifest);
+  free_oci_image_manifest (manifest);
   exit (0);
 }
