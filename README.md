@@ -1,12 +1,14 @@
 libocispec
 ==========
 
-A library for easily parsing
-of [OCI](https://github.com/opencontainers/runtime-spec) runtime spec
-files from C.
+[![Build Status](https://travis-ci.org/giuseppe/libocispec.svg?branch=master)](https://travis-ci.org/giuseppe/libocispec)
 
-The parser is generated directly from the JSON schema in the
-runtime-spec source repository.
+A library for easily parsing
+of [OCI runtime](https://github.com/opencontainers/runtime-spec)
+and [OCI image](https://github.com/opencontainers/image-spec) files
+from C.
+
+The parser is generated directly from the JSON schema in the source repository.
 
 Parsing an OCI configuration file is easy as:
 
