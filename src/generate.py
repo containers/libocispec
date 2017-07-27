@@ -588,7 +588,7 @@ def generate_C_code(structs, header_name, c_file, prefix):
     c_file.write('#include <stdlib.h>\n')
     c_file.write('#include <string.h>\n')
     c_file.write('#include <stdio.h>\n')
-    c_file.write('#include "read-file.h"\n')
+    c_file.write('#include <read-file.h>\n')
     c_file.write('#include "%s"\n\n' % header_name)
     c_file.write("FILE *oci_parser_errfile;\n\n")
     c_file.write('static yajl_val get_val(yajl_val tree, const char *name, yajl_type type) {\n')
