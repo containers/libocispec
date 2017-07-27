@@ -78,7 +78,7 @@ def make_pointer(name, typ, prefix):
     return "%s *" % make_name(name, prefix)
 
 def is_compound_object(typ):
-    return typ in ['object', 'array']
+    return typ in ['object', 'array', 'mapStringObject']
 
 def is_numeric_type(typ):
     if typ.startswith("int") or typ.startswith("uint"):
@@ -104,7 +104,7 @@ def generate_C_parse(obj, c_file, prefix):
         return
     if obj.typ == 'object':
         obj_typename = typename = make_name(obj.name, prefix)
-    elif obj.typ == 'array':
+    elif obj.typ == 'array' or obj.typ == "mapStringObject":
         obj_typename = typename = make_name_array(obj.name, prefix)
         objs = obj.subtypobj
         if objs is None:
@@ -124,7 +124,7 @@ def generate_C_parse(obj, c_file, prefix):
 
     if obj.typ == 'mapStringString':
         pass
-    elif obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
+    elif obj.typ == 'object' or ((obj.typ == 'array' or obj.typ == 'mapStringObject') and obj.subtypobj):
         nodes = obj.children if obj.typ == 'object' else obj.subtypobj
 
         required_to_check = []
@@ -175,6 +175,25 @@ def generate_C_parse(obj, c_file, prefix):
                 c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
                 read_value_generator(c_file, 4, 'tmpsub', "ret->%s[i]" % i.fixname, i.subtyp)
                 c_file.write('            }\n')
+                c_file.write('        }\n')
+                c_file.write('    }\n')
+            elif i.typ == 'mapStringObject':
+                c_file.write('    {\n')
+                c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_object);\n' % (i.origname))
+                c_file.write('        if (tmp != NULL) {\n')
+                c_file.write('            size_t i;\n')
+                c_file.write('            ret->%s_len = YAJL_GET_OBJECT (tmp)->len;\n' % i.fixname)
+                c_file.write('            ret->%s = safe_malloc (YAJL_GET_OBJECT (tmp)->len * sizeof (*ret->%s));\n' % (i.fixname, i.fixname))
+                c_file.write('            for (i = 0; i < YAJL_GET_OBJECT (tmp)->len; i++) {\n')
+                c_file.write('                const char * key = YAJL_GET_OBJECT (tmp)->keys[i];\n')
+                c_file.write('                if (key) {\n')
+                c_file.write('                     ret->%s[i] = strdup(key) ? : "";\n' % i.fixname)
+                c_file.write('                }\n')
+                c_file.write('            }\n')
+                c_file.write('        }\n')
+                c_file.write('        else\n')
+                c_file.write('        {\n')
+                c_file.write('            ret->%s_len = 0;\n' % i.fixname)
                 c_file.write('        }\n')
                 c_file.write('    }\n')
             elif i.typ == 'mapStringString':
@@ -236,7 +255,7 @@ def generate_C_free(obj, c_file, prefix):
         objs = []
     if obj.typ == 'object':
         objs = obj.children
-    elif obj.typ == 'array':
+    elif obj.typ == 'array' or obj.typ == 'mapStringObject':
         objs = obj.subtypobj
         if objs is None:
             return
@@ -252,7 +271,7 @@ def generate_C_free(obj, c_file, prefix):
             free_func = make_name(i.name, prefix)
             c_file.write("    free_%s (ptr->%s);\n" % (free_func, i.fixname))
             c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
-        elif i.typ == 'array':
+        elif i.typ == 'array' or i.typ == 'mapStringObject':
             if i.subtyp == 'mapStringString':
                 free_func = make_name_array(i.name, prefix)
                 c_file.write("    if (ptr->%s) {\n" % i.fixname)
@@ -304,12 +323,12 @@ def append_type_C_header(obj, header, prefix):
     if obj.typ == 'mapStringString':
         typename = make_name(obj.name, prefix)
         header.write("typedef string_cells %s;\n\n" % typename)
-    elif obj.typ == 'array':
+    elif obj.typ == 'array' or obj.typ == 'mapStringObject':
         if not obj.subtypobj:
             return
         header.write("typedef struct {\n")
         for i in obj.subtypobj:
-            if i.typ == 'array':
+            if i.typ == 'array' or i.typ == 'mapStringObject':
                 c_typ = make_pointer(i.name, i.subtyp, prefix) or c_types_mapping[i.subtyp]
                 if i.subtypobj is not None:
                     c_typ = make_name_array(i.name, prefix)
@@ -329,7 +348,7 @@ def append_type_C_header(obj, header, prefix):
     elif obj.typ == 'object':
         header.write("typedef struct {\n")
         for i in (obj.children or []):
-            if i.typ == 'array':
+            if i.typ == 'array' or i.typ == 'mapStringObject':
                 if i.subtypobj is not None:
                     c_typ = make_name_array(i.name, prefix)
                 else:
@@ -368,7 +387,7 @@ def get_ref(src, ref):
             basic_types = [
                 "int8", "int16", "int32", "int64",
                 "uint8", "uint16", "uint32", "uint64", "UID", "GID",
-                "mapStringString", "ArrayOfStrings"
+                "mapStringString", "ArrayOfStrings", "mapStringObject"
             ]
             if j in basic_types:
                 return src, {"type" : j}
@@ -408,7 +427,7 @@ def resolve_type(name, src, cur):
     subtyp = None
     subtypobj = None
     required = None
-    if typ == 'mapStringString' or typ == 'mapStringObject':
+    if typ == 'mapStringString':
         pass
     elif typ == 'array':
         if 'allOf' in cur["items"]:
@@ -436,6 +455,9 @@ def resolve_type(name, src, cur):
             required = cur['required']
     elif typ == 'ArrayOfStrings':
         typ = 'array'
+        subtyp = 'string'
+        children = subtypobj = None
+    elif typ == 'mapStringObject':
         subtyp = 'string'
         children = subtypobj = None
     else:

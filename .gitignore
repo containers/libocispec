@@ -44,9 +44,12 @@ tests/test-5.log
 tests/test-5.trs
 tests/test-6.log
 tests/test-6.trs
+tests/test-7.log
+tests/test-7.trs
 tests/test-1
 tests/test-2
 tests/test-3
 tests/test-4
 tests/test-5
 tests/test-6
+tests/test-7

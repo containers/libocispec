@@ -26,31 +26,19 @@ int
 main (int argc, char *argv[])
 {
   oci_parser_error err;
-  oci_image_image *image = oci_image_parse_file ("tests/image_config.json", 0, &err);
+  oci_image_image *image = oci_image_parse_file ("tests/image_config_mapstringobject.json", 0, &err);
 
   if (image == NULL) {
     printf ("error %s\n", err);
     exit (1);
   }
-  if (strcmp (image->author, "Alyssa P. Hacker <alyspdev@example.com>"))
+  if (image->config->Volumes_len != 0)
     exit (5);
-  if (strcmp (image->created, "2015-10-31T22:22:56.015925234Z"))
+  if (image->config->Volumes != NULL)
     exit (5);
-  if (strcmp (image->os, "linux"))
+  if (image->config->ExposedPorts_len != 0)
     exit (5);
-  if (strcmp (image->architecture, "amd64"))
-    exit (5);
-  if (strcmp (image->config->User, "1:1"))
-    exit (5);
-  if (strcmp (image->config->Env[1], "FOO=docker_is_a_really"))
-    exit (5);
-  if (strcmp (image->config->Entrypoint[0], "/bin/sh"))
-    exit (5);
-  if (image->config->Volumes_len != 2)
-    exit (5);
-  if (strcmp (image->config->Volumes[0], "/var/job-result-data"))
-    exit (5);
-  if (strcmp (image->config->Volumes[1], "/var/log/my-app-logs"))
+  if (image->config->ExposedPorts != NULL)
     exit (5);
   free_oci_image_image (image);
   exit (0);
