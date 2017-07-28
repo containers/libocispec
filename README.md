@@ -13,7 +13,7 @@ The parser is generated directly from the JSON schema in the source repository.
 Parsing an OCI configuration file is easy as:
 
 ```c
-    oci_container_container *container = oci_parse_file ("config.json", NULL, &err);
+    oci_container *container = oci_container_parse_file ("config.json", NULL, &err);
 
     if (container == NULL)
       exit (EXIT_FAILURE);
@@ -25,6 +25,6 @@ Parsing an OCI configuration file is easy as:
     for (size_t i; i < container->mounts_len; i++)
         printf ("Mounting to %s\n", container->mounts[i]->destination);
 
-    printf ("Running as user ID and GID %d %d\n", container->process->uid, container->process->gid);
+    printf ("Running as user ID and GID %d %d\n", container->process->user->uid, container->process->user->gid);
 
 ```
