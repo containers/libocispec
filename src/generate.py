@@ -739,7 +739,7 @@ if __name__ == "__main__":
         os.chdir(os.path.dirname(schema_file))
         with open(os.path.basename(schema_file)) as schema:
             schema_json = json.loads(schema.read())
-        generate(schema_json, header, header_file, c_file, prefix)
+        generate(schema_json, os.path.basename(header), header_file, c_file, prefix)
     os.chdir(oldcwd)
     os.rename(header + ".tmp", header)
     os.rename(c_source + ".tmp", c_source)
