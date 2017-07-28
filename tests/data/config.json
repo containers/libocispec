@@ -183,7 +183,7 @@
                         "rate": 600
                     }
                 ],
-                "throttleWriteIopsDevice": [
+                "throttleWriteIOPSDevice": [
                     {
                         "major": 8,
                         "minor": 16,
