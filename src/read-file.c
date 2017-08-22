@@ -41,7 +41,7 @@ fread_file (FILE *stream, size_t *length)
       if (ret < BUFSIZ || feof (stream))
         {
           *length = off + ret;
-          buf[*length - 1] = '\0';
+          buf[*length] = '\0';
           return buf;
         }
       off += BUFSIZ;
