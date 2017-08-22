@@ -62,6 +62,10 @@ main (int argc, char *argv[])
     exit (5);
   if (container->linux->resources->block_io->throttle_write_iops_device[0]->rate != 300)
     exit (5);
+  if (container->linux->namespaces_len != 5)
+    exit (5);
+  if (strcmp(container->linux->namespaces[2]->type, "ipc"))
+    exit (5);
   free_oci_container (container);
   exit (0);
 }

@@ -485,8 +485,9 @@ def resolve_type(name, src, cur):
             subtyp = children[0].typ
             subtypobj = children
         elif 'anyOf' in cur["items"]:
-            children = scan_list(name, src, cur["items"]['anyOf'])
-            subtyp = children[0].typ
+            anychildren = scan_list(name, src, cur["items"]['anyOf'])
+            subtyp = anychildren[0].typ
+            children = anychildren[0].children
             subtypobj = children
         elif '$ref' in cur["items"]:
             item_type, src = resolve_type(name, src, cur["items"])
