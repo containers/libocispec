@@ -10,7 +10,8 @@ SOURCE_FILES = src/oci_runtime_spec.c \
 	src/oci_image_spec.c \
 	src/oci_image_index_spec.c \
 	src/oci_image_layout_spec.c \
-	src/oci_image_manifest_spec.c
+	src/oci_image_manifest_spec.c \
+	src/oci_common.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
 
@@ -92,5 +93,6 @@ EXTRA_DIST = autogen.sh \
 	src/generate.py \
 	$(HEADER_FILES) \
 	src/read-file.h \
+	src/oci_common.h \
 	runtime-spec \
 	image-spec

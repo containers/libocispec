@@ -27,6 +27,7 @@ main (int argc, char *argv[])
 {
   oci_parser_error err;
   oci_container *container = oci_container_parse_file ("tests/data/config.json", 0, &err);
+  char *result = NULL;
 
   if (container == NULL) {
     printf ("error %s\n", err);
@@ -66,6 +67,16 @@ main (int argc, char *argv[])
     exit (5);
   if (strcmp(container->linux->namespaces[2]->type, "ipc"))
     exit (5);
+
+  result = oci_container_generate_json(container, 0, &err);
+  if (result) {
+    printf("res:%s\n", result);
+  } else {
+    printf("error %s\n", err);
+    exit (1);
+  }
+
+  free(result);
   free_oci_container (container);
   exit (0);
 }
