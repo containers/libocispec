@@ -315,10 +315,57 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                c_file.write('        stat = reformat_string(g, pstruct->%s, strlen(pstruct->%s));\n' % (i.fixname, i.fixname))
+                json_value_generator(c_file, 2, "pstruct->%s" % i.fixname, 'g', i.typ)
+                c_file.write("    }\n")
+
+            elif is_numeric_type(i.typ):
+                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                c_file.write("    }\n");
+                json_value_generator(c_file, 2, "pstruct->%s" % i.fixname, 'g', i.typ)
+                c_file.write("    }\n")
+
+            elif i.typ == 'boolean':
+                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write("        if (!stat)\n")
+                c_file.write("            return false;\n")
+                json_value_generator(c_file, 2, "pstruct->%s" % i.fixname, 'g', i.typ)
+                c_file.write("    }\n")
+
+            elif i.typ ==  'object':
+                typename = make_name(i.name, prefix)
+                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write("        if (!stat)\n")
+                c_file.write("            return false;\n")
+                c_file.write('        stat = gen_%s(g, pstruct->%s, ctx, err);\n' % (typename, i.fixname))
+                c_file.write("        if (!stat)\n")
+                c_file.write("            return false;\n")
+                c_file.write("    }\n")
+            elif i.typ == 'array' and i.subtypobj:
+                pass
+            elif i.typ == 'array' and i.subtyp == 'mapStringString':
+                pass
+            elif i.typ == 'array':
+                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write("        if (!stat)\n")
+                c_file.write("            return false;\n")
+                c_file.write('        size_t i;\n')
+                c_file.write('        stat = reformat_start_array(g);\n')
+                c_file.write("        if (!stat)\n")
+                c_file.write("            return false;\n")
+                c_file.write('        for (i = 0; i < pstruct->%s_len; i++) {\n' % (i.fixname))
+                json_value_generator(c_file, 3, "pstruct->%s[i]" % i.fixname, 'g', i.subtyp)
+                c_file.write('        }\n')
+                c_file.write('        stat = reformat_end_array(g);\n')
+                c_file.write("        if (!stat)\n")
+                c_file.write("            return false;\n")
+                c_file.write('    }\n')
+
+
         c_file.write("    stat = reformat_end_map(g);\n")
         c_file.write("    if (!stat)\n")
         c_file.write("        return false;\n")
@@ -341,6 +388,21 @@ def read_value_generator(c_file, level, src, dest, typ):
         c_file.write('%sif (%s)\n' % ('    ' * level, src))
         c_file.write('%s%s = YAJL_IS_TRUE (%s);\n' % ('    ' * (level + 1), dest, src))
 
+def json_value_generator(c_file, level, src, dst, typ):
+    if typ == 'string':
+        c_file.write('%sstat = reformat_string(%s, %s, strlen(%s));\n' % ('    ' * (level), dst, src, src))
+        c_file.write("%sif (!stat)\n" % ('    ' * (level)))
+        c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
+
+    elif is_numeric_type(typ):
+        c_file.write('%sstat = reformat_integer(%s, %s);\n' % ('    ' * (level), dst, src))
+        c_file.write("%sif (!stat)\n" % ('    ' * (level)))
+        c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
+
+    elif typ == 'boolean':
+        c_file.write('%sstat = reformat_boolean(%s, 1);\n' % ('    ' * (level), dst))
+        c_file.write("%sif (!stat)\n" % ('    ' * (level)))
+        c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
 
 def generate_C_free(obj, c_file, prefix):
     if not is_compound_object(obj.typ) and obj.typ != 'mapStringString':
