@@ -365,9 +365,6 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write("            return false;\n")
                 c_file.write('    }\n')
 
-            elif i.typ == 'array' and i.subtyp == 'mapStringString':
-                pass
-
             elif i.typ == 'array':
                 c_file.write('    if (pstruct->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
@@ -384,7 +381,13 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('    }\n')
-
+            elif i.typ == 'mapStirngString':
+                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write("        if (!stat)\n")
+                c_file.write("            return false;\n")
+                json_value_generator(c_file, 2, "pstruct->%s" % i.fixname, 'g', i.typ)
+                c_file.write("    }\n")
 
         c_file.write("    stat = reformat_end_map(g);\n")
         c_file.write("    if (!stat)\n")
@@ -409,7 +412,11 @@ def read_value_generator(c_file, level, src, dest, typ):
         c_file.write('%s%s = YAJL_IS_TRUE (%s);\n' % ('    ' * (level + 1), dest, src))
 
 def json_value_generator(c_file, level, src, dst, typ):
-    if typ == 'string':
+    if typ == 'mapStringString':
+        c_file.write('%sstat = gen_map_string_string(%s, %s);\n' % ('    ' * (level), dst, src))
+        c_file.write("%sif (!stat)\n" % ('    ' * (level)))
+        c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
+    elif typ == 'string':
         c_file.write('%sstat = reformat_string(%s, %s, strlen(%s));\n' % ('    ' * (level), dst, src, src))
         c_file.write("%sif (!stat)\n" % ('    ' * (level)))
         c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
@@ -693,9 +700,8 @@ def generate_C_header(structs, header, prefix):
     header.write("#ifndef %s_SCHEMA_H\n" % prefix.upper())
     header.write("# define %s_SCHEMA_H\n\n" % prefix.upper())
     header.write("# include <sys/types.h>\n")
-    header.write("# include <yajl/yajl_tree.h>\n")
     header.write("# include <stdint.h>\n")
-    header.write("# include \"oci_common.h\"\n\n")
+    header.write("# include \"oci_json_common.h\"\n\n")
 
     for i in structs:
         append_type_C_header(i, header, prefix)
@@ -710,53 +716,9 @@ def generate_C_code(structs, header_name, c_file, prefix):
     c_file.write("# ifndef _GNU_SOURCE\n")
     c_file.write("#  define _GNU_SOURCE\n")
     c_file.write("# endif\n")
-    c_file.write('#include <stdlib.h>\n')
     c_file.write('#include <string.h>\n')
-    c_file.write('#include <stdio.h>\n')
     c_file.write('#include <read-file.h>\n')
     c_file.write('#include "%s"\n\n' % header_name)
-    c_file.write("FILE *oci_parser_errfile;\n\n")
-    c_file.write('static yajl_val get_val(yajl_val tree, const char *name, yajl_type type) {\n')
-    c_file.write('    const char *path[] = { name, NULL };\n')
-    c_file.write('    return yajl_tree_get (tree, path, type);\n')
-    c_file.write('}\n\n')
-    c_file.write('static void free_cells (string_cells *cells) {\n')
-    c_file.write("    if (cells) {\n")
-    c_file.write("        size_t i;\n")
-    c_file.write("        for (i = 0; i < cells->len; i++) {\n")
-    c_file.write("            free (cells->keys[i]);\n")
-    c_file.write("            free (cells->values[i]);\n")
-    c_file.write("        }\n")
-    c_file.write("        free (cells);\n")
-    c_file.write("    }\n")
-    c_file.write("}\n\n")
-    c_file.write('static void *safe_malloc (size_t size) {\n')
-    c_file.write("    void *ret = malloc (size);\n")
-    c_file.write("    if (ret == NULL)\n")
-    c_file.write("        abort ();\n")
-    c_file.write("    memset (ret, 0, size);\n")
-    c_file.write("    return ret;\n")
-    c_file.write("}\n\n")
-
-    c_file.write('static string_cells *read_map_string_string (yajl_val src) {\n')
-    c_file.write('    string_cells *ret = NULL;\n')
-    c_file.write('    if (src != NULL) {\n')
-    c_file.write('        size_t i;\n')
-    c_file.write('        ret = safe_malloc (sizeof (string_cells));\n')
-    c_file.write('        ret->len = YAJL_GET_OBJECT (src)->len;\n')
-    c_file.write('        ret->keys = safe_malloc ((YAJL_GET_OBJECT (src)->len + 1) * sizeof (char *));\n')
-    c_file.write('        ret->values = safe_malloc ((YAJL_GET_OBJECT (src)->len + 1) * sizeof (char *));\n')
-    c_file.write('        for (i = 0; i < YAJL_GET_OBJECT (src)->len; i++) {\n')
-    c_file.write('            yajl_val srcsub = YAJL_GET_OBJECT (src)->values[i];\n')
-    c_file.write('            ret->keys[i] = strdup (YAJL_GET_OBJECT (src)->keys[i] ? : "");\n')
-    c_file.write('            if (srcsub)\n')
-    c_file.write('                ret->values[i] = strdup (YAJL_GET_STRING (srcsub) ? : "");\n')
-    c_file.write('            else\n')
-    c_file.write('                ret->values[i] = NULL;\n')
-    c_file.write('        }\n')
-    c_file.write('    }\n')
-    c_file.write('    return ret;\n')
-    c_file.write('}\n\n')
 
     for i in structs:
         append_C_code(i, c_file, prefix)
@@ -899,9 +861,12 @@ def generate_common_C_header(header_file):
     header_file.write("""// autogenerated file
 #ifndef _OCI_COMMON_H
 # define _OCI_COMMON_H\n
-#include <stdbool.h>
-#include <stdio.h>
-#include <yajl/yajl_gen.h>\n
+# include <stdbool.h>
+# include <stdio.h>
+# include <string.h>
+# include <stdlib.h>
+# include <yajl/yajl_tree.h>
+# include <yajl/yajl_gen.h>\n
 # undef linux
 # define LIBOCISPEC_OPTIONS_STRICT 1
 typedef char *oci_parser_error;\n
@@ -928,13 +893,18 @@ int reformat_start_map(void *ctx);\n
 int reformat_end_map(void *ctx);\n
 int reformat_start_array(void *ctx);\n
 int reformat_end_array(void *ctx);\n
+int gen_map_string_string(void *ctx, string_cells *cells);\n
 bool json_gen_init(yajl_gen *g);\n
+yajl_val get_val(yajl_val tree, const char *name, yajl_type type);\n
+string_cells *read_map_string_string (yajl_val src);\n
+void free_cells (string_cells *cells);\n
+void *safe_malloc (size_t size);\n
 #endif
 """)
 
 def generate_common_C_code(c_file):
     c_file.write("""// autogenerated file
-#include "oci_common.h"\n
+#include "oci_json_common.h"\n
 int reformat_integer(void *ctx, long long int num) {
     yajl_gen g = (yajl_gen) ctx;
     GEN_AND_RETURN(yajl_gen_integer(g,num));
@@ -979,6 +949,28 @@ int reformat_end_array(void *ctx) {
     yajl_gen g = (yajl_gen) ctx;
     GEN_AND_RETURN(yajl_gen_array_close(g));
 }\n
+int gen_map_string_string(void *ctx, string_cells *cells) {
+    bool stat = true;
+    yajl_gen g = (yajl_gen) ctx;
+    size_t i = 0;
+    if (!cells)
+        return false;\n
+    stat = reformat_start_map(g);
+    if (!stat)
+        return false;\n
+    for (i = 0; i < cells->len; i++) {
+        stat = reformat_map_key(g, cells->keys[i], strlen(cells->keys[i]));
+        if (!stat)
+            return false;
+        stat = reformat_string(g, cells->values[i], strlen(cells->values[i]));
+        if (!stat)
+            return false;
+    }\n
+    stat = reformat_end_map(g);
+    if (!stat)
+        return false;
+    return true;
+}\n
 bool json_gen_init(yajl_gen *g) {
     *g = yajl_gen_alloc(NULL);
     if (NULL == *g)
@@ -987,6 +979,46 @@ bool json_gen_init(yajl_gen *g) {
     yajl_gen_config(*g, yajl_gen_validate_utf8, 1);
     return true;
 }\n
+yajl_val get_val(yajl_val tree, const char *name, yajl_type type) {
+    const char *path[] = { name, NULL };
+    return yajl_tree_get (tree, path, type);
+}\n
+void free_cells (string_cells *cells) {
+    if (cells) {
+        size_t i;
+        for (i = 0; i < cells->len; i++) {
+            free (cells->keys[i]);
+            free (cells->values[i]);
+        }
+        free (cells);
+    }
+}\n
+void *safe_malloc (size_t size) {
+    void *ret = malloc (size);
+    if (ret == NULL)
+        abort ();
+    memset (ret, 0, size);
+    return ret;
+}\n
+string_cells *read_map_string_string (yajl_val src) {
+    string_cells *ret = NULL;
+    if (src != NULL) {
+        size_t i;
+        ret = safe_malloc (sizeof (string_cells));
+        ret->len = YAJL_GET_OBJECT (src)->len;
+        ret->keys = safe_malloc ((YAJL_GET_OBJECT (src)->len + 1) * sizeof (char *));
+        ret->values = safe_malloc ((YAJL_GET_OBJECT (src)->len + 1) * sizeof (char *));
+        for (i = 0; i < YAJL_GET_OBJECT (src)->len; i++) {
+            yajl_val srcsub = YAJL_GET_OBJECT (src)->values[i];
+            ret->keys[i] = strdup (YAJL_GET_OBJECT (src)->keys[i] ? : "");
+            if (srcsub)
+                ret->values[i] = strdup (YAJL_GET_STRING (srcsub) ? : "");
+            else
+                ret->values[i] = NULL;
+        }
+    }
+    return ret;
+}
 """)
 
 def generate_common_file(header_file, c_file):
@@ -999,7 +1031,7 @@ if __name__ == "__main__":
     c_source = sys.argv[3]
     prefix = sys.argv[4]
     oldcwd = os.getcwd()
-    with open("src/oci_common.h", "w") as common_h_file, open("src/oci_common.c", "w") as common_c_file:
+    with open("src/oci_json_common.h", "w") as common_h_file, open("src/oci_json_common.c", "w") as common_c_file:
         generate_common_file(common_h_file, common_c_file)
     with open(header + ".tmp", "w") as header_file, open(c_source + ".tmp", "w") as c_file:
         os.chdir(os.path.dirname(schema_file))
