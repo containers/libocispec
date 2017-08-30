@@ -254,6 +254,7 @@ def generate_C_parse(obj, c_file, prefix):
                 c_file.write('            ret->%s = read_map_string_string (tmp);\n' % (i.fixname))
                 c_file.write('        }\n')
                 c_file.write('    }\n')
+
         for i in required_to_check:
             c_file.write('    if (ret->%s == NULL) {\n' % i.fixname)
             c_file.write('        if (asprintf (err, "Required field %%s not present", "%s") < 0) {\n' % i.origname)
@@ -295,7 +296,7 @@ def generate_C_json(obj, c_file, prefix):
         objs = []
 
 
-    c_file.write("bool gen_%s (yajl_gen g, %s *pstruct, struct libocispec_context *ctx, oci_parser_error *err) {\n" % (typename, typename))
+    c_file.write("static bool gen_%s (yajl_gen g, %s *pstruct, struct libocispec_context *ctx, oci_parser_error *err) {\n" % (typename, typename))
     c_file.write("    bool stat = true;\n")
     c_file.write("    *err = 0;\n")
     c_file.write("    if (pstruct == NULL || g == NULL || err == NULL)\n")
@@ -408,12 +409,14 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write("            return false;\n")
                 c_file.write('    }\n')
 
-            elif i.typ == 'mapStirngString':
+            elif i.typ == 'mapStringString':
                 c_file.write('    if (pstruct->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                json_value_generator(c_file, 2, "pstruct->%s" % i.fixname, 'g', i.typ)
+                c_file.write('        stat = gen_map_string_string(g, pstruct->%s);\n' % i.fixname)
+                c_file.write("        if (!stat)\n")
+                c_file.write("            return false;\n")
                 c_file.write("    }\n")
 
         c_file.write("    stat = reformat_end_map(g);\n")

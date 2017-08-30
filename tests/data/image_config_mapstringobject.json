@@ -19,6 +19,9 @@
             "/etc/my-app.d/default.cfg"
         ],
         "Volumes": null,
+        "ExposedPorts": {
+            "8080/tcp": {}
+        },
         "StopSignal": "SIGKILL",
         "WorkingDir": "/home/alice",
         "Labels": {

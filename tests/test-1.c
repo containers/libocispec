@@ -27,56 +27,61 @@ main (int argc, char *argv[])
 {
   oci_parser_error err;
   oci_container *container = oci_container_parse_file ("tests/data/config.json", 0, &err);
-  char *result = NULL;
+  oci_container *container_gen = NULL;
+  char *json_buf = NULL;
 
   if (container == NULL) {
     printf ("error %s\n", err);
     exit (1);
   }
-  if (strcmp (container->hostname, "runc"))
-    exit (5);
-  if (strcmp (container->process->cwd, "/cwd"))
-    exit (5);
-  if (container->process->user->uid != 101)
-    exit (5);
-  if (strcmp (container->process->args[0], "ARGS1"))
-    exit (5);
-  if (strcmp (container->mounts[0]->destination, "/proc"))
-    exit (5);
-  if (container->linux->resources->block_io->weight_device[0]->major != 8)
-    exit (5);
-  if (container->linux->resources->block_io->weight_device[0]->minor != 0)
-    exit (5);
-  if (container->linux->resources->block_io->weight_device[0]->weight != 500)
-    exit (5);
-  if (container->linux->resources->block_io->weight_device[0]->leaf_weight != 300)
-    exit (5);
-  if (container->linux->resources->block_io->throttle_read_bps_device[0]->major != 8)
-    exit (5);
-  if (container->linux->resources->block_io->throttle_read_bps_device[0]->minor != 0)
-    exit (5);
-  if (container->linux->resources->block_io->throttle_read_bps_device[0]->rate != 600)
-    exit (5);
-  if (container->linux->resources->block_io->throttle_write_iops_device[0]->major != 8)
-    exit (5);
-  if (container->linux->resources->block_io->throttle_write_iops_device[0]->minor != 16)
-    exit (5);
-  if (container->linux->resources->block_io->throttle_write_iops_device[0]->rate != 300)
-    exit (5);
-  if (container->linux->namespaces_len != 5)
-    exit (5);
-  if (strcmp(container->linux->namespaces[2]->type, "ipc"))
-    exit (5);
-
-  result = oci_container_generate_json(container, 0, &err);
-  if (result) {
-    printf("res:%s\n", result);
-  } else {
-    printf("error %s\n", err);
+  json_buf = oci_container_generate_json(container, 0, &err);
+  if (json_buf == NULL) {
+    printf("gen error %s\n", err);
+    exit (1);
+  }
+  container_gen = oci_container_parse_data(json_buf, 0, &err);
+  if (container == NULL) {
+    printf ("parse error %s\n", err);
     exit (1);
   }
 
-  free(result);
+  if (strcmp (container->hostname, "runc") && strcmp(container->hostname, container_gen->hostname))
+    exit (5);
+  if (strcmp (container->process->cwd, "/cwd") && strcmp (container->process->cwd, container_gen->process->cwd))
+    exit (5);
+  if (container->process->user->uid != 101 || container_gen->process->user->uid != 101)
+    exit (5);
+  if (strcmp (container->process->args[0], "ARGS1") && strcmp (container->process->args[0], container_gen->process->args[0]))
+    exit (5);
+  if (strcmp (container->mounts[0]->destination, "/proc") && strcmp (container->mounts[0]->destination, container_gen->mounts[0]->destination))
+    exit (5);
+  if (container->linux->resources->block_io->weight_device[0]->major != 8 || container_gen->linux->resources->block_io->weight_device[0]->major != 8)
+    exit (5);
+  if (container->linux->resources->block_io->weight_device[0]->minor != 0 || container_gen->linux->resources->block_io->weight_device[0]->minor != 0)
+    exit (5);
+  if (container->linux->resources->block_io->weight_device[0]->weight != 500 || container_gen->linux->resources->block_io->weight_device[0]->weight != 500)
+    exit (5);
+  if (container->linux->resources->block_io->weight_device[0]->leaf_weight != 300 || container_gen->linux->resources->block_io->weight_device[0]->leaf_weight != 300)
+    exit (5);
+  if (container->linux->resources->block_io->throttle_read_bps_device[0]->major != 8 || container_gen->linux->resources->block_io->throttle_read_bps_device[0]->major != 8)
+    exit (5);
+  if (container->linux->resources->block_io->throttle_read_bps_device[0]->minor != 0 || container_gen->linux->resources->block_io->throttle_read_bps_device[0]->minor != 0)
+    exit (5);
+  if (container->linux->resources->block_io->throttle_read_bps_device[0]->rate != 600 || container_gen->linux->resources->block_io->throttle_read_bps_device[0]->rate != 600)
+    exit (5);
+  if (container->linux->resources->block_io->throttle_write_iops_device[0]->major != 8 || container_gen->linux->resources->block_io->throttle_write_iops_device[0]->major != 8)
+    exit (5);
+  if (container->linux->resources->block_io->throttle_write_iops_device[0]->minor != 16 || container_gen->linux->resources->block_io->throttle_write_iops_device[0]->minor != 16)
+    exit (5);
+  if (container->linux->resources->block_io->throttle_write_iops_device[0]->rate != 300 || container_gen->linux->resources->block_io->throttle_write_iops_device[0]->rate != 300)
+    exit (5);
+  if (container->linux->namespaces_len != 5 || container_gen->linux->namespaces_len != 5)
+    exit (5);
+  if (strcmp(container->linux->namespaces[2]->type, "ipc") && strcmp(container->linux->namespaces[2]->type, container_gen->linux->namespaces[2]->type))
+    exit (5);
+
+  free(json_buf);
   free_oci_container (container);
+  free_oci_container (container_gen);
   exit (0);
 }
