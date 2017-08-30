@@ -27,6 +27,7 @@ main (int argc, char *argv[])
 {
   oci_parser_error err;
   oci_image *image = oci_image_parse_file ("tests/data/image_config.json", 0, &err);
+  char *result = NULL;
 
   if (image == NULL) {
     printf ("error %s\n", err);
@@ -52,6 +53,15 @@ main (int argc, char *argv[])
     exit (5);
   if (strcmp (image->config->volumes[1], "/var/log/my-app-logs"))
     exit (5);
+  result = oci_image_generate_json(image, 0, &err);
+  if (result) {
+    printf("res:%s\n", result);
+  } else {
+    printf("error %s\n", err);
+    exit (1);
+  }
+
+  free(result);
   free_oci_image (image);
   exit (0);
 }
