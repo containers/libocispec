@@ -27,27 +27,44 @@ main (int argc, char *argv[])
 {
   oci_parser_error err;
   oci_image_manifest *manifest = oci_image_manifest_parse_file ("tests/data/image_manifest.json", 0, &err);
+  oci_image_manifest *manifest_gen = NULL;
+  char *json_buf = NULL;
 
   if (manifest == NULL) {
     printf ("error %s\n", err);
     exit (1);
   }
-  if (manifest->schema_version != 2)
+  json_buf = oci_image_manifest_generate_json(manifest, 0, &err);
+  if (json_buf == NULL) {
+    printf("gen error %s\n", err);
+    exit (1);
+  }
+  manifest_gen = oci_image_manifest_parse_data(json_buf, 0, &err);
+  if (manifest_gen == NULL) {
+    printf("parse error %s\n", err);
+    exit(1);
+  }
+
+  if (manifest->schema_version != 2 || manifest_gen->schema_version != 2)
     exit (5);
-  if (strcmp (manifest->config->media_type, "application/vnd.oci.image.config.v1+json"))
+  if (strcmp (manifest->config->media_type, "application/vnd.oci.image.config.v1+json") && strcmp (manifest->config->media_type, manifest_gen->config->media_type))
     exit (5);
-  if (manifest->config->size != 1470)
+  if (manifest->config->size != 1470 || manifest_gen->config->size != 1470)
     exit (5);
-  if (manifest->layers_len != 3)
+  if (manifest->layers_len != 3 || manifest_gen->layers_len != 3)
     exit (5);
-  if (strcmp (manifest->layers[1]->digest, "sha256:2b689805fbd00b2db1df73fae47562faac1a626d5f61744bfe29946ecff5d73d"))
+  if (strcmp (manifest->layers[1]->digest, "sha256:2b689805fbd00b2db1df73fae47562faac1a626d5f61744bfe29946ecff5d73d") || \
+      strcmp (manifest->layers[1]->digest, manifest_gen->layers[1]->digest))
     exit (5);
-  if (manifest->annotations->len != 2)
+  if (manifest->annotations->len != 2 || manifest_gen->annotations->len != 2)
     exit (5);
-  if (strcmp(manifest->annotations->keys[1], "key2"))
+  if (strcmp(manifest->annotations->keys[1], "key2") && strcmp(manifest->annotations->keys[1], manifest_gen->annotations->keys[1]))
     exit (5);
-  if (strcmp(manifest->annotations->values[1], "value2"))
+  if (strcmp(manifest->annotations->values[1], "value2") && strcmp(manifest->annotations->values[1], manifest_gen->annotations->values[1]))
     exit (5);
+
+  free(json_buf);
   free_oci_image_manifest (manifest);
+  free_oci_image_manifest (manifest_gen);
   exit (0);
 }

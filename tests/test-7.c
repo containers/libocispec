@@ -27,19 +27,35 @@ main (int argc, char *argv[])
 {
   oci_parser_error err;
   oci_image *image = oci_image_parse_file ("tests/data/image_config_mapstringobject.json", 0, &err);
+  oci_image *image_gen = NULL;
+  char *json_buf = NULL;
 
   if (image == NULL) {
     printf ("error %s\n", err);
     exit (1);
   }
-  if (image->config->volumes_len != 0)
+  json_buf = oci_image_generate_json(image, 0, &err);
+  if (json_buf == NULL) {
+    printf("gen error %s\n", err);
+    exit (1);
+  }
+  image_gen = oci_image_parse_data(json_buf, 0, &err);
+  if (image_gen == NULL) {
+    printf("parse error %s\n", err);
+    exit(1);
+  }
+
+  if (image->config->volumes_len != 0 || image_gen->config->volumes_len != 0)
     exit (5);
-  if (image->config->volumes != NULL)
+  if (image->config->volumes != NULL || image_gen->config->volumes != NULL)
     exit (5);
-  if (image->config->exposed_ports_len != 0)
+  if (image->config->exposed_ports_len != 1 || image_gen->config->exposed_ports_len != 1)
     exit (5);
-  if (image->config->exposed_ports != NULL)
+  if (strcmp (image->config->exposed_ports[0], "8080/tcp") && strcmp (image->config->exposed_ports[0], image_gen->config->exposed_ports[0]))
     exit (5);
+
+  free(json_buf);
   free_oci_image (image);
+  free_oci_image (image_gen);
   exit (0);
 }
