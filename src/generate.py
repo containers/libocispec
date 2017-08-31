@@ -296,11 +296,9 @@ def generate_C_json(obj, c_file, prefix):
         objs = []
 
 
-    c_file.write("static bool gen_%s (yajl_gen g, %s *pstruct, struct libocispec_context *ctx, oci_parser_error *err) {\n" % (typename, typename))
+    c_file.write("static bool gen_%s (yajl_gen g, %s *ptr, struct libocispec_context *ctx, oci_parser_error *err) {\n" % (typename, typename))
     c_file.write("    bool stat = true;\n")
     c_file.write("    *err = 0;\n")
-    c_file.write("    if (pstruct == NULL || g == NULL || err == NULL)\n")
-    c_file.write("        return false;\n")
 
     if obj.typ == 'mapStringString':
         pass
@@ -312,43 +310,43 @@ def generate_C_json(obj, c_file, prefix):
 
         for i in (nodes or []):
             if i.typ == 'string':
-                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                json_value_generator(c_file, 2, "pstruct->%s" % i.fixname, 'g', i.typ)
+                json_value_generator(c_file, 2, "ptr->%s" % i.fixname, 'g', i.typ)
                 c_file.write("    }\n")
 
             elif is_numeric_type(i.typ):
-                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                json_value_generator(c_file, 2, "pstruct->%s" % i.fixname, 'g', i.typ)
+                json_value_generator(c_file, 2, "ptr->%s" % i.fixname, 'g', i.typ)
                 c_file.write("    }\n")
 
             elif i.typ == 'boolean':
-                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                json_value_generator(c_file, 2, "pstruct->%s" % i.fixname, 'g', i.typ)
+                json_value_generator(c_file, 2, "ptr->%s" % i.fixname, 'g', i.typ)
                 c_file.write("    }\n")
 
             elif i.typ ==  'object':
                 typename = make_name(i.name, prefix)
-                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                c_file.write('        stat = gen_%s(g, pstruct->%s, ctx, err);\n' % (typename, i.fixname))
+                c_file.write('        stat = gen_%s(g, ptr->%s, ctx, err);\n' % (typename, i.fixname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write("    }\n")
 
             elif i.typ == 'array' and i.subtypobj:
                 typename = make_name_array(i.name, prefix)
-                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
@@ -356,8 +354,8 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write('        stat = reformat_start_array(g);\n')
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                c_file.write('        for (i = 0; i < pstruct->%s_len; i++) {\n' % (i.fixname))
-                c_file.write('            stat = gen_%s(g, pstruct->%s[i], ctx, err);\n' % (typename, i.fixname))
+                c_file.write('        for (i = 0; i < ptr->%s_len; i++) {\n' % (i.fixname))
+                c_file.write('            stat = gen_%s(g, ptr->%s[i], ctx, err);\n' % (typename, i.fixname))
                 c_file.write("            if (!stat)\n")
                 c_file.write("                return false;\n")
                 c_file.write('        }\n')
@@ -367,7 +365,7 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write('    }\n')
 
             elif i.typ == 'array':
-                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
@@ -375,15 +373,15 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write('        stat = reformat_start_array(g);\n')
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                c_file.write('        for (i = 0; i < pstruct->%s_len; i++) {\n' % (i.fixname))
-                json_value_generator(c_file, 3, "pstruct->%s[i]" % i.fixname, 'g', i.subtyp)
+                c_file.write('        for (i = 0; i < ptr->%s_len; i++) {\n' % (i.fixname))
+                json_value_generator(c_file, 3, "ptr->%s[i]" % i.fixname, 'g', i.subtyp)
                 c_file.write('        }\n')
                 c_file.write('        stat = reformat_end_array(g);\n')
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('    }\n')
             elif i.typ == 'mapStringObject':
-                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
@@ -391,8 +389,8 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        size_t i;\n')
-                c_file.write('        for (i = 0; i < pstruct->%s_len; i++) {\n' % (i.fixname))
-                c_file.write('            stat = reformat_map_key(g, pstruct->%s[i], strlen(pstruct->%s[i]));\n' % (i.fixname, i.fixname))
+                c_file.write('        for (i = 0; i < ptr->%s_len; i++) {\n' % (i.fixname))
+                c_file.write('            stat = reformat_map_key(g, ptr->%s[i], strlen(ptr->%s[i]));\n' % (i.fixname, i.fixname))
                 c_file.write("            if (!stat)\n")
                 c_file.write("                return false;\n")
                 c_file.write('            yajl_gen_config(g, yajl_gen_beautify, 0);\n')
@@ -410,11 +408,11 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write('    }\n')
 
             elif i.typ == 'mapStringString':
-                c_file.write('    if (pstruct->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                c_file.write('        stat = gen_map_string_string(g, pstruct->%s);\n' % i.fixname)
+                c_file.write('        stat = gen_map_string_string(g, ptr->%s);\n' % i.fixname)
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write("    }\n")
@@ -839,16 +837,16 @@ oci_%s *oci_%s_parse_data (const char *jsondata, struct libocispec_context *ctx,
 """ % (prefix, prefix, prefix, prefix, prefix, prefix))
 
     c_file.write("""\n
-char *oci_%s_generate_json (oci_%s *pstruct, struct libocispec_context *ctx, oci_parser_error *err) {
+char *oci_%s_generate_json (oci_%s *ptr, struct libocispec_context *ctx, oci_parser_error *err) {
     yajl_gen g = NULL;
     const unsigned char *gen_buf = NULL;
     char *json_buf = NULL;
-    size_t gen_len = 0;
-    *err = NULL;
-    if (!pstruct) {
+    size_t gen_len = 0;\n
+    if (!ptr || !err) {
         *err = strdup("NULL input");
         goto out;
-    }
+    }\n
+    *err = NULL;
     struct libocispec_context tmp_ctx;
     if (!ctx) {
         ctx = &tmp_ctx;
@@ -858,7 +856,7 @@ char *oci_%s_generate_json (oci_%s *pstruct, struct libocispec_context *ctx, oci
         *err = strdup("Json_gen init failed");
         goto out;
     }\n
-    if (!gen_oci_%s(g, pstruct, ctx, err)) {
+    if (!gen_oci_%s(g, ptr, ctx, err)) {
         *err = strdup("Failed to generate json");
         goto free_out;
     }\n
