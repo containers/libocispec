@@ -296,7 +296,7 @@ def generate_C_json(obj, c_file, prefix):
         objs = []
 
 
-    c_file.write("static bool gen_%s (yajl_gen g, %s *ptr, struct libocispec_context *ctx, oci_parser_error *err) {\n" % (typename, typename))
+    c_file.write("bool gen_%s (yajl_gen g, %s *ptr, struct libocispec_context *ctx, oci_parser_error *err) {\n" % (typename, typename))
     c_file.write("    bool stat = true;\n")
     c_file.write("    *err = 0;\n")
 
@@ -582,6 +582,7 @@ def append_type_C_header(obj, header, prefix):
         header.write("}\n%s;\n\n" % typename)
         header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
         header.write("%s *make_%s (yajl_val tree, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
+        header.write("bool gen_%s (yajl_gen g, %s *ptr, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
 
 def get_ref(src, ref):
     if '#/' in ref:
