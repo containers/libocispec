@@ -1055,13 +1055,18 @@ def generate_common_file(header_file, c_file):
     generate_common_C_code(c_file)
 
 if __name__ == "__main__":
+    oldcwd = os.getcwd()
+
+    if len(sys.argv) < 5:
+        with open("src/oci_json_common.h", "w") as common_h_file, open("src/oci_json_common.c", "w") as common_c_file:
+            generate_common_file(common_h_file, common_c_file)
+        sys.exit(0)
+
     schema_file = sys.argv[1]
     header = sys.argv[2]
     c_source = sys.argv[3]
     prefix = sys.argv[4]
-    oldcwd = os.getcwd()
-    with open("src/oci_json_common.h", "w") as common_h_file, open("src/oci_json_common.c", "w") as common_c_file:
-        generate_common_file(common_h_file, common_c_file)
+
     with open(header + ".tmp", "w") as header_file, open(c_source + ".tmp", "w") as c_file:
         os.chdir(os.path.dirname(schema_file))
         with open(os.path.basename(schema_file)) as schema:

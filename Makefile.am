@@ -15,19 +15,22 @@ SOURCE_FILES = src/oci_runtime_spec.c \
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
 
-src/oci_runtime_spec.c: runtime-spec/schema/config-schema.json src/generate.py
+src/oci_json_common.h src/oci_json_common.c:
+	$(srcdir)/src/generate.py
+
+src/oci_runtime_spec.c: runtime-spec/schema/config-schema.json src/generate.py src/oci_json_common.h
 	$(srcdir)/src/generate.py $(srcdir)/runtime-spec/schema/config-schema.json src/oci_runtime_spec.h src/oci_runtime_spec.c container
 
-src/oci_image_spec.c: image-spec/schema/config-schema.json src/generate.py
+src/oci_image_spec.c: image-spec/schema/config-schema.json src/generate.py src/oci_json_common.h
 	$(srcdir)/src/generate.py $(srcdir)/image-spec/schema/config-schema.json src/oci_image_spec.h src/oci_image_spec.c image
 
-src/oci_image_index_spec.c: image-spec/schema/image-index-schema.json src/generate.py
+src/oci_image_index_spec.c: image-spec/schema/image-index-schema.json src/generate.py src/oci_json_common.h
 	$(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-index-schema.json src/oci_image_index_spec.h src/oci_image_index_spec.c image_index
 
-src/oci_image_layout_spec.c: image-spec/schema/image-layout-schema.json src/generate.py
+src/oci_image_layout_spec.c: image-spec/schema/image-layout-schema.json src/generate.py src/oci_json_common.h
 	$(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-layout-schema.json src/oci_image_layout_spec.h src/oci_image_layout_spec.c image_layout
 
-src/oci_image_manifest_spec.c: image-spec/schema/image-manifest-schema.json src/generate.py
+src/oci_image_manifest_spec.c: image-spec/schema/image-manifest-schema.json src/generate.py src/oci_json_common.h
 	$(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-manifest-schema.json src/oci_image_manifest_spec.h src/oci_image_manifest_spec.c image_manifest
 
 $(HEADER_FILES): %.h: %.c src/generate.py
