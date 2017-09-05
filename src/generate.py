@@ -303,7 +303,7 @@ def generate_C_json(obj, c_file, prefix):
     if obj.typ == 'mapStringString':
         pass
     elif obj.typ == 'object' or ((obj.typ == 'array' or obj.typ == 'mapStringObject') and obj.subtypobj):
-        c_file.write("    stat = reformat_start_map(g);\n")
+        c_file.write("    stat = reformat_start_map (g);\n")
         c_file.write("    if (!stat)\n")
         c_file.write("        return false;\n")
         nodes = obj.children if obj.typ == 'object' else obj.subtypobj
@@ -311,7 +311,7 @@ def generate_C_json(obj, c_file, prefix):
         for i in (nodes or []):
             if i.typ == 'string':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 json_value_generator(c_file, 2, "ptr->%s" % i.fixname, 'g', i.typ)
@@ -319,7 +319,7 @@ def generate_C_json(obj, c_file, prefix):
 
             elif is_numeric_type(i.typ):
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 json_value_generator(c_file, 2, "ptr->%s" % i.fixname, 'g', i.typ)
@@ -327,7 +327,7 @@ def generate_C_json(obj, c_file, prefix):
 
             elif i.typ == 'boolean':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 json_value_generator(c_file, 2, "ptr->%s" % i.fixname, 'g', i.typ)
@@ -336,10 +336,10 @@ def generate_C_json(obj, c_file, prefix):
             elif i.typ ==  'object':
                 typename = make_name(i.name, prefix)
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                c_file.write('        stat = gen_%s(g, ptr->%s, ctx, err);\n' % (typename, i.fixname))
+                c_file.write('        stat = gen_%s (g, ptr->%s, ctx, err);\n' % (typename, i.fixname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write("    }\n")
@@ -347,11 +347,11 @@ def generate_C_json(obj, c_file, prefix):
             elif i.typ == 'array' and i.subtypobj:
                 typename = make_name_array(i.name, prefix)
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        size_t i;\n')
-                c_file.write('        stat = reformat_start_array(g);\n')
+                c_file.write('        stat = reformat_start_array (g);\n')
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        for (i = 0; i < ptr->%s_len; i++) {\n' % (i.fixname))
@@ -359,65 +359,65 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write("            if (!stat)\n")
                 c_file.write("                return false;\n")
                 c_file.write('        }\n')
-                c_file.write('        stat = reformat_end_array(g);\n')
+                c_file.write('        stat = reformat_end_array (g);\n')
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('    }\n')
 
             elif i.typ == 'array':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        size_t i;\n')
-                c_file.write('        stat = reformat_start_array(g);\n')
+                c_file.write('        stat = reformat_start_array (g);\n')
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        for (i = 0; i < ptr->%s_len; i++) {\n' % (i.fixname))
                 json_value_generator(c_file, 3, "ptr->%s[i]" % i.fixname, 'g', i.subtyp)
                 c_file.write('        }\n')
-                c_file.write('        stat = reformat_end_array(g);\n')
+                c_file.write('        stat = reformat_end_array (g);\n')
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('    }\n')
             elif i.typ == 'mapStringObject':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                c_file.write('        stat = reformat_start_map(g);\n')
+                c_file.write('        stat = reformat_start_map (g);\n')
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        size_t i;\n')
                 c_file.write('        for (i = 0; i < ptr->%s_len; i++) {\n' % (i.fixname))
-                c_file.write('            stat = reformat_map_key(g, ptr->%s[i], strlen(ptr->%s[i]));\n' % (i.fixname, i.fixname))
+                c_file.write('            stat = reformat_map_key (g, ptr->%s[i], strlen (ptr->%s[i]));\n' % (i.fixname, i.fixname))
                 c_file.write("            if (!stat)\n")
                 c_file.write("                return false;\n")
-                c_file.write('            yajl_gen_config(g, yajl_gen_beautify, 0);\n')
-                c_file.write('            stat = reformat_start_map(g);\n')
+                c_file.write('            yajl_gen_config (g, yajl_gen_beautify, 0);\n')
+                c_file.write('            stat = reformat_start_map (g);\n')
                 c_file.write("            if (!stat)\n")
                 c_file.write("                return false;\n")
-                c_file.write('            stat = reformat_end_map(g);\n')
+                c_file.write('            stat = reformat_end_map (g);\n')
                 c_file.write("            if (!stat)\n")
                 c_file.write("                return false;\n")
-                c_file.write('            yajl_gen_config(g, yajl_gen_beautify, 1);\n')
+                c_file.write('            yajl_gen_config (g, yajl_gen_beautify, 1);\n')
                 c_file.write('        }\n')
-                c_file.write('        stat = reformat_end_map(g);\n')
+                c_file.write('        stat = reformat_end_map (g);\n')
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('    }\n')
 
             elif i.typ == 'mapStringString':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key(g, "%s", strlen("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
-                c_file.write('        stat = gen_map_string_string(g, ptr->%s);\n' % i.fixname)
+                c_file.write('        stat = gen_map_string_string (g, ptr->%s);\n' % i.fixname)
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write("    }\n")
 
-        c_file.write("    stat = reformat_end_map(g);\n")
+        c_file.write("    stat = reformat_end_map (g);\n")
         c_file.write("    if (!stat)\n")
         c_file.write("        return false;\n")
     c_file.write('    return true;\n')
@@ -445,7 +445,7 @@ def json_value_generator(c_file, level, src, dst, typ):
         c_file.write("%sif (!stat)\n" % ('    ' * (level)))
         c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
     elif typ == 'string':
-        c_file.write('%sstat = reformat_string(%s, %s, strlen(%s));\n' % ('    ' * (level), dst, src, src))
+        c_file.write('%sstat = reformat_string(%s, %s, strlen (%s));\n' % ('    ' * (level), dst, src, src))
         c_file.write("%sif (!stat)\n" % ('    ' * (level)))
         c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
 
@@ -840,38 +840,45 @@ oci_%s *oci_%s_parse_data (const char *jsondata, struct libocispec_context *ctx,
     c_file.write("""\n
 char *oci_%s_generate_json (oci_%s *ptr, struct libocispec_context *ctx, oci_parser_error *err) {
     yajl_gen g = NULL;
+    struct libocispec_context tmp_ctx;
     const unsigned char *gen_buf = NULL;
     char *json_buf = NULL;
-    size_t gen_len = 0;\n
+    size_t gen_len = 0;
+
     if (!ptr || !err) {
-        *err = strdup("NULL input");
+        *err = strdup ("NULL input");
         goto out;
-    }\n
+    }
+
     *err = NULL;
-    struct libocispec_context tmp_ctx;
     if (!ctx) {
         ctx = &tmp_ctx;
         memset (&tmp_ctx, 0, sizeof (tmp_ctx));
-    }\n
-    if (!json_gen_init(&g)) {
-        *err = strdup("Json_gen init failed");
+    }
+
+    if (!json_gen_init (&g)) {
+        *err = strdup ("Json_gen init failed");
         goto out;
-    }\n
-    if (!gen_oci_%s(g, ptr, ctx, err)) {
-        *err = strdup("Failed to generate json");
+    }
+
+    if (!gen_oci_%s (g, ptr, ctx, err)) {
+        *err = strdup ("Failed to generate json");
         goto free_out;
-    }\n
-    yajl_gen_get_buf(g, &gen_buf, &gen_len);
+    }
+
+    yajl_gen_get_buf (g, &gen_buf, &gen_len);
     if (!gen_buf) {
-        *err = strdup("Error to get generated json");
+        *err = strdup ("Error to get generated json");
         goto free_out;
-    }\n
-    json_buf = safe_malloc(gen_len + 1);
-    memcpy(json_buf, gen_buf, gen_len);
-    json_buf[gen_len] = '\\0';\n
+    }
+
+    json_buf = safe_malloc (gen_len + 1);
+    memcpy (json_buf, gen_buf, gen_len);
+    json_buf[gen_len] = '\\0';
+
 free_out:
-    yajl_gen_clear(g);
-    yajl_gen_free(g);
+    yajl_gen_clear (g);
+    yajl_gen_free (g);
 out:
     return json_buf;
 }
@@ -906,25 +913,25 @@ struct libocispec_context {\n    int options;\n    FILE *stderr;\n};\n
 # define GEN_AND_RETURN(func) {                  \\
     yajl_gen_status __stat = func;                    \\
     if (__stat == yajl_gen_generation_complete && s_streamReformat) {\\
-        yajl_gen_reset(g, \"\\n\");                \\
+        yajl_gen_reset (g, \"\\n\");                \\
         __stat = func;                      \\
     }                             \\
     return __stat == yajl_gen_status_ok; \\
 }\n
-bool reformat_integer(void *ctx, long long int num);\n
-bool reformat_double(void *ctx, double num);\n
-bool reformat_number(void *ctx, const char *str, size_t len);\n
-bool reformat_string(void *ctx, const unsigned char *str, size_t len);\n
-bool reformat_null(void *ctx);\n
-bool reformat_boolean(void *ctx, int boolean);\n
-bool reformat_map_key(void *ctx, const unsigned char *str, size_t len);\n
-bool reformat_start_map(void *ctx);\n
-bool reformat_end_map(void *ctx);\n
-bool reformat_start_array(void *ctx);\n
-bool reformat_end_array(void *ctx);\n
-bool gen_map_string_string(void *ctx, string_cells *cells);\n
-bool json_gen_init(yajl_gen *g);\n
-yajl_val get_val(yajl_val tree, const char *name, yajl_type type);\n
+bool reformat_integer (void *ctx, long long int num);\n
+bool reformat_double (void *ctx, double num);\n
+bool reformat_number (void *ctx, const char *str, size_t len);\n
+bool reformat_string (void *ctx, const unsigned char *str, size_t len);\n
+bool reformat_null (void *ctx);\n
+bool reformat_boolean (void *ctx, int boolean);\n
+bool reformat_map_key (void *ctx, const unsigned char *str, size_t len);\n
+bool reformat_start_map (void *ctx);\n
+bool reformat_end_map (void *ctx);\n
+bool reformat_start_array (void *ctx);\n
+bool reformat_end_array (void *ctx);\n
+bool gen_map_string_string (void *ctx, string_cells *cells);\n
+bool json_gen_init (yajl_gen *g);\n
+yajl_val get_val (yajl_val tree, const char *name, yajl_type type);\n
 string_cells *read_map_string_string (yajl_val src);\n
 void free_cells (string_cells *cells);\n
 void *safe_malloc (size_t size);\n
@@ -934,84 +941,98 @@ void *safe_malloc (size_t size);\n
 def generate_common_C_code(c_file):
     c_file.write("""// autogenerated file
 #include "oci_json_common.h"\n
-bool reformat_integer(void *ctx, long long int num) {
+bool reformat_integer (void *ctx, long long int num) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_integer(g,num));
-}\n
-bool reformat_double(void *ctx, double num) {
+    GEN_AND_RETURN (yajl_gen_integer (g,num));
+}
+
+bool reformat_double (void *ctx, double num) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_double(g,num));
-}\n
-bool reformat_number(void *ctx, const char *str, size_t len) {
+    GEN_AND_RETURN (yajl_gen_double (g,num));
+}
+
+bool reformat_number (void *ctx, const char *str, size_t len) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_number(g, str, len));
-}\n
-bool reformat_string(void *ctx, const unsigned char *str, size_t len) {
+    GEN_AND_RETURN (yajl_gen_number (g, str, len));
+}
+
+bool reformat_string (void *ctx, const unsigned char *str, size_t len) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_string(g, str, len));
-}\n
-bool reformat_null(void *ctx) {
+    GEN_AND_RETURN (yajl_gen_string (g, str, len));
+}
+
+bool reformat_null (void *ctx) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_null(g));
-}\n
-bool reformat_boolean(void *ctx, int boolean) {
+    GEN_AND_RETURN (yajl_gen_null (g));
+}
+
+bool reformat_boolean (void *ctx, int boolean) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_bool(g, boolean));
-}\n
-bool reformat_map_key(void *ctx, const unsigned char *str, size_t len) {
+    GEN_AND_RETURN (yajl_gen_bool (g, boolean));
+}
+
+bool reformat_map_key (void *ctx, const unsigned char *str, size_t len) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_string(g, str, len));
-}\n
-bool reformat_start_map(void *ctx) {
+    GEN_AND_RETURN (yajl_gen_string (g, str, len));
+}
+
+bool reformat_start_map (void *ctx) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_map_open(g));
-}\n
-bool reformat_end_map(void *ctx) {
+    GEN_AND_RETURN (yajl_gen_map_open (g));
+}
+
+bool reformat_end_map (void *ctx) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_map_close(g));
-}\n
-bool reformat_start_array(void *ctx) {
+    GEN_AND_RETURN (yajl_gen_map_close (g));
+}
+
+bool reformat_start_array (void *ctx) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_array_open(g));
-}\n
-bool reformat_end_array(void *ctx) {
+    GEN_AND_RETURN (yajl_gen_array_open (g));
+}
+
+bool reformat_end_array (void *ctx) {
     yajl_gen g = (yajl_gen) ctx;
-    GEN_AND_RETURN(yajl_gen_array_close(g));
-}\n
-bool gen_map_string_string(void *ctx, string_cells *cells) {
+    GEN_AND_RETURN (yajl_gen_array_close (g));
+}
+
+bool gen_map_string_string (void *ctx, string_cells *cells) {
     bool stat = true;
     yajl_gen g = (yajl_gen) ctx;
     size_t i = 0;
     if (!cells)
         return false;\n
-    stat = reformat_start_map(g);
+    stat = reformat_start_map (g);
     if (!stat)
         return false;\n
     for (i = 0; i < cells->len; i++) {
-        stat = reformat_map_key(g, cells->keys[i], strlen(cells->keys[i]));
+        stat = reformat_map_key (g, cells->keys[i], strlen (cells->keys[i]));
         if (!stat)
             return false;
-        stat = reformat_string(g, cells->values[i], strlen(cells->values[i]));
+        stat = reformat_string (g, cells->values[i], strlen (cells->values[i]));
         if (!stat)
             return false;
     }\n
-    stat = reformat_end_map(g);
+    stat = reformat_end_map (g);
     if (!stat)
         return false;
     return true;
-}\n
-bool json_gen_init(yajl_gen *g) {
-    *g = yajl_gen_alloc(NULL);
+}
+
+bool json_gen_init (yajl_gen *g) {
+    *g = yajl_gen_alloc (NULL);
     if (NULL == *g)
         return false;\n
-    yajl_gen_config(*g, yajl_gen_beautify, 1);
-    yajl_gen_config(*g, yajl_gen_validate_utf8, 1);
+    yajl_gen_config (*g, yajl_gen_beautify, 1);
+    yajl_gen_config (*g, yajl_gen_validate_utf8, 1);
     return true;
-}\n
-yajl_val get_val(yajl_val tree, const char *name, yajl_type type) {
+}
+
+yajl_val get_val (yajl_val tree, const char *name, yajl_type type) {
     const char *path[] = { name, NULL };
     return yajl_tree_get (tree, path, type);
-}\n
+}
+
 void free_cells (string_cells *cells) {
     if (cells) {
         size_t i;
@@ -1021,14 +1042,16 @@ void free_cells (string_cells *cells) {
         }
         free (cells);
     }
-}\n
+}
+
 void *safe_malloc (size_t size) {
     void *ret = malloc (size);
     if (ret == NULL)
         abort ();
     memset (ret, 0, size);
     return ret;
-}\n
+}
+
 string_cells *read_map_string_string (yajl_val src) {
     string_cells *ret = NULL;
     if (src != NULL) {
