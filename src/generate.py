@@ -311,7 +311,7 @@ def generate_C_json(obj, c_file, prefix):
         for i in (nodes or []):
             if i.typ == 'string':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, (unsigned char *) "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 json_value_generator(c_file, 2, "ptr->%s" % i.fixname, 'g', i.typ)
@@ -319,7 +319,7 @@ def generate_C_json(obj, c_file, prefix):
 
             elif is_numeric_type(i.typ):
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, (unsigned char *)"%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 json_value_generator(c_file, 2, "ptr->%s" % i.fixname, 'g', i.typ)
@@ -327,7 +327,7 @@ def generate_C_json(obj, c_file, prefix):
 
             elif i.typ == 'boolean':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, (unsigned char *)"%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 json_value_generator(c_file, 2, "ptr->%s" % i.fixname, 'g', i.typ)
@@ -336,7 +336,7 @@ def generate_C_json(obj, c_file, prefix):
             elif i.typ ==  'object':
                 typename = make_name(i.name, prefix)
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, (unsigned char *) "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        stat = gen_%s (g, ptr->%s, ctx, err);\n' % (typename, i.fixname))
@@ -347,7 +347,7 @@ def generate_C_json(obj, c_file, prefix):
             elif i.typ == 'array' and i.subtypobj:
                 typename = make_name_array(i.name, prefix)
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, (unsigned char *) "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        size_t i;\n')
@@ -366,7 +366,7 @@ def generate_C_json(obj, c_file, prefix):
 
             elif i.typ == 'array':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, (unsigned char *) "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        size_t i;\n')
@@ -382,7 +382,7 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write('    }\n')
             elif i.typ == 'mapStringObject':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, (unsigned char *) "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        stat = reformat_start_map (g);\n')
@@ -390,7 +390,7 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write("            return false;\n")
                 c_file.write('        size_t i;\n')
                 c_file.write('        for (i = 0; i < ptr->%s_len; i++) {\n' % (i.fixname))
-                c_file.write('            stat = reformat_map_key (g, ptr->%s[i], strlen (ptr->%s[i]));\n' % (i.fixname, i.fixname))
+                c_file.write('            stat = reformat_map_key (g, (unsigned char *) ptr->%s[i], strlen (ptr->%s[i]));\n' % (i.fixname, i.fixname))
                 c_file.write("            if (!stat)\n")
                 c_file.write("                return false;\n")
                 c_file.write('            yajl_gen_config (g, yajl_gen_beautify, 0);\n')
@@ -409,7 +409,7 @@ def generate_C_json(obj, c_file, prefix):
 
             elif i.typ == 'mapStringString':
                 c_file.write('    if (ptr->%s) {\n' % i.fixname)
-                c_file.write('        stat = reformat_map_key (g, "%s", strlen ("%s"));\n' % (i.origname, i.origname))
+                c_file.write('        stat = reformat_map_key (g, (unsigned char *) "%s", strlen ("%s"));\n' % (i.origname, i.origname))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
                 c_file.write('        stat = gen_map_string_string (g, ptr->%s);\n' % i.fixname)
@@ -441,21 +441,21 @@ def read_value_generator(c_file, level, src, dest, typ):
 
 def json_value_generator(c_file, level, src, dst, typ):
     if typ == 'mapStringString':
-        c_file.write('%sstat = gen_map_string_string(%s, %s);\n' % ('    ' * (level), dst, src))
+        c_file.write('%sstat = gen_map_string_string (%s, %s);\n' % ('    ' * (level), dst, src))
         c_file.write("%sif (!stat)\n" % ('    ' * (level)))
         c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
     elif typ == 'string':
-        c_file.write('%sstat = reformat_string(%s, %s, strlen (%s));\n' % ('    ' * (level), dst, src, src))
+        c_file.write('%sstat = reformat_string (%s, (unsigned char *) %s, strlen (%s));\n' % ('    ' * (level), dst, src, src))
         c_file.write("%sif (!stat)\n" % ('    ' * (level)))
         c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
 
     elif is_numeric_type(typ):
-        c_file.write('%sstat = reformat_integer(%s, %s);\n' % ('    ' * (level), dst, src))
+        c_file.write('%sstat = reformat_integer (%s, %s);\n' % ('    ' * (level), dst, src))
         c_file.write("%sif (!stat)\n" % ('    ' * (level)))
         c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
 
     elif typ == 'boolean':
-        c_file.write('%sstat = reformat_boolean(%s, 1);\n' % ('    ' * (level), dst))
+        c_file.write('%sstat = reformat_boolean (%s, 1);\n' % ('    ' * (level), dst))
         c_file.write("%sif (!stat)\n" % ('    ' * (level)))
         c_file.write("%sreturn false;\n" % ('    ' * (level + 1)))
 
@@ -1006,10 +1006,10 @@ bool gen_map_string_string (void *ctx, string_cells *cells) {
     if (!stat)
         return false;\n
     for (i = 0; i < cells->len; i++) {
-        stat = reformat_map_key (g, cells->keys[i], strlen (cells->keys[i]));
+        stat = reformat_map_key (g, (unsigned char *) cells->keys[i], strlen (cells->keys[i]));
         if (!stat)
             return false;
-        stat = reformat_string (g, cells->values[i], strlen (cells->values[i]));
+        stat = reformat_string (g, (unsigned char *) cells->values[i], strlen (cells->values[i]));
         if (!stat)
             return false;
     }\n
