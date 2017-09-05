@@ -9,7 +9,7 @@ addons:
       - libseccomp-dev
 script:
   - NOCONFIGURE=1 ./autogen.sh
-  - ./configure
+  - ./configure CFLAGS="-Wall -Werror"
   - make -j $(nproc)
   - make syntax-check
   - make check
