@@ -10,7 +10,7 @@ addons:
 script:
   - NOCONFIGURE=1 ./autogen.sh
   - ./configure
-  - make
+  - make -j $(nproc)
   - make syntax-check
   - make check
   - make distcheck
