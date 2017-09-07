@@ -35,17 +35,17 @@ Generating an OCI configuration json string is also easy as:
     oci_container container;
     char *json_buf = NULL;
 
-    memset(&container, 0, sizeof(oci_container));
+    memset (&container, 0, sizeof (oci_container));
 
     container.oci_version = "2";
     container.hostname = "ubuntu";
     /* Add other configuration. */
     /* ... ... */
 
-    json_buf = oci_container_generate_json(&container, NULL, &err);
+    json_buf = oci_container_generate_json (&container, NULL, &err);
     if (json_buf == NULL)
-      exit(EXIT_FAILURE);
+      exit (EXIT_FAILURE);
 
-    printf("The generated json string is:\n%s\n", json_buf);
+    printf ("The generated json string is:\n%s\n", json_buf);
 
 ```
