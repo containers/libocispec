@@ -766,13 +766,13 @@ oci_%s *oci_%s_parse_file (const char *filename, struct libocispec_context *ctx,
     char *content = read_file (filename, &filesize);
     char errbuf[1024];
     if (content == NULL) {
-        *err = strdup ("cannot read the file");
+        asprintf (err, "cannot read the file: %%s", filename);
         return NULL;
     }
     tree = yajl_tree_parse (content, errbuf, sizeof(errbuf));
     free (content);
     if (tree == NULL) {
-        *err = strdup ("cannot parse the file");
+        asprintf (err, "cannot parse the file: %%s", errbuf);
         return NULL;
     }
 
