@@ -99,12 +99,12 @@ c_types_mapping = {
 }
 
 def make_name_array(name, prefix):
-    return "oci_%s_%s_element" % (prefix, name)
+    return "%s_%s_element" % (prefix, name)
 
 def make_name(name, prefix):
     if prefix == name:
-        return "oci_%s" % name
-    return "oci_%s_%s" % (prefix, name)
+        return "%s" % name
+    return "%s_%s" % (prefix, name)
 
 def make_pointer(name, typ, prefix):
     if typ != 'object' and typ != 'mapStringString':
@@ -149,7 +149,7 @@ def generate_C_parse(obj, c_file, prefix):
         objs = []
 
 
-    c_file.write("%s *make_%s (yajl_val tree, struct libocispec_context *ctx, oci_parser_error *err) {\n" % (typename, typename))
+    c_file.write("%s *make_%s (yajl_val tree, struct parser_context *ctx, parser_error *err) {\n" % (typename, typename))
     c_file.write("    %s *ret = NULL;\n" % (typename))
     c_file.write("    *err = 0;\n")
     c_file.write("    if (tree == NULL)\n")
@@ -253,7 +253,7 @@ def generate_C_parse(obj, c_file, prefix):
             #O(n^2) complexity, but the objects should not really be big...
             condition = " &&\n                ".join(['strcmp (tree->u.object.keys[i], "%s")' % i.origname for i in obj.children])
             c_file.write("""
-    if (tree->type == yajl_t_object && (ctx->options & LIBOCISPEC_OPTIONS_STRICT)) {
+    if (tree->type == yajl_t_object && (ctx->options & PARSE_OPTIONS_STRICT)) {
         int i;
         for (i = 0; i < tree->u.object.len; i++)
             if (%s) {
@@ -280,7 +280,7 @@ def generate_C_json(obj, c_file, prefix):
         objs = []
 
 
-    c_file.write("bool gen_%s (yajl_gen g, %s *ptr, struct libocispec_context *ctx, oci_parser_error *err) {\n" % (typename, typename))
+    c_file.write("bool gen_%s (yajl_gen g, %s *ptr, struct parser_context *ctx, parser_error *err) {\n" % (typename, typename))
     c_file.write("    bool stat = true;\n")
     c_file.write("    *err = 0;\n")
 
@@ -541,7 +541,7 @@ def append_type_C_header(obj, header, prefix):
         typename = make_name_array(obj.name, prefix)
         header.write("}\n%s;\n\n" % typename)
         header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
-        header.write("%s *make_%s (yajl_val tree, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
+        header.write("%s *make_%s (yajl_val tree, struct parser_context *ctx, parser_error *err);\n\n" % (typename, typename))
     elif obj.typ == 'object':
         header.write("typedef struct {\n")
         for i in (obj.children or []):
@@ -565,8 +565,8 @@ def append_type_C_header(obj, header, prefix):
         typename = make_name(obj.name, prefix)
         header.write("}\n%s;\n\n" % typename)
         header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
-        header.write("%s *make_%s (yajl_val tree, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
-        header.write("bool gen_%s (yajl_gen g, %s *ptr, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (typename, typename))
+        header.write("%s *make_%s (yajl_val tree, struct parser_context *ctx, parser_error *err);\n\n" % (typename, typename))
+        header.write("bool gen_%s (yajl_gen g, %s *ptr, struct parser_context *ctx, parser_error *err);\n\n" % (typename, typename))
 
 def get_ref(src, ref):
     if '#/' in ref:
@@ -714,14 +714,14 @@ def generate_C_header(structs, header, prefix):
     header.write("# define %s_SCHEMA_H\n\n" % prefix.upper())
     header.write("# include <sys/types.h>\n")
     header.write("# include <stdint.h>\n")
-    header.write("# include \"oci_json_common.h\"\n\n")
+    header.write("# include \"json_common.h\"\n\n")
 
     for i in structs:
         append_type_C_header(i, header, prefix)
-    header.write("oci_%s *oci_%s_parse_file (const char *filename, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (prefix, prefix))
-    header.write("oci_%s *oci_%s_parse_file_stream (FILE *stream, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (prefix, prefix))
-    header.write("oci_%s *oci_%s_parse_data (const char *jsondata, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (prefix, prefix))
-    header.write("char *oci_%s_generate_json (oci_%s *%s, struct libocispec_context *ctx, oci_parser_error *err);\n\n" % (prefix, prefix, prefix))
+    header.write("%s *%s_parse_file (const char *filename, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
+    header.write("%s *%s_parse_file_stream (FILE *stream, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
+    header.write("%s *%s_parse_data (const char *jsondata, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
+    header.write("char *%s_generate_json (%s *ptr, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
     header.write("#endif\n")
 
 def generate_C_code(structs, header_name, c_file, prefix):
@@ -738,11 +738,11 @@ def generate_C_code(structs, header_name, c_file, prefix):
 
 def generate_C_epilogue(c_file, prefix):
     c_file.write("""\n
-oci_%s *oci_%s_parse_file (const char *filename, struct libocispec_context *ctx, oci_parser_error *err) {
+%s *%s_parse_file (const char *filename, struct parser_context *ctx, parser_error *err) {
     yajl_val tree;
     size_t filesize;
     *err = NULL;
-    struct libocispec_context tmp_ctx;
+    struct parser_context tmp_ctx;
     if (!ctx) {
        ctx = &tmp_ctx;
        memset (&tmp_ctx, 0, sizeof (tmp_ctx));
@@ -762,18 +762,18 @@ oci_%s *oci_%s_parse_file (const char *filename, struct libocispec_context *ctx,
         return NULL;
     }
 
-    oci_%s *%s = make_oci_%s (tree, ctx, err);
+    %s *ptr = make_%s (tree, ctx, err);
     yajl_tree_free (tree);
-    return %s;
+    return ptr;
 }
-""" % (prefix, prefix, prefix, prefix, prefix, prefix))
+""" % (prefix, prefix, prefix, prefix))
 
     c_file.write("""\n
-oci_%s *oci_%s_parse_file_stream (FILE *stream, struct libocispec_context *ctx, oci_parser_error *err) {
+%s *%s_parse_file_stream (FILE *stream, struct parser_context *ctx, parser_error *err) {
     yajl_val tree;
     size_t filesize;
     *err = NULL;
-    struct libocispec_context tmp_ctx;
+    struct parser_context tmp_ctx;
     if (!ctx) {
        ctx = &tmp_ctx;
        memset (&tmp_ctx, 0, sizeof (tmp_ctx));
@@ -791,42 +791,42 @@ oci_%s *oci_%s_parse_file_stream (FILE *stream, struct libocispec_context *ctx, 
         return NULL;
     }
 
-    oci_%s *%s = make_oci_%s (tree, ctx, err);
+    %s *ptr = make_%s (tree, ctx, err);
     yajl_tree_free (tree);
-    return %s;
+    return ptr;
 }
-""" % (prefix, prefix, prefix, prefix, prefix, prefix))
+""" % (prefix, prefix, prefix, prefix))
 
     c_file.write("""\n
-oci_%s *oci_%s_parse_data (const char *jsondata, struct libocispec_context *ctx, oci_parser_error *err) {
+%s *%s_parse_data (const char *jsondata, struct parser_context *ctx, parser_error *err) {
     yajl_val tree;
     *err = NULL;
-    struct libocispec_context tmp_ctx;
+    struct parser_context tmp_ctx;
     if (!ctx) {
        ctx = &tmp_ctx;
        memset (&tmp_ctx, 0, sizeof (tmp_ctx));
     }
     char errbuf[1024];
     if (jsondata == NULL) {
-        *err = strdup ("oci data cannot be NULL");
+        *err = strdup ("json data cannot be NULL");
         return NULL;
     }
     tree = yajl_tree_parse (jsondata, errbuf, sizeof(errbuf));
     if (tree == NULL) {
-        *err = strdup ("cannot parse the oci data");
+        *err = strdup ("cannot parse the json data");
         return NULL;
     }
 
-    oci_%s *%s = make_oci_%s (tree, ctx, err);
+    %s *ptr = make_%s (tree, ctx, err);
     yajl_tree_free (tree);
-    return %s;
+    return ptr;
 }
-""" % (prefix, prefix, prefix, prefix, prefix, prefix))
+""" % (prefix, prefix, prefix, prefix))
 
     c_file.write("""\n
-char *oci_%s_generate_json (oci_%s *ptr, struct libocispec_context *ctx, oci_parser_error *err) {
+char *%s_generate_json (%s *ptr, struct parser_context *ctx, parser_error *err) {
     yajl_gen g = NULL;
-    struct libocispec_context tmp_ctx;
+    struct parser_context tmp_ctx;
     const unsigned char *gen_buf = NULL;
     char *json_buf = NULL;
     size_t gen_len = 0;
@@ -847,7 +847,7 @@ char *oci_%s_generate_json (oci_%s *ptr, struct libocispec_context *ctx, oci_par
         goto out;
     }
 
-    if (!gen_oci_%s (g, ptr, ctx, err)) {
+    if (!gen_%s (g, ptr, ctx, err)) {
         *err = strdup ("Failed to generate json");
         goto free_out;
     }
@@ -881,8 +881,8 @@ def generate(schema_json, header_name, header_file, c_file, prefix):
 
 def generate_common_C_header(header_file):
     header_file.write("""/* autogenerated file */
-#ifndef _OCI_COMMON_H
-# define _OCI_COMMON_H
+#ifndef _JSON_COMMON_H
+# define _JSON_COMMON_H
 
 # include <stdbool.h>
 # include <stdio.h>
@@ -892,8 +892,8 @@ def generate_common_C_header(header_file):
 # include <yajl/yajl_gen.h>
 
 # undef linux
-# define LIBOCISPEC_OPTIONS_STRICT 1
-typedef char *oci_parser_error;
+# define PARSE_OPTIONS_STRICT 1
+typedef char *parser_error;
 
 typedef struct {
     char **keys;
@@ -901,7 +901,7 @@ typedef struct {
     size_t len;
 } string_cells;
 
-struct libocispec_context {
+struct parser_context {
     int options;
     FILE *stderr;
 };
@@ -956,7 +956,7 @@ void *safe_malloc (size_t size);
 
 def generate_common_C_code(c_file):
     c_file.write("""/* autogenerated file */
-#include "oci_json_common.h"
+#include "json_common.h"
 
 bool reformat_integer (void *ctx, long long int num) {
     yajl_gen g = (yajl_gen) ctx;
@@ -1098,7 +1098,7 @@ if __name__ == "__main__":
     oldcwd = os.getcwd()
 
     if len(sys.argv) < 5:
-        with open("src/oci_json_common.h", "w") as common_h_file, open("src/oci_json_common.c", "w") as common_c_file:
+        with open("src/json_common.h", "w") as common_h_file, open("src/json_common.c", "w") as common_c_file:
             generate_common_file(common_h_file, common_c_file)
         sys.exit(0)
 

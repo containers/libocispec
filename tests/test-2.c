@@ -25,7 +25,7 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 int
 main (int argc, char *argv[])
 {
-  oci_parser_error err;
+  parser_error err;
   oci_container *container = oci_container_parse_file ("tests/data/config.nocwd.json", 0, &err);
   if (container != NULL) {
     exit (4);
