@@ -15,6 +15,8 @@ AC_PROG_RANLIB
 AC_PROG_CC
 AM_PROG_CC_C_O
 
+AM_PATH_PYTHON([2.7])
+
 PKG_CHECK_MODULES([YAJL], [yajl >= 2.1.0])
 
 AC_CHECK_LIB(seccomp, seccomp_rule_add)
