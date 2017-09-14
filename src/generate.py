@@ -766,13 +766,15 @@ oci_%s *oci_%s_parse_file (const char *filename, struct libocispec_context *ctx,
     char *content = read_file (filename, &filesize);
     char errbuf[1024];
     if (content == NULL) {
-        asprintf (err, "cannot read the file: %%s", filename);
+        if (asprintf (err, "cannot read the file: %%s", filename) < 0)
+            *err = "error allocating memory";
         return NULL;
     }
     tree = yajl_tree_parse (content, errbuf, sizeof(errbuf));
     free (content);
     if (tree == NULL) {
-        asprintf (err, "cannot parse the file: %%s", errbuf);
+        if (asprintf (err, "cannot parse the file: %%s", errbuf) < 0)
+            *err = "error allocating memory";
         return NULL;
     }
 
