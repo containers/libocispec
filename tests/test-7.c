@@ -25,7 +25,7 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 int
 main (int argc, char *argv[])
 {
-  oci_parser_error err;
+  parser_error err;
   oci_image *image = oci_image_parse_file ("tests/data/image_config_mapstringobject.json", 0, &err);
   oci_image *image_gen = NULL;
   char *json_buf = NULL;

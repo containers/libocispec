@@ -26,15 +26,15 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 int
 main (int argc, char *argv[])
 {
-  oci_parser_error err;
+  parser_error err;
   oci_container *container;
   const char *file = "config.json";
-  struct libocispec_context ctx;
+  struct parser_context ctx;
 
   if (argc > 1)
     file = argv[1];
 
-  ctx.options = LIBOCISPEC_OPTIONS_STRICT;
+  ctx.options = PARSE_OPTIONS_STRICT;
   ctx.stderr = stderr;
 
   container = oci_container_parse_file (file, &ctx, &err);
