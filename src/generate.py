@@ -222,7 +222,7 @@ def generate_C_parse(obj, c_file, prefix):
                 c_file.write('            for (i = 0; i < YAJL_GET_OBJECT (tmp)->len; i++) {\n')
                 c_file.write('                const char *key = YAJL_GET_OBJECT (tmp)->keys[i];\n')
                 c_file.write('                if (key) {\n')
-                c_file.write('                     ret->%s[i] = strdup(key) ? : "";\n' % i.fixname)
+                c_file.write('                     ret->%s[i] = strdup (key) ? : "";\n' % i.fixname)
                 c_file.write('                }\n')
                 c_file.write('            }\n')
                 c_file.write('        }\n')
@@ -242,7 +242,7 @@ def generate_C_parse(obj, c_file, prefix):
         for i in required_to_check:
             c_file.write('    if (ret->%s == NULL) {\n' % i.fixname)
             c_file.write('        if (asprintf (err, "Required field %%s not present", "%s") < 0) {\n' % i.origname)
-            c_file.write('            *err = strdup("error allocating memory");\n')
+            c_file.write('            *err = strdup ("error allocating memory");\n')
             c_file.write('            return NULL;\n')
             c_file.write("        }\n")
             c_file.write("        free_%s (ret);\n" % obj_typename)
@@ -754,14 +754,14 @@ def generate_C_epilogue(c_file, prefix):
     char errbuf[1024];
     if (content == NULL) {
         if (asprintf (err, "cannot read the file: %%s", filename) < 0)
-            *err = strdup("error allocating memory");
+            *err = strdup ("error allocating memory");
         return NULL;
     }
-    tree = yajl_tree_parse (content, errbuf, sizeof(errbuf));
+    tree = yajl_tree_parse (content, errbuf, sizeof (errbuf));
     free (content);
     if (tree == NULL) {
         if (asprintf (err, "cannot parse the file: %%s", errbuf) < 0)
-            *err = strdup("error allocating memory");
+            *err = strdup ("error allocating memory");
         return NULL;
     }
 
@@ -787,11 +787,11 @@ def generate_C_epilogue(c_file, prefix):
         *err = strdup ("cannot read the file");
         return NULL;
     }
-    tree = yajl_tree_parse (content, errbuf, sizeof(errbuf));
+    tree = yajl_tree_parse (content, errbuf, sizeof (errbuf));
     free (content);
     if (tree == NULL) {
         if (asprintf (err, "cannot parse the stream: %%s", errbuf) < 0)
-            *err = strdup("error allocating memory");
+            *err = strdup ("error allocating memory");
         return NULL;
     }
 
@@ -815,10 +815,10 @@ def generate_C_epilogue(c_file, prefix):
         *err = strdup ("json data cannot be NULL");
         return NULL;
     }
-    tree = yajl_tree_parse (jsondata, errbuf, sizeof(errbuf));
+    tree = yajl_tree_parse (jsondata, errbuf, sizeof (errbuf));
     if (tree == NULL) {
         if (asprintf (err, "cannot parse the data: %%s", errbuf) < 0)
-            *err = strdup("error allocating memory");
+            *err = strdup ("error allocating memory");
         return NULL;
     }
 
