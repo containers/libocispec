@@ -164,7 +164,7 @@ def generate_C_parse(obj, c_file, prefix):
 
         required_to_check = []
         for i in (nodes or []):
-            if obj.required and i.origname in obj.required and not is_numeric_type(i.typ):
+            if obj.required and i.origname in obj.required and not is_numeric_type(i.typ) and i.typ != 'boolean':
                 required_to_check.append(i)
             if i.typ == 'string':
                 c_file.write('    {\n')
@@ -639,10 +639,10 @@ def resolve_type(name, src, cur):
             subtypobj = children
         elif '$ref' in cur["items"]:
             item_type, src = resolve_type(name, src, cur["items"])
-            return Node(name, typ, None, subtyp=item_type.typ, subtypobj=item_type.children), src
+            return Node(name, typ, None, subtyp=item_type.typ, subtypobj=item_type.children, required=item_type.required), src
         elif 'type' in cur["items"]:
             item_type, src = resolve_type(name, src, cur["items"])
-            return Node(name, typ, None, subtyp=item_type.typ, subtypobj=item_type.children), src
+            return Node(name, typ, None, subtyp=item_type.typ, subtypobj=item_type.children, required=item_type.required), src
     elif typ == 'object':
         if 'allOf' in cur:
             children = merge(scan_list(name, src, cur['allOf']))
@@ -686,7 +686,10 @@ def scan_properties(name, schema, props):
     return scan_dict(name, schema, props['properties'])
 
 def scan_main(schema, prefix):
-    return Node(Name(prefix), "object", scan_properties(Name(""), schema, schema))
+    required = None;
+    if 'required' in schema:
+        required = schema['required']
+    return Node(Name(prefix), "object", scan_properties(Name(""), schema, schema), None, None, required)
 
 def flatten(tree, structs, visited={}):
     if tree.children is not None:
