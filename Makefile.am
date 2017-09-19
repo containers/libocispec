@@ -76,7 +76,7 @@ TESTS = tests/test-1 \
 	tests/test-6 \
 	tests/test-7
 
-bin_PROGRAMS = src/validate $(TESTS)
+noinst_PROGRAMS = src/validate $(TESTS)
 
 $(abs_top_builddir)/tests/data: $(abs_top_srcdir)/tests/data
 	if test $(abs_top_srcdir) != $(abs_top_builddir) && test ! -d $@; then rm -f $@; ln -s $< $@; fi
