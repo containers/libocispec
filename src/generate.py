@@ -196,6 +196,10 @@ def generate_C_parse(obj, c_file, prefix):
                 c_file.write('            for (i = 0; i < YAJL_GET_ARRAY (tmp)->len; i++) {\n')
                 c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
                 c_file.write('                ret->%s[i] = make_%s (tmpsub, ctx, err);\n' % (i.fixname, typename))
+                c_file.write('                if (ret->%s[i] == NULL) {\n' % (i.fixname))
+                c_file.write("                    free_%s (ret);\n" % obj_typename)
+                c_file.write("                    return NULL;\n")
+                c_file.write('                }\n')
                 c_file.write('            }\n')
                 c_file.write('        }\n')
                 c_file.write('    }\n')
@@ -241,7 +245,7 @@ def generate_C_parse(obj, c_file, prefix):
 
         for i in required_to_check:
             c_file.write('    if (ret->%s == NULL) {\n' % i.fixname)
-            c_file.write('        if (asprintf (err, "Required field %%s not present", "%s") < 0) {\n' % i.origname)
+            c_file.write('        if (asprintf (err, "Required field \'%%s\' not present", "%s") < 0) {\n' % i.origname)
             c_file.write('            *err = strdup ("error allocating memory");\n')
             c_file.write('            return NULL;\n')
             c_file.write("        }\n")
