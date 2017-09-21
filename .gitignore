@@ -10,6 +10,8 @@ src/oci_image_layout_spec.c
 src/oci_image_layout_spec.h
 src/oci_image_manifest_spec.c
 src/oci_image_manifest_spec.h
+src/oci_json_common.c
+src/oci_json_common.h
 src/json_common.h
 src/json_common.c
 Makefile
