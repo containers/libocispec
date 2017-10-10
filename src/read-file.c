@@ -50,9 +50,12 @@ fread_file (FILE *stream, size_t *length)
 
 char *read_file (const char *path, size_t *length)
 {
+  char *buf = NULL;
   FILE *f = fopen (path, "r");
   if (f == NULL)
     return NULL;
 
-  return fread_file (f, length);
+  buf = fread_file (f, length);
+  fclose (f);
+  return buf;
 }
