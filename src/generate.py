@@ -481,6 +481,7 @@ def generate_C_free(obj, c_file, prefix):
                 c_file.write("            if (ptr->%s[i])\n" % (i.fixname))
                 c_file.write("                free_cells (ptr->%s[i]);\n" % (i.fixname))
                 c_file.write("        }\n")
+                c_file.write("        free (ptr->%s);\n" % (i.fixname))
                 c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
                 c_file.write("    }\n")
             elif i.subtyp == 'string':
@@ -491,6 +492,7 @@ def generate_C_free(obj, c_file, prefix):
                 c_file.write("            if (ptr->%s[i])\n" % (i.fixname))
                 c_file.write("                free (ptr->%s[i]);\n" % (i.fixname))
                 c_file.write("        }\n")
+                c_file.write("        free (ptr->%s);\n" % (i.fixname))
                 c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
                 c_file.write("    }\n")
             elif i.subtypobj is not None:
@@ -1069,6 +1071,8 @@ void free_cells (string_cells *cells) {
             free (cells->keys[i]);
             free (cells->values[i]);
         }
+        free (cells->keys);
+        free (cells->values);
         free (cells);
     }
 }
