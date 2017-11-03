@@ -23,15 +23,18 @@
 char *
 fread_file (FILE *stream, size_t *length)
 {
-  char *buf = NULL;
+  char *buf = NULL, *tmpbuf = NULL;
   size_t off = 0;
 
   while (1)
     {
       size_t ret;
-      buf = realloc (buf, off + BUFSIZ + 1);
-      if (buf == NULL)
+      tmpbuf = realloc (buf, off + BUFSIZ + 1);
+      if (tmpbuf == NULL) {
+        free (buf);
         return NULL;
+      }
+      buf = tmpbuf;
       ret = fread (buf + off, 1, BUFSIZ, stream);
       if (ret == 0 && ferror (stream))
         {
@@ -40,8 +43,8 @@ fread_file (FILE *stream, size_t *length)
         }
       if (ret < BUFSIZ || feof (stream))
         {
-          *length = off + ret;
-          buf[*length] = '\0';
+          *length = off + ret + 1;
+          buf[*length - 1] = '\0';
           return buf;
         }
       off += BUFSIZ;
