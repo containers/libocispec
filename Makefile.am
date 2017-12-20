@@ -11,6 +11,7 @@ SOURCE_FILES = src/oci_runtime_spec.c \
 	src/oci_image_index_spec.c \
 	src/oci_image_layout_spec.c \
 	src/oci_image_manifest_spec.c \
+	src/image_manifest_items.c \
 	src/json_common.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
@@ -32,6 +33,9 @@ src/oci_image_layout_spec.c: image-spec/schema/image-layout-schema.json src/gene
 
 src/oci_image_manifest_spec.c: image-spec/schema/image-manifest-schema.json src/generate.py src/json_common.h
 	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-manifest-schema.json src/oci_image_manifest_spec.h src/oci_image_manifest_spec.c oci_image_manifest
+
+src/image_manifest_items.c: tests/test-spec/imageManifestItems/image-manifest-items-schema.json src/generate.py src/json_common.h
+	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/tests/test-spec/imageManifestItems/image-manifest-items-schema.json src/image_manifest_items.h src/image_manifest_items.c image_manifest_items
 
 $(HEADER_FILES): %.h: %.c src/generate.py
 
@@ -65,6 +69,9 @@ tests_test_6_LDADD = $(TESTS_LDADD)
 tests_test_7_SOURCES = tests/test-7.c
 tests_test_7_LDADD = $(TESTS_LDADD)
 
+tests_test_8_SOURCES = tests/test-8.c
+tests_test_8_LDADD = $(TESTS_LDADD)
+
 src_validate_SOURCES = src/validate.c
 src_validate_LDADD = $(TESTS_LDADD)
 
@@ -74,7 +81,8 @@ TESTS = tests/test-1 \
 	tests/test-4 \
 	tests/test-5 \
 	tests/test-6 \
-	tests/test-7
+	tests/test-7 \
+	tests/test-8
 
 noinst_PROGRAMS = src/validate $(TESTS)
 
@@ -93,6 +101,8 @@ EXTRA_DIST = autogen.sh \
 	tests/data/image_manifest.json \
 	tests/data/image_config.json \
 	tests/data/config.nocwd.json \
+	tests/data/image_manifest_item.json \
+	tests/test-spec \
 	src/generate.py \
 	$(HEADER_FILES) \
 	src/read-file.h \

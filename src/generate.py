@@ -25,6 +25,8 @@ bind continuously single uppercase to one word, translate all words to lowercase
 and add '_' between adjacent words only when fixedname[-1] != '_' and the following word not beginning with '_'.
 '''
 def transform_to_C_name(name):
+    if name is None or name is "":
+        return ""
     parts = []
     preindex = 0
     for index, char in enumerate(name):
@@ -99,9 +101,15 @@ c_types_mapping = {
 }
 
 def make_name_array(name, prefix):
+    if name is None or name is "":
+        return "%s_element" % prefix
+    if prefix == name:
+        return "%s_element" % prefix
     return "%s_%s_element" % (prefix, name)
 
 def make_name(name, prefix):
+    if name is None or name is "":
+        return "%s" % prefix
     if prefix == name:
         return "%s" % name
     return "%s_%s" % (prefix, name)
@@ -155,7 +163,6 @@ def generate_C_parse(obj, c_file, prefix):
     c_file.write("    if (tree == NULL)\n")
     c_file.write("        return ret;\n")
     c_file.write("    ret = safe_malloc (sizeof (*ret));\n")
-    c_file.write("    memset (ret, 0, sizeof (*ret));\n")
 
     if obj.typ == 'mapStringString':
         pass
@@ -189,13 +196,13 @@ def generate_C_parse(obj, c_file, prefix):
                 typename = make_name_array(i.name, prefix)
                 c_file.write('    {\n')
                 c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' % (i.origname))
-                c_file.write('        if (tmp != NULL) {\n')
+                c_file.write('        if (tmp && YAJL_GET_ARRAY (tmp)) {\n')
                 c_file.write('            size_t i;\n')
                 c_file.write('            ret->%s_len = YAJL_GET_ARRAY (tmp)->len;\n' % (i.fixname))
                 c_file.write('            ret->%s = safe_malloc ((YAJL_GET_ARRAY (tmp)->len + 1) * sizeof (*ret->%s));\n' % (i.fixname, i.fixname))
                 c_file.write('            for (i = 0; i < YAJL_GET_ARRAY (tmp)->len; i++) {\n')
-                c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
-                c_file.write('                ret->%s[i] = make_%s (tmpsub, ctx, err);\n' % (i.fixname, typename))
+                c_file.write('                yajl_val val = YAJL_GET_ARRAY (tmp)->values[i];\n')
+                c_file.write('                ret->%s[i] = make_%s (val, ctx, err);\n' % (i.fixname, typename))
                 c_file.write('                if (ret->%s[i] == NULL) {\n' % (i.fixname))
                 c_file.write("                    free_%s (ret);\n" % obj_typename)
                 c_file.write("                    return NULL;\n")
@@ -206,20 +213,19 @@ def generate_C_parse(obj, c_file, prefix):
             elif i.typ == 'array':
                 c_file.write('    {\n')
                 c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' % (i.origname))
-                c_file.write('        if (tmp != NULL) {\n')
+                c_file.write('        if (tmp && YAJL_GET_ARRAY (tmp)) {\n')
                 c_file.write('            size_t i;\n')
                 c_file.write('            ret->%s_len = YAJL_GET_ARRAY (tmp)->len;\n' % (i.fixname))
                 c_file.write('            ret->%s = safe_malloc ((YAJL_GET_ARRAY (tmp)->len + 1) * sizeof (*ret->%s));\n' % (i.fixname, i.fixname))
                 c_file.write('            for (i = 0; i < YAJL_GET_ARRAY (tmp)->len; i++) {\n')
-                c_file.write('                yajl_val tmpsub = YAJL_GET_ARRAY (tmp)->values[i];\n')
-                read_value_generator(c_file, 4, 'tmpsub', "ret->%s[i]" % i.fixname, i.subtyp)
+                read_value_generator(c_file, 4, 'YAJL_GET_ARRAY (tmp)->values[i]', "ret->%s[i]" % i.fixname, i.subtyp)
                 c_file.write('            }\n')
                 c_file.write('        }\n')
                 c_file.write('    }\n')
             elif i.typ == 'mapStringObject':
                 c_file.write('    {\n')
                 c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_object);\n' % (i.origname))
-                c_file.write('        if (tmp != NULL) {\n')
+                c_file.write('        if (tmp && YAJL_GET_OBJECT (tmp)) {\n')
                 c_file.write('            size_t i;\n')
                 c_file.write('            ret->%s_len = YAJL_GET_OBJECT (tmp)->len;\n' % i.fixname)
                 c_file.write('            ret->%s = safe_malloc ((YAJL_GET_OBJECT (tmp)->len + 1) * sizeof (*ret->%s));\n' % (i.fixname, i.fixname))
@@ -245,10 +251,8 @@ def generate_C_parse(obj, c_file, prefix):
 
         for i in required_to_check:
             c_file.write('    if (ret->%s == NULL) {\n' % i.fixname)
-            c_file.write('        if (asprintf (err, "Required field \'%%s\' not present", "%s") < 0) {\n' % i.origname)
+            c_file.write('        if (asprintf (err, "Required field \'%%s\' not present", "%s") < 0)\n' % i.origname)
             c_file.write('            *err = strdup ("error allocating memory");\n')
-            c_file.write('            return NULL;\n')
-            c_file.write("        }\n")
             c_file.write("        free_%s (ret);\n" % obj_typename)
             c_file.write("        return NULL;\n")
             c_file.write('    }\n')
@@ -413,19 +417,26 @@ def generate_C_json(obj, c_file, prefix):
 
 def read_value_generator(c_file, level, src, dest, typ):
     if typ == 'mapStringString':
-        c_file.write('%s%s = read_map_string_string (%s);\n' % ('    ' * (level), dest, src))
+        c_file.write('%syajl_val val = %s;\n' % ('    ' * level, src))
+        c_file.write('%sif (val)\n' % ('    ' * level))
+        c_file.write('%s%s = read_map_string_string (val);\n' % ('    ' * (level + 1), dest))
     elif typ == 'string':
-        c_file.write('%sif (%s)\n' % ('    ' * level, src))
-        c_file.write('%s%s = strdup (YAJL_GET_STRING (%s) ? : "");\n' % ('    ' * (level + 1), dest, src))
+        c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
+        c_file.write('%sif (val) {\n' % ('    ' * (level)))
+        c_file.write('%schar *str = YAJL_GET_STRING (val);\n' % ('    ' * (level + 1)))
+        c_file.write('%s%s = strdup (str ? str : "");\n' % ('    ' * (level + 1), dest))
+        c_file.write('%s}\n' % ('    ' * level))
     elif is_numeric_type(typ):
-        c_file.write('%sif (%s)\n' % ('    ' * level, src))
+        c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
+        c_file.write('%sif (val)\n' % ('    ' * (level)))
         if typ.startswith("uint"):
-            c_file.write('%s%s = strtoull (YAJL_GET_NUMBER (%s), NULL, 10);\n' % ('    ' * (level + 1), dest, src))
+            c_file.write('%s%s = strtoull (YAJL_GET_NUMBER (val), NULL, 10);\n' % ('    ' * (level + 1), dest))
         else:
-            c_file.write('%s%s = strtoll (YAJL_GET_NUMBER (%s), NULL, 10);\n' % ('    ' * (level + 1), dest, src))
+            c_file.write('%s%s = strtoll (YAJL_GET_NUMBER (val), NULL, 10);\n' % ('    ' * (level + 1), dest))
     elif typ == 'boolean':
-        c_file.write('%sif (%s)\n' % ('    ' * level, src))
-        c_file.write('%s%s = YAJL_IS_TRUE (%s);\n' % ('    ' * (level + 1), dest, src))
+        c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
+        c_file.write('%sif (val)\n' % ('    ' * (level)))
+        c_file.write('%s%s = YAJL_IS_TRUE (val);\n' % ('    ' * (level + 1), dest))
 
 def json_value_generator(c_file, level, src, dst, typ):
     if typ == 'mapStringString':
@@ -463,6 +474,8 @@ def generate_C_free(obj, c_file, prefix):
         typename = typename + "_element"
 
     c_file.write("void free_%s (%s *ptr) {\n" % (typename, typename))
+    c_file.write("    if (!ptr)\n")
+    c_file.write("        return;\n")
     if obj.typ == 'mapStringString':
         c_file.write("    free_cells (ptr);\n")
         c_file.write("    ptr = NULL;\n")
@@ -478,8 +491,10 @@ def generate_C_free(obj, c_file, prefix):
                 c_file.write("    if (ptr->%s) {\n" % i.fixname)
                 c_file.write("        size_t i;\n")
                 c_file.write("        for (i = 0; i < ptr->%s_len; i++) {\n" % i.fixname)
-                c_file.write("            if (ptr->%s[i])\n" % (i.fixname))
+                c_file.write("            if (ptr->%s[i]) {\n" % (i.fixname))
                 c_file.write("                free_cells (ptr->%s[i]);\n" % (i.fixname))
+                c_file.write("                ptr->%s[i] = NULL;\n" % (i.fixname))
+                c_file.write("            }\n")
                 c_file.write("        }\n")
                 c_file.write("        free (ptr->%s);\n" % (i.fixname))
                 c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
@@ -489,8 +504,10 @@ def generate_C_free(obj, c_file, prefix):
                 c_file.write("    if (ptr->%s) {\n" % i.fixname)
                 c_file.write("        size_t i;\n")
                 c_file.write("        for (i = 0; i < ptr->%s_len; i++) {\n" % i.fixname)
-                c_file.write("            if (ptr->%s[i])\n" % (i.fixname))
+                c_file.write("            if (ptr->%s[i]) {\n" % (i.fixname))
                 c_file.write("                free (ptr->%s[i]);\n" % (i.fixname))
+                c_file.write("                ptr->%s[i] = NULL;\n" % (i.fixname))
+                c_file.write("            }\n")
                 c_file.write("        }\n")
                 c_file.write("        free (ptr->%s);\n" % (i.fixname))
                 c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
@@ -500,8 +517,10 @@ def generate_C_free(obj, c_file, prefix):
                 c_file.write("    if (ptr->%s) {\n" % i.fixname)
                 c_file.write("        size_t i;\n")
                 c_file.write("        for (i = 0; i < ptr->%s_len; i++)\n" % i.fixname)
-                c_file.write("            if (ptr->%s[i])\n" % (i.fixname))
+                c_file.write("            if (ptr->%s[i]) {\n" % (i.fixname))
                 c_file.write("                free_%s (ptr->%s[i]);\n" % (free_func, i.fixname))
+                c_file.write("                ptr->%s[i] = NULL;\n" % (i.fixname))
+                c_file.write("            }\n")
                 c_file.write("        free (ptr->%s);\n" % i.fixname)
                 c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
                 c_file.write("    }\n")
@@ -519,9 +538,10 @@ def generate_C_free(obj, c_file, prefix):
                 c_file.write("    free (ptr->%s);\n" % (i.fixname))
                 c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
             elif i.typ == 'object':
-                c_file.write("    if (ptr->%s)\n" % (i.fixname))
+                c_file.write("    if (ptr->%s) {\n" % (i.fixname))
                 c_file.write("        free_%s (ptr->%s);\n" % (typename, i.fixname))
-                c_file.write("    ptr->%s = NULL;\n" % (i.fixname))
+                c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
+                c_file.write("    }\n")
     c_file.write("    free (ptr);\n")
     c_file.write("}\n\n")
 
@@ -696,9 +716,16 @@ def scan_properties(name, schema, props):
 
 def scan_main(schema, prefix):
     required = None;
-    if 'required' in schema:
-        required = schema['required']
-    return Node(Name(prefix), "object", scan_properties(Name(""), schema, schema), None, None, required)
+    if 'object' in schema['type']:
+        if 'required' in schema:
+            required = schema['required']
+        return Node(Name(prefix), 'object', scan_properties(Name(""), schema, schema), None, None, required)
+    elif 'array' in schema['type']:
+        item_type, _ = resolve_type(Name(""), schema['items'], schema['items'])
+        return Node(Name(prefix), 'array', None, item_type.typ, item_type.children, item_type.required)
+    else:
+        print("Not supported type '%s'" % schema['type'])
+        return None
 
 def flatten(tree, structs, visited={}):
     if tree.children is not None:
@@ -727,13 +754,20 @@ def generate_C_header(structs, header, prefix):
     header.write("# include <sys/types.h>\n")
     header.write("# include <stdint.h>\n")
     header.write("# include \"json_common.h\"\n\n")
-
     for i in structs:
         append_type_C_header(i, header, prefix)
-    header.write("%s *%s_parse_file (const char *filename, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
-    header.write("%s *%s_parse_file_stream (FILE *stream, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
-    header.write("%s *%s_parse_data (const char *jsondata, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
-    header.write("char *%s_generate_json (%s *ptr, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
+    toptype = structs[len(structs) - 1].typ
+    if toptype is 'object':
+        header.write("%s *%s_parse_file (const char *filename, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
+        header.write("%s *%s_parse_file_stream (FILE *stream, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
+        header.write("%s *%s_parse_data (const char *jsondata, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
+        header.write("char *%s_generate_json (%s *ptr, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
+    else:
+        header.write("void free_%s (%s_element **ptr, size_t len);\n\n" % (prefix, prefix))
+        header.write("%s_element **%s_parse_file (const char *filename, struct parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, prefix))
+        header.write("%s_element **%s_parse_file_stream (FILE *stream, struct parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, prefix))
+        header.write("%s_element **%s_parse_data (const char *jsondata, struct parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, prefix))
+        header.write("char *%s_generate_json (%s_element **ptr, size_t len, struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
     header.write("#endif\n")
 
 def generate_C_code(structs, header_name, c_file, prefix):
@@ -748,11 +782,77 @@ def generate_C_code(structs, header_name, c_file, prefix):
     for i in structs:
         append_C_code(i, c_file, prefix)
 
-def generate_C_epilogue(c_file, prefix):
-    c_file.write("""\n
-%s *%s_parse_file (const char *filename, struct parser_context *ctx, parser_error *err) {
+def generate_C_epilogue(c_file, prefix, typ):
+    if typ is 'array':
+        c_file.write("""\n
+%s_element **make_%s (yajl_val tree, struct parser_context *ctx, parser_error *err, size_t *len) {
+    %s_element **ptr;
+    size_t i, alen;
+    if (!tree || !err || !len || !YAJL_GET_ARRAY (tree))
+        return NULL;
+    *err = 0;
+    alen = YAJL_GET_ARRAY (tree)->len;
+    if (alen == 0)
+        return NULL;
+    ptr = safe_malloc ((alen + 1) * sizeof (%s_element *));
+    for (i = 0; i < alen; i++) {
+        yajl_val val = YAJL_GET_ARRAY (tree)->values[i];
+        ptr[i] = make_%s_element (val, ctx, err);
+        if (ptr[i] == NULL) {
+            free_%s(ptr, alen);
+            return NULL;
+        }
+    }
+    *len = alen;
+    return ptr;
+}
+""" % (prefix, prefix, prefix, prefix, prefix, prefix))
+        c_file.write("""\n
+void free_%s (%s_element **ptr, size_t len) {
+    size_t i;
+
+    if (!ptr || len <= 0)
+        return;
+
+    for (i = 0; i < len; i++) {
+        if (ptr[i]) {
+            free_%s_element (ptr[i]);
+            ptr[i] = NULL;
+        }
+    }
+    free (ptr);
+}
+""" % (prefix, prefix, prefix))
+        c_file.write("""\n
+bool gen_%s (yajl_gen g, %s_element **ptr, size_t len, struct parser_context *ctx, parser_error *err) {
+    bool stat;
+    size_t i;
+    *err = 0;
+    stat = reformat_start_array (g);
+    if (!stat)
+        return false;
+    for (i = 0; i < len; i++) {
+        stat = gen_%s_element (g, ptr[i], ctx, err);
+        if (!stat)
+            return false;
+    }
+    stat = reformat_end_array (g);
+    if (!stat)
+        return false;
+    return true;
+}
+""" % (prefix, prefix, prefix))
+
+    if typ is 'object':
+        c_file.write("\n%s *%s_parse_file (const char *filename, struct parser_context *ctx, parser_error *err) {" % (prefix, prefix))
+    else:
+        c_file.write("\n%s_element **%s_parse_file (const char *filename, struct parser_context *ctx, parser_error *err, size_t *len) {" % (prefix, prefix))
+    c_file.write("""
     yajl_val tree;
     size_t filesize;
+
+    if (!filename || !err)
+        return NULL;
     *err = NULL;
     struct parser_context tmp_ctx;
     if (!ctx) {
@@ -762,28 +862,38 @@ def generate_C_epilogue(c_file, prefix):
     char *content = read_file (filename, &filesize);
     char errbuf[1024];
     if (content == NULL) {
-        if (asprintf (err, "cannot read the file: %%s", filename) < 0)
+        if (asprintf (err, "cannot read the file: %s", filename) < 0)
             *err = strdup ("error allocating memory");
         return NULL;
     }
     tree = yajl_tree_parse (content, errbuf, sizeof (errbuf));
     free (content);
     if (tree == NULL) {
-        if (asprintf (err, "cannot parse the file: %%s", errbuf) < 0)
+        if (asprintf (err, "cannot parse the file: %s", errbuf) < 0)
             *err = strdup ("error allocating memory");
         return NULL;
     }
-
-    %s *ptr = make_%s (tree, ctx, err);
+""")
+    if typ is 'object':
+        c_file.write("\n    %s *ptr = make_%s (tree, ctx, err);" % (prefix, prefix))
+    else:
+        c_file.write("\n    %s_element **ptr = make_%s (tree, ctx, err, len);" % (prefix, prefix))
+    c_file.write("""
     yajl_tree_free (tree);
     return ptr;
 }
-""" % (prefix, prefix, prefix, prefix))
+""")
 
-    c_file.write("""\n
-%s *%s_parse_file_stream (FILE *stream, struct parser_context *ctx, parser_error *err) {
+    if typ is 'object':
+        c_file.write("\n%s *%s_parse_file_stream (FILE *stream, struct parser_context *ctx, parser_error *err) {" % (prefix, prefix))
+    else:
+        c_file.write("\n%s_element **%s_parse_file_stream (FILE *stream, struct parser_context *ctx, parser_error *err, size_t *len) {" % (prefix, prefix))
+    c_file.write("""
     yajl_val tree;
     size_t filesize;
+
+    if (!stream || !err)
+        return NULL;
     *err = NULL;
     struct parser_context tmp_ctx;
     if (!ctx) {
@@ -799,57 +909,67 @@ def generate_C_epilogue(c_file, prefix):
     tree = yajl_tree_parse (content, errbuf, sizeof (errbuf));
     free (content);
     if (tree == NULL) {
-        if (asprintf (err, "cannot parse the stream: %%s", errbuf) < 0)
+        if (asprintf (err, "cannot parse the stream: %s", errbuf) < 0)
             *err = strdup ("error allocating memory");
         return NULL;
     }
-
-    %s *ptr = make_%s (tree, ctx, err);
+""")
+    if typ is 'object':
+        c_file.write("\n    %s *ptr = make_%s (tree, ctx, err);" % (prefix, prefix))
+    else:
+        c_file.write("\n    %s_element **ptr = make_%s (tree, ctx, err, len);" % (prefix, prefix))
+    c_file.write("""
     yajl_tree_free (tree);
     return ptr;
 }
-""" % (prefix, prefix, prefix, prefix))
+""")
 
-    c_file.write("""\n
-%s *%s_parse_data (const char *jsondata, struct parser_context *ctx, parser_error *err) {
+    if typ is 'object':
+        c_file.write("\n%s *%s_parse_data (const char *jsondata, struct parser_context *ctx, parser_error *err) {" % (prefix, prefix))
+    else:
+        c_file.write("\n%s_element **%s_parse_data (const char *jsondata, struct parser_context *ctx, parser_error *err, size_t *len) {" % (prefix, prefix))
+    c_file.write("""
     yajl_val tree;
-    *err = NULL;
     struct parser_context tmp_ctx;
+
+    if (!jsondata || !err)
+        return NULL;
+    *err = NULL;
     if (!ctx) {
        ctx = &tmp_ctx;
        memset (&tmp_ctx, 0, sizeof (tmp_ctx));
     }
     char errbuf[1024];
-    if (jsondata == NULL) {
-        *err = strdup ("json data cannot be NULL");
-        return NULL;
-    }
     tree = yajl_tree_parse (jsondata, errbuf, sizeof (errbuf));
     if (tree == NULL) {
-        if (asprintf (err, "cannot parse the data: %%s", errbuf) < 0)
+        if (asprintf (err, "cannot parse the data: %s", errbuf) < 0)
             *err = strdup ("error allocating memory");
         return NULL;
     }
-
-    %s *ptr = make_%s (tree, ctx, err);
+""")
+    if typ is 'object':
+        c_file.write("    %s *ptr = make_%s (tree, ctx, err);" % (prefix, prefix))
+    else:
+        c_file.write("    %s_element **ptr = make_%s (tree, ctx, err, len);" % (prefix, prefix))
+    c_file.write("""
     yajl_tree_free (tree);
     return ptr;
 }
-""" % (prefix, prefix, prefix, prefix))
+""")
 
-    c_file.write("""\n
-char *%s_generate_json (%s *ptr, struct parser_context *ctx, parser_error *err) {
+    if typ is 'object':
+        c_file.write("char *%s_generate_json (%s *ptr, struct parser_context *ctx, parser_error *err) {" % (prefix, prefix))
+    else:
+        c_file.write("char *%s_generate_json (%s_element **ptr, size_t len, struct parser_context *ctx, parser_error *err) {" % (prefix, prefix))
+    c_file.write("""
     yajl_gen g = NULL;
     struct parser_context tmp_ctx;
     const unsigned char *gen_buf = NULL;
     char *json_buf = NULL;
     size_t gen_len = 0;
 
-    if (!ptr || !err) {
-        *err = strdup ("NULL input");
-        goto out;
-    }
-
+    if (!ptr || !err)
+        return NULL;
     *err = NULL;
     if (!ctx) {
         ctx = &tmp_ctx;
@@ -860,8 +980,12 @@ char *%s_generate_json (%s *ptr, struct parser_context *ctx, parser_error *err) 
         *err = strdup ("Json_gen init failed");
         goto out;
     }
-
-    if (!gen_%s (g, ptr, ctx, err)) {
+""")
+    if typ is 'object':
+        c_file.write("    if (!gen_%s (g, ptr, ctx, err)) {" % prefix)
+    else:
+        c_file.write("    if (!gen_%s (g, ptr, len, ctx, err)) {" % prefix)
+    c_file.write("""
         *err = strdup ("Failed to generate json");
         goto free_out;
     }
@@ -882,16 +1006,20 @@ free_out:
 out:
     return json_buf;
 }
-""" % (prefix, prefix, prefix))
+""")
 
 def generate(schema_json, header_name, header_file, c_file, prefix):
     tree = scan_main(schema_json, prefix)
+    if tree == None:
+        print("ERROR: generating failed")
+        return
     # we could do this in scan_main, but let's work on tree that is easier
     # to access.
     structs = flatten(tree, [])
     generate_C_header(structs, header_file, prefix)
     generate_C_code(structs, header_name, c_file, prefix)
-    generate_C_epilogue(c_file, prefix)
+    generate_C_epilogue(c_file, prefix, tree.typ)
+
 
 def generate_common_C_header(header_file):
     header_file.write("""/* autogenerated file */
@@ -916,7 +1044,7 @@ typedef struct {
 } string_cells;
 
 struct parser_context {
-    int options;
+    unsigned int options;
     FILE *stderr;
 };
 
@@ -1069,10 +1197,14 @@ void free_cells (string_cells *cells) {
         size_t i;
         for (i = 0; i < cells->len; i++) {
             free (cells->keys[i]);
+            cells->keys[i] = NULL;
             free (cells->values[i]);
+            cells->values[i] = NULL;
         }
         free (cells->keys);
+        cells->keys = NULL;
         free (cells->values);
+        cells->values = NULL;
         free (cells);
     }
 }
@@ -1087,19 +1219,22 @@ void *safe_malloc (size_t size) {
 
 string_cells *read_map_string_string (yajl_val src) {
     string_cells *ret = NULL;
-    if (src != NULL) {
+    if (src && YAJL_GET_OBJECT (src)) {
         size_t i;
         ret = safe_malloc (sizeof (string_cells));
         ret->len = YAJL_GET_OBJECT (src)->len;
         ret->keys = safe_malloc ((YAJL_GET_OBJECT (src)->len + 1) * sizeof (char *));
         ret->values = safe_malloc ((YAJL_GET_OBJECT (src)->len + 1) * sizeof (char *));
         for (i = 0; i < YAJL_GET_OBJECT (src)->len; i++) {
-            yajl_val srcsub = YAJL_GET_OBJECT (src)->values[i];
-            ret->keys[i] = strdup (YAJL_GET_OBJECT (src)->keys[i] ? : "");
-            if (srcsub)
-                ret->values[i] = strdup (YAJL_GET_STRING (srcsub) ? : "");
-            else
+            const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
+            yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+            ret->keys[i] = strdup (srckey ? srckey : "");
+            if (srcval) {
+                char *str = YAJL_GET_STRING (srcval);
+                ret->values[i] = strdup (str ? str : "");
+            } else {
                 ret->values[i] = NULL;
+            }
         }
     }
     return ret;
