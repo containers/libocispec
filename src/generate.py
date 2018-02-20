@@ -524,6 +524,9 @@ def generate_C_free(obj, c_file, prefix):
                 c_file.write("        free (ptr->%s);\n" % i.fixname)
                 c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
                 c_file.write("    }\n")
+            else:
+                c_file.write("   if (ptr->%s)\n" % (i.fixname))
+                c_file.write("     free (ptr->%s);\n" % (i.fixname))
 
             c_typ = get_pointer(i.name, i.subtypobj, prefix)
             if c_typ == None:
