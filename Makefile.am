@@ -4,6 +4,7 @@ AM_CFLAGS = $(WARN_CFLAGS) -I$(top_srcdir)/src -I$(top_builddir)/src
 
 GITIGNOREFILES = build-aux/ gtk-doc.make config.h.in aclocal.m4
 
+noinst_LTLIBRARIES = libocispec.la
 noinst_LIBRARIES = libocispec.a
 
 SOURCE_FILES = src/oci_runtime_spec.c \
@@ -41,12 +42,15 @@ $(HEADER_FILES): %.h: %.c src/generate.py
 
 BUILT_SOURCES = $(HEADER_FILES) $(SOURCE_FILES)
 
-libocispec_a_SOURCES = $(SOURCE_FILES) \
+libocispec_la_SOURCES = $(SOURCE_FILES) \
 	src/read-file.c
 
 CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES)
 
-TESTS_LDADD = libocispec.a $(SELINUX_LIBS) $(YAJL_LIBS)
+TESTS_LDADD = libocispec.la $(SELINUX_LIBS) $(YAJL_LIBS)
+
+libocispec.a: libocispec.la
+	$(LIBTOOL) --mode=link $(GCC) libocispec.la -o libocispec.a
 
 tests_test_1_SOURCES = tests/test-1.c
 tests_test_1_LDADD = $(TESTS_LDADD)

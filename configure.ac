@@ -6,12 +6,13 @@ AC_CONFIG_AUX_DIR([build-aux])
 
 AC_USE_SYSTEM_EXTENSIONS
 
+LT_INIT([disable-shared])
+
 AM_INIT_AUTOMAKE([1.11 -Wno-portability foreign tar-ustar no-dist-gzip dist-xz subdir-objects])
 AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
 
 AC_PROG_SED
-AC_PROG_RANLIB
 AC_PROG_CC
 AM_PROG_CC_C_O
 
