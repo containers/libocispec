@@ -45,6 +45,8 @@ BUILT_SOURCES = $(HEADER_FILES) $(SOURCE_FILES)
 libocispec_la_SOURCES = $(SOURCE_FILES) \
 	src/read-file.c
 
+libocispec_a_SOURCES =
+
 CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES)
 
 TESTS_LDADD = libocispec.la $(SELINUX_LIBS) $(YAJL_LIBS)
