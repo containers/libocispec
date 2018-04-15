@@ -21,22 +21,22 @@ src/json_common.h src/json_common.c:
 	$(PYTHON) $(srcdir)/src/generate.py
 
 src/oci_runtime_spec.c: runtime-spec/schema/config-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/runtime-spec/schema/config-schema.json src/oci_runtime_spec.h src/oci_runtime_spec.c oci_container
+	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/runtime-spec/schema/config-schema.json src/oci_runtime_spec.h src/oci_runtime_spec.c oci_container $(OCI_RUNTIME_EXTENSIONS)
 
 src/oci_image_spec.c: image-spec/schema/config-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/config-schema.json src/oci_image_spec.h src/oci_image_spec.c oci_image
+	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/config-schema.json src/oci_image_spec.h src/oci_image_spec.c oci_image $(OCI_IMAGE_EXTENSIONS)
 
 src/oci_image_index_spec.c: image-spec/schema/image-index-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-index-schema.json src/oci_image_index_spec.h src/oci_image_index_spec.c oci_image_index
+	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-index-schema.json src/oci_image_index_spec.h src/oci_image_index_spec.c oci_image_index $(OCI_IMAGE_INDEX_EXTENSIONS)
 
 src/oci_image_layout_spec.c: image-spec/schema/image-layout-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-layout-schema.json src/oci_image_layout_spec.h src/oci_image_layout_spec.c oci_image_layout
+	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-layout-schema.json src/oci_image_layout_spec.h src/oci_image_layout_spec.c oci_image_layout $(OCI_IMAGE_LAYOUT_EXTENSIONS)
 
 src/oci_image_manifest_spec.c: image-spec/schema/image-manifest-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-manifest-schema.json src/oci_image_manifest_spec.h src/oci_image_manifest_spec.c oci_image_manifest
+	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-manifest-schema.json src/oci_image_manifest_spec.h src/oci_image_manifest_spec.c oci_image_manifest $(OCI_IMAGE_MANIFEST_EXTENSIONS)
 
 src/image_manifest_items.c: tests/test-spec/imageManifestItems/image-manifest-items-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/tests/test-spec/imageManifestItems/image-manifest-items-schema.json src/image_manifest_items.h src/image_manifest_items.c image_manifest_items
+	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/tests/test-spec/imageManifestItems/image-manifest-items-schema.json src/image_manifest_items.h src/image_manifest_items.c image_manifest_items $(OCI_IMAGE_MANIFEST_ITEMS_EXTENSIONS)
 
 $(HEADER_FILES): %.h: %.c src/generate.py
 

@@ -12,6 +12,13 @@ AM_INIT_AUTOMAKE([1.11 -Wno-portability foreign tar-ustar no-dist-gzip dist-xz s
 AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
 
+AC_ARG_VAR(OCI_RUNTIME_EXTENSIONS, [extensions for the OCI runtime parser])
+AC_ARG_VAR(OCI_IMAGE_EXTENSIONS, [extensions for the OCI image parser])
+AC_ARG_VAR(OCI_IMAGE_INDEX_EXTENSIONS, [extensions for the OCI image index parser])
+AC_ARG_VAR(OCI_IMAGE_LAYOUT_EXTENSIONS, [extensions for the OCI image layout parser])
+AC_ARG_VAR(OCI_IMAGE_MANIFEST_EXTENSIONS, [extensions for the OCI image manifest parser])
+AC_ARG_VAR(OCI_IMAGE_MANIFEST_ITEMS_EXTENSIONS, [extensions for the OCI image manifest items parser])
+
 AC_PROG_SED
 AC_PROG_CC
 AM_PROG_CC_C_O
