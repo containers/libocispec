@@ -730,13 +730,13 @@ def scan_main(schema, prefix):
         print("Not supported type '%s'" % schema['type'])
         return None
 
-def flatten(tree, structs, visited={}):
+def flatten(tree, structs, visited):
     if tree.children is not None:
         for i in tree.children:
-            flatten(i, structs, visited=visited)
+            flatten(i, structs, visited)
     if tree.subtypobj is not None:
         for i in tree.subtypobj:
-            flatten(i, structs, visited=visited)
+            flatten(i, structs, visited)
 
     if tree.typ == 'array' and tree.subtyp == 'mapStringString':
         name = Name(tree.name + "_element")
@@ -1011,17 +1011,20 @@ out:
 }
 """)
 
-def generate(schema_json, header_name, header_file, c_file, prefix):
+def generate(schema_json, prefix):
     tree = scan_main(schema_json, prefix)
     if tree == None:
         print("ERROR: generating failed")
-        return
+        return None, None
     # we could do this in scan_main, but let's work on tree that is easier
     # to access.
-    structs = flatten(tree, [])
+    structs = flatten(tree, [], {})
+    return tree.typ, structs
+
+def write_C_code(structs, typ, header_name, header_file, c_file, prefix):
     generate_C_header(structs, header_file, prefix)
     generate_C_code(structs, header_name, c_file, prefix)
-    generate_C_epilogue(c_file, prefix, tree.typ)
+    generate_C_epilogue(c_file, prefix, typ)
 
 
 def generate_common_C_header(header_file):
@@ -1244,6 +1247,36 @@ string_cells *read_map_string_string (yajl_val src) {
 }
 """)
 
+def merge_structs(old, new):
+    if old is None:
+        return new
+
+    old_by_key = {i.name: i for i in old}
+    prepend = []
+    for i in new:
+        if i.name not in old_by_key:
+            prepend.append(i)
+
+    old = prepend + old
+
+    new_by_key = {i.name: i for i in new}
+    for i in old:
+        if i.name not in new_by_key:
+            continue
+        n = new_by_key[i.name]
+
+        old_children_by_key = {j.name: j for j in (i.children or [])}
+        old_required_by_key = set(i.required or [])
+
+        for nc in (n.children or []):
+            if nc.name not in old_children_by_key:
+                i.children.append(nc)
+        for r in (n.required or []):
+            if r not in old_required_by_key:
+                i.required.append(r)
+
+    return old
+
 def generate_common_file(header_file, c_file):
     generate_common_C_header(header_file)
     generate_common_C_code(c_file)
@@ -1261,11 +1294,19 @@ if __name__ == "__main__":
     c_source = sys.argv[3]
     prefix = sys.argv[4]
 
+    files = [schema_file] + sys.argv[5:]
+
     with open(header + ".tmp", "w") as header_file, open(c_source + ".tmp", "w") as c_file:
-        os.chdir(os.path.dirname(schema_file))
-        with open(os.path.basename(schema_file)) as schema:
-            schema_json = json.loads(schema.read())
-        generate(schema_json, os.path.basename(header), header_file, c_file, prefix)
-    os.chdir(oldcwd)
+        typ, structs = None, None
+        for i in files:
+            os.chdir(os.path.dirname(i))
+            with open(os.path.basename(i)) as schema:
+                schema_json = json.loads(schema.read())
+            ntyp, nstructs = generate(schema_json, prefix)
+            typ = typ or ntyp
+            structs = merge_structs(structs, nstructs)
+            os.chdir(oldcwd)
+        write_C_code(structs, typ, os.path.basename(header), header_file, c_file, prefix)
+
     os.rename(header + ".tmp", header)
     os.rename(c_source + ".tmp", c_source)
