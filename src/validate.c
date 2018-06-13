@@ -35,7 +35,7 @@ main (int argc, char *argv[])
     file = argv[1];
 
   ctx.options = PARSE_OPTIONS_STRICT;
-  ctx.stderr = stderr;
+  ctx.errfile = stderr;
 
   container = oci_container_parse_file (file, &ctx, &err);
   if (container)

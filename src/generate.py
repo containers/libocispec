@@ -265,7 +265,7 @@ def generate_C_parse(obj, c_file, prefix):
         int i;
         for (i = 0; i < tree->u.object.len; i++)
             if (%s) {
-                fprintf (ctx->stderr, "WARNING: unknown key found: %%s\\n", tree->u.object.keys[i]);
+                fprintf (ctx->errfile, "WARNING: unknown key found: %%s\\n", tree->u.object.keys[i]);
             }
         }
 """ % condition)
@@ -1051,7 +1051,7 @@ typedef struct {
 
 struct parser_context {
     unsigned int options;
-    FILE *stderr;
+    FILE *errfile;
 };
 
 /* non-zero when we're reformatting a stream */
