@@ -2,7 +2,7 @@
 #
 # libocispec - a C library for parsing OCI spec files.
 #
-# Copyright (C) 2017 Giuseppe Scrivano <giuseppe@scrivano.org>
+# Copyright (C) 2017, 2019 Giuseppe Scrivano <giuseppe@scrivano.org>
 # libocispec is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
