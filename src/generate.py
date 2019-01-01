@@ -233,6 +233,8 @@ def generate_C_parse(obj, c_file, prefix):
                 c_file.write('                const char *key = YAJL_GET_OBJECT (tmp)->keys[i];\n')
                 c_file.write('                if (key) {\n')
                 c_file.write('                     ret->%s[i] = strdup (key) ? : "";\n' % i.fixname)
+                c_file.write('                     if (ret->%s[i] == NULL)\n' % i.fixname)
+                c_file.write('                         abort ();')
                 c_file.write('                }\n')
                 c_file.write('            }\n')
                 c_file.write('        }\n')
@@ -425,6 +427,8 @@ def read_value_generator(c_file, level, src, dest, typ):
         c_file.write('%sif (val) {\n' % ('    ' * (level)))
         c_file.write('%schar *str = YAJL_GET_STRING (val);\n' % ('    ' * (level + 1)))
         c_file.write('%s%s = strdup (str ? str : "");\n' % ('    ' * (level + 1), dest))
+        c_file.write('%sif (%s == NULL)\n' % ('    ' * (level + 1), dest))
+        c_file.write('%s    abort ();\n' % ('    ' * (level + 1)))
         c_file.write('%s}\n' % ('    ' * level))
     elif is_numeric_type(typ):
         c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
@@ -1235,9 +1239,13 @@ string_cells *read_map_string_string (yajl_val src) {
             const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
             yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
             ret->keys[i] = strdup (srckey ? srckey : "");
+            if (ret->keys[i] == NULL)
+                abort ();
             if (srcval) {
                 char *str = YAJL_GET_STRING (srcval);
                 ret->values[i] = strdup (str ? str : "");
+                if (ret->values[i] == NULL)
+                    abort ();
             } else {
                 ret->values[i] = NULL;
             }
