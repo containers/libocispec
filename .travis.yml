@@ -6,7 +6,6 @@ addons:
     packages:
       - automake
       - autotools-dev
-      - libseccomp-dev
       - git
       - cmake
 before_install:

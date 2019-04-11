@@ -27,8 +27,6 @@ AM_PATH_PYTHON([3])
 
 PKG_CHECK_MODULES([YAJL], [yajl >= 2.1.0])
 
-AC_CHECK_LIB(seccomp, seccomp_rule_add)
-
 AC_CONFIG_FILES([
 Makefile
 ])
