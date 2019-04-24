@@ -32,10 +32,11 @@ fread_file (FILE *stream, size_t *length)
     {
       size_t ret;
       tmpbuf = realloc (buf, off + BUFSIZ + 1);
-      if (tmpbuf == NULL) {
-        free (buf);
-        return NULL;
-      }
+      if (tmpbuf == NULL)
+        {
+          free (buf);
+          return NULL;
+        }
       buf = tmpbuf;
       ret = fread (buf + off, 1, BUFSIZ, stream);
       if (ret == 0 && ferror (stream))
@@ -55,22 +56,17 @@ fread_file (FILE *stream, size_t *length)
 
 char *read_file (const char *path, size_t *length)
 {
-    char *buf = NULL;
-    char *rpath = NULL;
+  FILE *f;
+  char *buf = NULL;
 
-    if (!path || !length || strlen (path) > PATH_MAX)
-        return NULL;
+  if (!path || !length)
+    return NULL;
 
-    rpath = realpath (path, NULL);
-    if (rpath == NULL)
-        return NULL;
+  f = fopen (path, "r");
+  if (f == NULL)
+    return NULL;
 
-    FILE *f = fopen (rpath, "r");
-    free(rpath);
-    if (f == NULL)
-        return NULL;
-
-    buf = fread_file (f, length);
-    fclose (f);
-    return buf;
+  buf = fread_file (f, length);
+  fclose (f);
+  return buf;
 }
