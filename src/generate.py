@@ -259,7 +259,7 @@ def generate_C_parse(obj, c_file, prefix):
         for i in required_to_check:
             c_file.write('    if (ret->%s == NULL) {\n' % i.fixname)
             c_file.write('        if (asprintf (err, "Required field \'%%s\' not present", "%s") < 0)\n' % i.origname)
-            c_file.write('            *err = strdup ("error allocating memory");\n')
+            c_file.write('            abort();\n')
             c_file.write("        free_%s (ret);\n" % obj_typename)
             c_file.write("        return NULL;\n")
             c_file.write('    }\n')
@@ -875,14 +875,14 @@ bool gen_%s (yajl_gen g, %s_element **ptr, size_t len, struct parser_context *ct
     char errbuf[1024];
     if (content == NULL) {
         if (asprintf (err, "cannot read the file: %s", filename) < 0)
-            *err = strdup ("error allocating memory");
+            abort ();
         return NULL;
     }
     tree = yajl_tree_parse (content, errbuf, sizeof (errbuf));
     free (content);
     if (tree == NULL) {
         if (asprintf (err, "cannot parse the file: %s", errbuf) < 0)
-            *err = strdup ("error allocating memory");
+            abort ();
         return NULL;
     }
 """)
@@ -922,7 +922,7 @@ bool gen_%s (yajl_gen g, %s_element **ptr, size_t len, struct parser_context *ct
     free (content);
     if (tree == NULL) {
         if (asprintf (err, "cannot parse the stream: %s", errbuf) < 0)
-            *err = strdup ("error allocating memory");
+            abort ();
         return NULL;
     }
 """)
@@ -955,7 +955,7 @@ bool gen_%s (yajl_gen g, %s_element **ptr, size_t len, struct parser_context *ct
     tree = yajl_tree_parse (jsondata, errbuf, sizeof (errbuf));
     if (tree == NULL) {
         if (asprintf (err, "cannot parse the data: %s", errbuf) < 0)
-            *err = strdup ("error allocating memory");
+            abort ();
         return NULL;
     }
 """)
