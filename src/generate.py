@@ -320,7 +320,7 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write("    }\n")
 
             elif is_numeric_type(i.typ):
-                c_file.write('    if (ptr->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s_present) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key (g, (unsigned char *)"%s", %s);\n' % (i.origname, strlen(i.origname)))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
@@ -328,7 +328,7 @@ def generate_C_json(obj, c_file, prefix):
                 c_file.write("    }\n")
 
             elif i.typ == 'boolean':
-                c_file.write('    if (ptr->%s) {\n' % i.fixname)
+                c_file.write('    if (ptr->%s_present) {\n' % i.fixname)
                 c_file.write('        stat = reformat_map_key (g, (unsigned char *)"%s", %s);\n' % (i.origname, strlen(i.origname)))
                 c_file.write("        if (!stat)\n")
                 c_file.write("            return false;\n")
@@ -440,15 +440,21 @@ def read_value_generator(c_file, level, src, dest, typ):
         c_file.write('%s}\n' % ('    ' * level))
     elif is_numeric_type(typ):
         c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
-        c_file.write('%sif (val)\n' % ('    ' * (level)))
+        c_file.write('%sif (val) {\n' % ('    ' * (level)))
         if typ.startswith("uint"):
             c_file.write('%s%s = strtoull (YAJL_GET_NUMBER (val), NULL, 10);\n' % ('    ' * (level + 1), dest))
         else:
             c_file.write('%s%s = strtoll (YAJL_GET_NUMBER (val), NULL, 10);\n' % ('    ' * (level + 1), dest))
+        if '[' not in dest:
+            c_file.write('%s%s_present = 1;\n' % ('    ' * (level + 1), dest))
+        c_file.write('%s}\n' % ('    ' * (level)))
     elif typ == 'boolean':
         c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
-        c_file.write('%sif (val)\n' % ('    ' * (level)))
+        c_file.write('%sif (val) {\n' % ('    ' * (level)))
         c_file.write('%s%s = YAJL_IS_TRUE (val);\n' % ('    ' * (level + 1), dest))
+        if '[' not in dest:
+            c_file.write('%s%s_present = 1;\n' % ('    ' * (level + 1), dest))
+        c_file.write('%s}\n' % ('    ' * (level)))
 
 def json_value_generator(c_file, level, src, dst, typ):
     if typ == 'mapStringString':
@@ -582,6 +588,11 @@ def append_type_C_header(obj, header, prefix):
             else:
                 c_typ = make_pointer(i.name, i.typ, prefix) or c_types_mapping[i.typ]
                 header.write("    %s%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.fixname))
+
+        for i in obj.subtypobj:
+            if is_numeric_type(i.typ) or i.typ == 'boolean':
+                header.write("    unsigned int %s_present : 1;\n" % (i.fixname))
+
         typename = make_name_array(obj.name, prefix)
         header.write("}\n%s;\n\n" % typename)
         header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
@@ -605,6 +616,10 @@ def append_type_C_header(obj, header, prefix):
             else:
                 c_typ = make_pointer(i.name, i.typ, prefix) or c_types_mapping[i.typ]
                 header.write("    %s%s%s;\n\n" % (c_typ, " " if '*' not in c_typ else "", i.fixname))
+
+        for i in (obj.children or []):
+            if is_numeric_type(i.typ) or i.typ == 'boolean':
+                header.write("    unsigned int %s_present : 1;\n" % (i.fixname))
 
         typename = make_name(obj.name, prefix)
         header.write("}\n%s;\n\n" % typename)

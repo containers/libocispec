@@ -11,8 +11,7 @@
             "width": 0
         },
         "user": {
-            "uid": 101,
-            "gid": 0
+            "uid": 101
         },
         "args": [
             "ARGS1",
