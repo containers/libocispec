@@ -272,7 +272,7 @@ def generate_C_parse(obj, c_file, prefix):
             condition = " &&\n                ".join(['strcmp (tree->u.object.keys[i], "%s")' % i.origname for i in obj.children])
             c_file.write("""
     if (tree->type == yajl_t_object && (ctx->options & PARSE_OPTIONS_STRICT)) {
-        int i;
+        size_t i;
         for (i = 0; i < tree->u.object.len; i++)
             if (%s) {
                 fprintf (ctx->errfile, "WARNING: unknown key found: %%s\\n", tree->u.object.keys[i]);
