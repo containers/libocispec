@@ -23,7 +23,7 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <oci_image_layout_spec.h>
 
 int
-main (int argc, char *argv[])
+main ()
 {
   parser_error err;
   oci_image_layout *image_layout = oci_image_layout_parse_file ("tests/data/image_layout_config.json", 0, &err);

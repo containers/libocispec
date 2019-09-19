@@ -23,7 +23,7 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <image_manifest_items.h>
 
 int
-main (int argc, char *argv[])
+main ()
 {
   parser_error err = NULL;
   size_t len, len_gen;

@@ -163,6 +163,7 @@ def generate_C_parse(obj, c_file, prefix):
     c_file.write("%s *make_%s (yajl_val tree, struct parser_context *ctx, parser_error *err) {\n" % (typename, typename))
     c_file.write("    %s *ret = NULL;\n" % (typename))
     c_file.write("    *err = 0;\n")
+    c_file.write("    (void) ctx;  /* Silence compiler warning.  */\n")
     c_file.write("    if (tree == NULL)\n")
     c_file.write("        return ret;\n")
     c_file.write("    ret = safe_malloc (sizeof (*ret));\n")
@@ -301,6 +302,8 @@ def generate_C_json(obj, c_file, prefix):
     c_file.write("bool gen_%s (yajl_gen g, %s *ptr, struct parser_context *ctx, parser_error *err) {\n" % (typename, typename))
     c_file.write("    bool stat = true;\n")
     c_file.write("    *err = 0;\n")
+    c_file.write("    (void) ptr;  /* Silence compiler warning.  */\n")
+    c_file.write("    (void) ctx;  /* Silence compiler warning.  */\n")
 
     if obj.typ == 'mapStringString':
         pass
