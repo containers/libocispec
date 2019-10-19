@@ -20,7 +20,6 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <error.h>
 #include "oci_runtime_spec.h"
 
 int
@@ -41,8 +40,10 @@ main (int argc, char *argv[])
   if (container)
     free_oci_container (container);
 
-  if (err)
-    error (EXIT_FAILURE, 0, "error in %s: %s", file, err);
+  if (err) {
+    fprintf (stderr, "error in %s: %s\n", file, err);
+    exit (EXIT_FAILURE);
+  }
 
   exit (EXIT_SUCCESS);
 }
