@@ -25,6 +25,9 @@ build-aux/depcomp
 build-aux/install-sh
 build-aux/missing
 build-aux/test-driver
+build-aux/config.guess
+build-aux/config.sub
+build-aux/ltmain.sh
 config.h
 config.h.in
 config.h.in~
@@ -62,3 +65,7 @@ tests/test-5
 tests/test-6
 tests/test-7
 tests/test-8
+libocispec.la
+libtool
+m4/*
+src/*.lo
