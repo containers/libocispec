@@ -1270,13 +1270,17 @@ string_cells *read_map_string_string (yajl_val src) {
             const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
             yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
             ret->keys[i] = strdup (srckey ? srckey : "");
-            if (ret->keys[i] == NULL)
+            if (ret->keys[i] == NULL) {
+                free_cells (ret);
                 return NULL;
+            }
             if (srcval) {
                 char *str = YAJL_GET_STRING (srcval);
                 ret->values[i] = strdup (str ? str : "");
-                if (ret->values[i] == NULL)
+                if (ret->values[i] == NULL) {
+                    free_cells (ret);
                     return NULL;
+                }
             } else {
                 ret->values[i] = NULL;
             }
