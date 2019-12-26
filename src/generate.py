@@ -243,7 +243,7 @@ def generate_C_parse(obj, c_file, prefix):
                 c_file.write('                if (key) {\n')
                 c_file.write('                     ret->%s[i] = strdup (key) ? : "";\n' % i.fixname)
                 c_file.write('                     if (ret->%s[i] == NULL)\n' % i.fixname)
-                c_file.write('                         abort ();')
+                c_file.write('                         return NULL;')
                 c_file.write('                }\n')
                 c_file.write('            }\n')
                 c_file.write('        }\n')
@@ -263,7 +263,7 @@ def generate_C_parse(obj, c_file, prefix):
         for i in required_to_check:
             c_file.write('    if (ret->%s == NULL) {\n' % i.fixname)
             c_file.write('        if (asprintf (err, "Required field \'%%s\' not present", "%s") < 0)\n' % i.origname)
-            c_file.write('            abort();\n')
+            c_file.write('            return NULL;\n')
             c_file.write("        free_%s (ret);\n" % obj_typename)
             c_file.write("        return NULL;\n")
             c_file.write('    }\n')
@@ -439,7 +439,7 @@ def read_value_generator(c_file, level, src, dest, typ):
         c_file.write('%schar *str = YAJL_GET_STRING (val);\n' % ('    ' * (level + 1)))
         c_file.write('%s%s = strdup (str ? str : "");\n' % ('    ' * (level + 1), dest))
         c_file.write('%sif (%s == NULL)\n' % ('    ' * (level + 1), dest))
-        c_file.write('%s    abort ();\n' % ('    ' * (level + 1)))
+        c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
         c_file.write('%s}\n' % ('    ' * level))
     elif is_numeric_type(typ):
         c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
@@ -786,6 +786,7 @@ def generate_C_header(structs, header, prefix):
     header.write("# define %s_SCHEMA_H\n\n" % prefix.upper())
     header.write("# include <sys/types.h>\n")
     header.write("# include <stdint.h>\n")
+    header.write("# include <errno.h>\n")
     header.write("# include \"json_common.h\"\n\n")
     for i in structs:
         append_type_C_header(i, header, prefix)
@@ -895,15 +896,17 @@ bool gen_%s (yajl_gen g, %s_element **ptr, size_t len, struct parser_context *ct
     char *content = read_file (filename, &filesize);
     char errbuf[1024];
     if (content == NULL) {
-        if (asprintf (err, "cannot read the file: %s", filename) < 0)
-            abort ();
+        int saved_errno = errno;
+        asprintf (err, "cannot read the file: %s", filename);
+        errno = saved_errno;
         return NULL;
     }
     tree = yajl_tree_parse (content, errbuf, sizeof (errbuf));
     free (content);
     if (tree == NULL) {
-        if (asprintf (err, "cannot parse the file: %s", errbuf) < 0)
-            abort ();
+        int saved_errno = errno;
+        asprintf (err, "cannot parse the file: %s", errbuf);
+        errno = saved_errno;
         return NULL;
     }
 """)
@@ -942,8 +945,9 @@ bool gen_%s (yajl_gen g, %s_element **ptr, size_t len, struct parser_context *ct
     tree = yajl_tree_parse (content, errbuf, sizeof (errbuf));
     free (content);
     if (tree == NULL) {
-        if (asprintf (err, "cannot parse the stream: %s", errbuf) < 0)
-            abort ();
+        int saved_errno = errno;
+        asprintf (err, "cannot parse the stream: %s", errbuf);
+        errno = saved_errno;
         return NULL;
     }
 """)
@@ -975,8 +979,9 @@ bool gen_%s (yajl_gen g, %s_element **ptr, size_t len, struct parser_context *ct
     char errbuf[1024];
     tree = yajl_tree_parse (jsondata, errbuf, sizeof (errbuf));
     if (tree == NULL) {
-        if (asprintf (err, "cannot parse the data: %s", errbuf) < 0)
-            abort ();
+        int saved_errno = errno;
+        asprintf (err, "cannot parse the data: %s", errbuf);
+        errno = saved_errno;
         return NULL;
     }
 """)
@@ -1248,7 +1253,7 @@ void free_cells (string_cells *cells) {
 void *safe_malloc (size_t size) {
     void *ret = malloc (size);
     if (ret == NULL)
-        abort ();
+        return NULL;
     memset (ret, 0, size);
     return ret;
 }
@@ -1266,12 +1271,12 @@ string_cells *read_map_string_string (yajl_val src) {
             yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
             ret->keys[i] = strdup (srckey ? srckey : "");
             if (ret->keys[i] == NULL)
-                abort ();
+                return NULL;
             if (srcval) {
                 char *str = YAJL_GET_STRING (srcval);
                 ret->values[i] = strdup (str ? str : "");
                 if (ret->values[i] == NULL)
-                    abort ();
+                    return NULL;
             } else {
                 ret->values[i] = NULL;
             }
