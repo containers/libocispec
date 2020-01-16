@@ -20,26 +20,26 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <oci_image_manifest_spec.h>
+#include "image_spec_schema_image_manifest_schema.h"
 
 int
 main ()
 {
   parser_error err;
-  oci_image_manifest *manifest = oci_image_manifest_parse_file ("tests/data/image_manifest.json", 0, &err);
-  oci_image_manifest *manifest_gen = NULL;
+  image_spec_schema_image_manifest_schema *manifest = image_spec_schema_image_manifest_schema_parse_file ("tests/data/image_manifest.json", 0, &err);
+  image_spec_schema_image_manifest_schema *manifest_gen = NULL;
   char *json_buf = NULL;
 
   if (manifest == NULL) {
     printf ("error %s\n", err);
     exit (1);
   }
-  json_buf = oci_image_manifest_generate_json(manifest, 0, &err);
+  json_buf = image_spec_schema_image_manifest_schema_generate_json(manifest, 0, &err);
   if (json_buf == NULL) {
     printf("gen error %s\n", err);
     exit (1);
   }
-  manifest_gen = oci_image_manifest_parse_data(json_buf, 0, &err);
+  manifest_gen = image_spec_schema_image_manifest_schema_parse_data(json_buf, 0, &err);
   if (manifest_gen == NULL) {
     printf("parse error %s\n", err);
     exit(1);
@@ -64,7 +64,7 @@ main ()
     exit (5);
 
   free(json_buf);
-  free_oci_image_manifest (manifest);
-  free_oci_image_manifest (manifest_gen);
+  free_image_spec_schema_image_manifest_schema (manifest);
+  free_image_spec_schema_image_manifest_schema (manifest_gen);
   exit (0);
 }

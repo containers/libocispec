@@ -13,7 +13,7 @@ The parser is generated directly from the JSON schema in the source repository.
 Parsing an OCI configuration file is easy as:
 
 ```c
-    oci_container *container = oci_container_parse_file ("config.json", NULL, &err);
+    runtime_spec_schema_config_schema *container = runtime_spec_schema_config_schema_parse_file ("config.json", NULL, &err);
 
     if (container == NULL)
       exit (EXIT_FAILURE);
@@ -32,17 +32,17 @@ Parsing an OCI configuration file is easy as:
 Generating an OCI configuration json string is also easy as:
 
 ```c
-    oci_container container;
+    runtime_spec_schema_config_schema container;
     char *json_buf = NULL;
 
-    memset (&container, 0, sizeof (oci_container));
+    memset (&container, 0, sizeof (runtime_spec_schema_config_schema));
 
     container.oci_version = "2";
     container.hostname = "ubuntu";
     /* Add other configuration. */
     /* ... ... */
 
-    json_buf = oci_container_generate_json (&container, NULL, &err);
+    json_buf = runtime_spec_schema_config_schema_generate_json (&container, NULL, &err);
     if (json_buf == NULL)
       exit (EXIT_FAILURE);
 

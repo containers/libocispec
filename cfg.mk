@@ -11,6 +11,7 @@ local-checks-to-skip = \
     sc_GPL_version \
     sc_prohibit_always_true_header_tests \
     sc_prohibit_intprops_without_use \
+    sc_prohibit_strcmp \
 
 
 #SHELL=bash -x

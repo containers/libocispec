@@ -20,28 +20,29 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <image_manifest_items.h>
+#include "image_manifest_items_image_manifest_items_schema.h"
+
 
 int
 main ()
 {
   parser_error err = NULL;
   size_t len, len_gen;
-  image_manifest_items_element **image_items = image_manifest_items_parse_file ("tests/data/image_manifest_item.json", 0, &err, &len);
-  image_manifest_items_element **image_items_gen = NULL;
+  image_manifest_items_image_manifest_items_schema_element **image_items = image_manifest_items_image_manifest_items_schema_parse_file ("tests/data/image_manifest_item.json", 0, &err, &len);
+  image_manifest_items_image_manifest_items_schema_element **image_items_gen = NULL;
   char *json_buf = NULL;
 
   if (image_items == NULL) {
     printf ("error %s\n", err);
     exit (1);
   }
-  json_buf = image_manifest_items_generate_json (image_items, len, 0, &err);
+  json_buf = image_manifest_items_image_manifest_items_schema_generate_json ((const image_manifest_items_image_manifest_items_schema_element **)image_items, len, 0, &err);
   if (json_buf == NULL) {
     printf ("gen error %s\n", err);
     exit (1);
   }
 
-  image_items_gen = image_manifest_items_parse_data (json_buf, 0, &err, &len_gen);
+  image_items_gen = image_manifest_items_image_manifest_items_schema_parse_data (json_buf, 0, &err, &len_gen);
   if (image_items_gen == NULL) {
     printf ("parse error %s\n", err);
     exit (1);
@@ -60,7 +61,7 @@ main ()
     exit (8);
 
   free (json_buf);
-  free_image_manifest_items (image_items, len);
-  free_image_manifest_items (image_items_gen, len_gen);
+  free_image_manifest_items_image_manifest_items_schema (image_items, len);
+  free_image_manifest_items_image_manifest_items_schema (image_items_gen, len_gen);
   exit (0);
 }

@@ -20,13 +20,13 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <oci_runtime_spec.h>
+#include "runtime_spec_schema_config_schema.h"
 
 int
 main ()
 {
   parser_error err;
-  oci_container *container = oci_container_parse_file ("tests/data/config.nocwd.json", 0, &err);
+  runtime_spec_schema_config_schema *container = runtime_spec_schema_config_schema_parse_file ("tests/data/config.nocwd.json", 0, &err);
   if (container != NULL) {
     exit (4);
   }
