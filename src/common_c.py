@@ -4,6 +4,7 @@
 #
 # Copyright (C) Huawei Technologies., Ltd. 2018-2020.
 # Copyright (C) 2017, 2019 Giuseppe Scrivano <giuseppe@scrivano.org>
+#
 # libocispec is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -16,7 +17,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
-#!/usr/bin/python -Es
+
+# As a special exception, you may create a larger work that contains
+# part or all of the libocispec parser skeleton and distribute that work
+# under terms of your choice, so long as that work isn't itself a
+# parser generator using the skeleton or a modified version thereof
+# as a parser skeleton.  Alternatively, if you modify or redistribute
+# the parser skeleton itself, you may (at your option) remove this
+# special exception, which will cause the skeleton and the resulting
+# libocispec output files to be licensed under the GNU General Public
+# License without this special exception.
+
 import os
 import fcntl
 
