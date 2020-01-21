@@ -44,6 +44,7 @@ def generate_json_common_c(out):
         source_file.write("""// Auto generated file. Do not edit!
 # define _GNU_SOURCE
 # include <stdio.h>
+# include <string.h>
 # include <errno.h>
 # include <limits.h>
 # include "json_common.h"
@@ -1445,7 +1446,7 @@ append_json_map_string_string (json_map_string_string * map, const char *key,
 }
 
 char *
-json_marshal_string (const char *str, size_t strlen,
+json_marshal_string (const char *str, size_t length,
 		     const struct parser_context *ctx, parser_error * err)
 {
   yajl_gen g = NULL;
@@ -1467,7 +1468,7 @@ json_marshal_string (const char *str, size_t strlen,
       *err = strdup ("Json_gen init failed");
       goto out;
     }
-  stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) str, strlen);
+  stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) str, length);
   if (yajl_gen_status_ok != stat)
     {
       if (asprintf (err, "error generating json, errcode: %d", (int) stat) <

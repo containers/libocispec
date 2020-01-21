@@ -70,8 +70,8 @@ extern "C" {
 
 # define GEN_SET_ERROR_AND_RETURN(stat, err) { \\
     if (*(err) == NULL) {\\
-        if (asprintf(err, "%s: %s: %d: error generating json, errcode: %u", __FILE__, __func__, __LINE__, stat) < 0) { \\
-            *(err) = strdup("error allocating memory"); \\
+        if (asprintf (err, "%s: %s: %d: error generating json, errcode: %u", __FILE__, __func__, __LINE__, stat) < 0) { \\
+            *(err) = strdup ("error allocating memory"); \\
         } \\
     }\\
     return stat; \\
@@ -240,7 +240,7 @@ yajl_gen_status gen_json_map_string_string (void *ctx,
 int append_json_map_string_string (json_map_string_string * map,
 				   const char *key, const char *val);
 
-char *json_marshal_string (const char *str, size_t strlen,
+char *json_marshal_string (const char *str, size_t length,
 			   const struct parser_context *ctx,
 			   parser_error * err);
 
