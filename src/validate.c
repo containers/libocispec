@@ -20,25 +20,25 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "oci_runtime_spec.h"
+#include "runtime_spec_schema_config_schema.h"
 
 int
 main (int argc, char *argv[])
 {
   parser_error err;
-  oci_container *container;
+  runtime_spec_schema_config_schema *container;
   const char *file = "config.json";
   struct parser_context ctx;
 
   if (argc > 1)
     file = argv[1];
 
-  ctx.options = PARSE_OPTIONS_STRICT;
+  ctx.options = OPT_PARSE_STRICT;
   ctx.errfile = stderr;
 
-  container = oci_container_parse_file (file, &ctx, &err);
+  container = runtime_spec_schema_config_schema_parse_file (file, &ctx, &err);
   if (container)
-    free_oci_container (container);
+    free_runtime_spec_schema_config_schema (container);
 
   if (err) {
     fprintf (stderr, "error in %s: %s\n", file, err);

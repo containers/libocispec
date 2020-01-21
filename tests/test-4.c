@@ -20,26 +20,26 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <oci_image_index_spec.h>
+#include "image_spec_schema_image_index_schema.h"
 
 int
 main ()
 {
   parser_error err;
-  oci_image_index *image_index = oci_image_index_parse_file ("tests/data/image_index_config.json", 0, &err);
-  oci_image_index *image_index_gen = NULL;
+  image_spec_schema_image_index_schema *image_index = image_spec_schema_image_index_schema_parse_file ("tests/data/image_index_config.json", 0, &err);
+  image_spec_schema_image_index_schema *image_index_gen = NULL;
   char *json_buf = NULL;
 
   if (image_index == NULL) {
     printf ("error %s\n", err);
     exit (1);
   }
-  json_buf = oci_image_index_generate_json(image_index, 0, &err);
+  json_buf = image_spec_schema_image_index_schema_generate_json(image_index, 0, &err);
   if (json_buf == NULL) {
     printf("gen error %s\n", err);
     exit (1);
   }
-  image_index_gen = oci_image_index_parse_data(json_buf, 0, &err);
+  image_index_gen = image_spec_schema_image_index_schema_parse_data(json_buf, 0, &err);
   if (image_index_gen == NULL) {
     printf("parse error %s\n", err);
     exit(1);
@@ -81,7 +81,7 @@ main ()
     exit (5);
 
   free(json_buf);
-  free_oci_image_index (image_index);
-  free_oci_image_index (image_index_gen);
+  free_image_spec_schema_image_index_schema (image_index);
+  free_image_spec_schema_image_index_schema (image_index_gen);
   exit (0);
 }

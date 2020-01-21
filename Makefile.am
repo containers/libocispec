@@ -7,36 +7,52 @@ GITIGNOREFILES = build-aux/ gtk-doc.make config.h.in aclocal.m4
 noinst_LTLIBRARIES = libocispec.la
 noinst_LIBRARIES = libocispec.a
 
-SOURCE_FILES = src/oci_runtime_spec.c \
-	src/oci_image_spec.c \
-	src/oci_image_index_spec.c \
-	src/oci_image_layout_spec.c \
-	src/oci_image_manifest_spec.c \
-	src/image_manifest_items.c \
+SOURCE_FILES = src/json_common.c \
+	src/image_spec_schema_config_schema.c \
+	src/image_spec_schema_content_descriptor.c \
+	src/image_spec_schema_defs.c \
+	src/image_spec_schema_defs_descriptor.c \
+	src/image_spec_schema_image_index_schema.c \
+	src/image_spec_schema_image_layout_schema.c \
+	src/image_spec_schema_image_manifest_schema.c \
+	src/runtime_spec_schema_config_linux.c \
+	src/runtime_spec_schema_config_schema.c \
+	src/runtime_spec_schema_config_solaris.c \
+	src/runtime_spec_schema_config_vm.c \
+	src/runtime_spec_schema_config_windows.c \
+	src/runtime_spec_schema_defs.c \
+	src/runtime_spec_schema_defs_linux.c \
+	src/runtime_spec_schema_defs_vm.c \
+	src/runtime_spec_schema_defs_windows.c \
+	src/runtime_spec_schema_state_schema.c \
+	src/image_manifest_items_image_manifest_items_schema.c \
 	src/json_common.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
 
 src/json_common.h src/json_common.c:
-	$(PYTHON) $(srcdir)/src/generate.py
+	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/runtime-spec/schema ${srcdir}/image-spec/schema
+	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/imageManifestItems
 
-src/oci_runtime_spec.c: runtime-spec/schema/config-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/runtime-spec/schema/config-schema.json src/oci_runtime_spec.h src/oci_runtime_spec.c oci_container $(OCI_RUNTIME_EXTENSIONS)
 
-src/oci_image_spec.c: image-spec/schema/config-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/config-schema.json src/oci_image_spec.h src/oci_image_spec.c oci_image $(OCI_IMAGE_EXTENSIONS)
-
-src/oci_image_index_spec.c: image-spec/schema/image-index-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-index-schema.json src/oci_image_index_spec.h src/oci_image_index_spec.c oci_image_index $(OCI_IMAGE_INDEX_EXTENSIONS)
-
-src/oci_image_layout_spec.c: image-spec/schema/image-layout-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-layout-schema.json src/oci_image_layout_spec.h src/oci_image_layout_spec.c oci_image_layout $(OCI_IMAGE_LAYOUT_EXTENSIONS)
-
-src/oci_image_manifest_spec.c: image-spec/schema/image-manifest-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/image-spec/schema/image-manifest-schema.json src/oci_image_manifest_spec.h src/oci_image_manifest_spec.c oci_image_manifest $(OCI_IMAGE_MANIFEST_EXTENSIONS)
-
-src/image_manifest_items.c: tests/test-spec/imageManifestItems/image-manifest-items-schema.json src/generate.py src/json_common.h
-	$(PYTHON) $(srcdir)/src/generate.py $(srcdir)/tests/test-spec/imageManifestItems/image-manifest-items-schema.json src/image_manifest_items.h src/image_manifest_items.c image_manifest_items $(OCI_IMAGE_MANIFEST_ITEMS_EXTENSIONS)
+src/image_spec_schema_config_schema.c \
+	src/image_spec_schema_content_descriptor.c \
+	src/image_spec_schema_defs.c \
+	src/image_spec_schema_defs_descriptor.c \
+	src/image_spec_schema_image_index_schema.c \
+	src/image_spec_schema_image_layout_schema.c \
+	src/image_spec_schema_image_manifest_schema.c \
+	src/runtime_spec_schema_config_linux.c \
+	src/runtime_spec_schema_config_schema.c \
+	src/runtime_spec_schema_config_solaris.c \
+	src/runtime_spec_schema_config_vm.c \
+	src/runtime_spec_schema_config_windows.c \
+	src/runtime_spec_schema_defs.c \
+	src/runtime_spec_schema_defs_linux.c \
+	src/runtime_spec_schema_defs_vm.c \
+	src/runtime_spec_schema_defs_windows.c \
+	src/runtime_spec_schema_state_schema.c \
+	src/image_manifest_items_image_manifest_items_schema.c: src/json_common.h
 
 $(HEADER_FILES): %.h: %.c src/generate.py
 
@@ -110,6 +126,11 @@ EXTRA_DIST = autogen.sh \
 	tests/data/image_manifest_item.json \
 	tests/test-spec \
 	src/generate.py \
+	src/common_c.py \
+	src/common_h.py \
+	src/headers.py \
+	src/helpers.py \
+	src/sources.py \
 	$(HEADER_FILES) \
 	src/read-file.h \
 	src/json_common.h \
@@ -119,3 +140,6 @@ EXTRA_DIST = autogen.sh \
 sync:
 	(cd image-spec; git pull https://github.com/opencontainers/image-spec)
 	(cd runtime-spec; git pull https://github.com/opencontainers/runtime-spec)
+generate:
+	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/runtime-spec/schema ${srcdir}/image-spec/schema
+	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/imageManifestItems
