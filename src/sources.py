@@ -381,7 +381,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
     History: 2019-06-17
     """
     if obj.typ == 'string':
-        c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) ||' \
+        c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s != NULL))\n' % obj.fixname)
         c_file.write('      {\n')
         c_file.write('        char *str = "";\n')
@@ -394,7 +394,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         json_value_generator(c_file, 2, "str", 'g', 'ctx', obj.typ)
         c_file.write("      }\n")
     elif helpers.judge_data_type(obj.typ):
-        c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) ||' \
+        c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s_present))\n' % obj.fixname)
         c_file.write('      {\n')
         if obj.typ == 'double':
@@ -430,7 +430,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         json_value_generator(c_file, 2, "num", 'g', 'ctx', numtyp)
         c_file.write("      }\n")
     elif obj.typ == 'boolean':
-        c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) ||' \
+        c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s_present))\n' % obj.fixname)
         c_file.write('      {\n')
         c_file.write('        bool b = false;\n')
@@ -448,7 +448,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
             typename = obj.subtypname
         else:
             typename = helpers.get_prefixed_name(obj.name, prefix)
-        c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) ||' \
+        c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s != NULL))\n' % obj.fixname)
         c_file.write("      {\n")
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
@@ -465,7 +465,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
             typename = obj.subtypname
         else:
             typename = helpers.get_name_substr(obj.name, prefix)
-        c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) || ' \
+        c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) || ' \
                      '(ptr != NULL && ptr->%s != NULL))\n' % obj.fixname)
         c_file.write('      {\n')
         c_file.write('        size_t len = 0, i;\n')
@@ -494,7 +494,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write('      }\n')
     elif obj.typ == 'array' and obj.subtyp == 'byte':
-        c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) ||' \
+        c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s != NULL && ptr->%s_len))\n' \
                      % (obj.fixname, obj.fixname))
         c_file.write('      {\n')
@@ -515,7 +515,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("      }\n")
     elif obj.typ == 'array':
-        c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) || ' \
+        c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) || ' \
                      '(ptr != NULL && ptr->%s != NULL))\n' % obj.fixname)
         c_file.write('      {\n')
         c_file.write('        size_t len = 0, i;\n')
@@ -541,7 +541,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.write('            yajl_gen_config (g, yajl_gen_beautify, 1);\n')
         c_file.write('      }\n')
     elif helpers.valid_basic_map_name(obj.typ):
-        c_file.write('    if ((ctx->options & OPT_GEN_KAY_VALUE) || ' \
+        c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) || ' \
                      '(ptr != NULL && ptr->%s != NULL))\n' % obj.fixname)
         c_file.write('      {\n')
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \

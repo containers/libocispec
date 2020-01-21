@@ -62,7 +62,7 @@ extern "C" {
 // options to report error if there is unknown key found in json
 # define OPT_PARSE_STRICT 0x01
 // options to generate all key and value
-# define OPT_GEN_KAY_VALUE 0x02
+# define OPT_GEN_KEY_VALUE 0x02
 // options to generate simplify(no indent) json string
 # define OPT_GEN_SIMPLIFY 0x04
 // options not to validate utf8 data
