@@ -71,7 +71,7 @@ extern "C" {
 # define GEN_SET_ERROR_AND_RETURN(stat, err) { \\
     if (*(err) == NULL) {\\
         if (asprintf(err, "%s: %s: %d: error generating json, errcode: %u", __FILE__, __func__, __LINE__, stat) < 0) { \\
-            *(err) = safe_strdup("error allocating memory"); \\
+            *(err) = strdup("error allocating memory"); \\
         } \\
     }\\
     return stat; \\
@@ -91,8 +91,6 @@ yajl_gen_status map_int(void *ctx, long long int num);
 bool json_gen_init(yajl_gen *g, const struct parser_context *ctx);
 
 yajl_val get_val(yajl_val tree, const char *name, yajl_type type);
-
-void *safe_malloc(size_t size);
 
 int common_safe_double(const char *numstr, double *converted);
 
@@ -115,8 +113,6 @@ int common_safe_int32(const char *numstr, int32_t *converted);
 int common_safe_int64(const char *numstr, int64_t *converted);
 
 int common_safe_int(const char *numstr, int *converted);
-
-char *safe_strdup(const char *src);
 
 typedef struct {
     int *keys;
