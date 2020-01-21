@@ -40,10 +40,11 @@ main (int argc, char *argv[])
   if (container)
     free_runtime_spec_schema_config_schema (container);
 
-  if (err) {
-    fprintf (stderr, "error in %s: %s\n", file, err);
-    exit (EXIT_FAILURE);
-  }
+  if (err)
+    {
+      fprintf (stderr, "error in %s: %s\n", file, err);
+      exit (EXIT_FAILURE);
+    }
 
   exit (EXIT_SUCCESS);
 }
