@@ -63,12 +63,11 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     c_file.write('        const char **keys = YAJL_GET_OBJECT (tree)->keys;\n')
     c_file.write('        yajl_val *values = YAJL_GET_OBJECT (tree)->values;\n')
     c_file.write('        ret->len = len;\n')
-    c_file.write('        ret->keys = calloc (1, (len + 1) ' \
-                 '* sizeof (*ret->keys));\n')
+    c_file.write('        ret->keys = calloc (len + 1, sizeof (*ret->keys));\n')
     c_file.write('        if (ret->keys == NULL)\n')
     c_file.write('          return NULL;\n')
-    c_file.write('        ret->%s = calloc (1, (len + 1) ' \
-                 '* sizeof (*ret->%s));\n' % (child.fixname, child.fixname))
+    c_file.write('        ret->%s = calloc (len + 1, sizeof (*ret->%s));\n' % \
+                 (child.fixname, child.fixname))
     c_file.write('        if (ret->%s == NULL)\n' % child.fixname)
     c_file.write('          {\n')
     c_file.write('            free (ret->keys);\n')
@@ -166,8 +165,8 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
         c_file.write('            size_t len = YAJL_GET_ARRAY (tmp)->len;\n')
         c_file.write('            yajl_val *values = YAJL_GET_ARRAY (tmp)->values;\n')
         c_file.write('            ret->%s_len = len;\n' % (obj.fixname))
-        c_file.write('            ret->%s = calloc (1, (len + 1) ' \
-                     '* sizeof (*ret->%s));\n' % (obj.fixname, obj.fixname))
+        c_file.write('            ret->%s = calloc (len + 1, sizeof (*ret->%s));\n' % \
+                     (obj.fixname, obj.fixname))
         c_file.write('            if (ret->%s == NULL)\n' % obj.fixname)
         c_file.write('              {\n')
         c_file.write("                free_%s (ret);\n" % obj_typename)
@@ -216,8 +215,8 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
         c_file.write('            size_t len = YAJL_GET_ARRAY (tmp)->len;\n')
         c_file.write('            yajl_val *values = YAJL_GET_ARRAY (tmp)->values;\n')
         c_file.write('            ret->%s_len = len;\n' % (obj.fixname))
-        c_file.write('            ret->%s = calloc (1, (len + 1) *' \
-            ' sizeof (*ret->%s));\n' % (obj.fixname, obj.fixname))
+        c_file.write('            ret->%s = calloc (len + 1, sizeof (*ret->%s));\n' \
+                     % (obj.fixname, obj.fixname))
         c_file.write('            if (ret->%s == NULL)\n' % obj.fixname)
         c_file.write('              {\n')
         c_file.write('                free_%s (ret);\n' % obj_typename)
@@ -959,7 +958,7 @@ def get_c_epilog(c_file, prefix, typ):
     alen = YAJL_GET_ARRAY (tree)->len;
     if (alen == 0)
       return NULL;
-    ptr = calloc (1, (alen + 1) * sizeof (%s_element *));
+    ptr = calloc (alen + 1, sizeof (%s_element *));
     if (ptr == NULL)
       return NULL;
     for (i = 0; i < alen; i++)
