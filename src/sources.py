@@ -381,12 +381,13 @@ def get_obj_arr_obj(obj, c_file, prefix):
     History: 2019-06-17
     """
     if obj.typ == 'string':
+        l = len(obj.origname)
         c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s != NULL))\n' % obj.fixname)
         c_file.write('      {\n')
         c_file.write('        char *str = "";\n')
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("%s"), strlen ("%s"));\n' % (obj.origname, obj.origname))
+(const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL)\n" % obj.fixname)
@@ -403,9 +404,10 @@ def get_obj_arr_obj(obj, c_file, prefix):
             numtyp = 'long long unsigned int'
         else:
             numtyp = 'long long int'
+        l = len(obj.origname)
         c_file.write('        %s num = 0;\n' % numtyp)
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("%s"), strlen ("%s"));\n' % (obj.origname, obj.origname))
+(const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s)\n" % obj.fixname)
@@ -418,9 +420,10 @@ def get_obj_arr_obj(obj, c_file, prefix):
         numtyp = helpers.obtain_data_pointer_type(obj.typ)
         if numtyp == "":
             return
+        l = len(obj.origname)
         c_file.write('        %s num = 0;\n' % helpers.get_map_c_types(numtyp))
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("%s"), strlen ("%s"));\n' % (obj.origname, obj.origname))
+(const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL) {\n" % obj.fixname)
@@ -434,8 +437,9 @@ def get_obj_arr_obj(obj, c_file, prefix):
                      ' (ptr != NULL && ptr->%s_present))\n' % obj.fixname)
         c_file.write('      {\n')
         c_file.write('        bool b = false;\n')
+        l = len(obj.origname)
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("%s"), strlen ("%s"));\n' % (obj.origname, obj.origname))
+(const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s)\n" % obj.fixname)
@@ -444,6 +448,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         json_value_generator(c_file, 2, "b", 'g', 'ctx', obj.typ)
         c_file.write("      }\n")
     elif obj.typ == 'object' or obj.typ == 'mapStringObject':
+        l = len(obj.origname)
         if obj.subtypname:
             typename = obj.subtypname
         else:
@@ -452,7 +457,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
                      ' (ptr != NULL && ptr->%s != NULL))\n' % obj.fixname)
         c_file.write("      {\n")
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("%s"), strlen ("%s"));\n' % (obj.origname, obj.origname))
+(const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write('        stat = gen_%s (g, ptr != NULL ? ptr->%s : NULL, ctx, err);\n' \
@@ -461,6 +466,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("      }\n")
     elif obj.typ == 'array' and (obj.subtypobj or obj.subtyp == 'object'):
+        l = len(obj.origname)
         if obj.subtypname:
             typename = obj.subtypname
         else:
@@ -470,7 +476,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.write('      {\n')
         c_file.write('        size_t len = 0, i;\n')
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("%s"), strlen ("%s"));\n' % (obj.origname, obj.origname))
+(const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL)\n" % obj.fixname)
@@ -494,6 +500,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write('      }\n')
     elif obj.typ == 'array' and obj.subtyp == 'byte':
+        l = len(obj.origname)
         c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) ||' \
                      ' (ptr != NULL && ptr->%s != NULL && ptr->%s_len))\n' \
                      % (obj.fixname, obj.fixname))
@@ -501,7 +508,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.write('        const char *str = "";\n')
         c_file.write('        size_t len = 0;\n')
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("%s"), strlen ("%s"));\n' % (obj.origname, obj.origname))
+(const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL)\n" % obj.fixname)
@@ -515,12 +522,13 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("      }\n")
     elif obj.typ == 'array':
+        l = len(obj.origname)
         c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) || ' \
                      '(ptr != NULL && ptr->%s != NULL))\n' % obj.fixname)
         c_file.write('      {\n')
         c_file.write('        size_t len = 0, i;\n')
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("%s"), strlen ("%s"));\n' % (obj.origname, obj.origname))
+(const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write("        if (ptr != NULL && ptr->%s != NULL)\n" % obj.fixname)
@@ -541,11 +549,12 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.write('            yajl_gen_config (g, yajl_gen_beautify, 1);\n')
         c_file.write('      }\n')
     elif helpers.valid_basic_map_name(obj.typ):
+        l = len(obj.origname)
         c_file.write('    if ((ctx->options & OPT_GEN_KEY_VALUE) || ' \
                      '(ptr != NULL && ptr->%s != NULL))\n' % obj.fixname)
         c_file.write('      {\n')
         c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("%s"), strlen ("%s"));\n' % (obj.origname, obj.origname))
+(const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.write('        stat = gen_%s (g, ptr ? ptr->%s : NULL, ctx, err);\n' \
