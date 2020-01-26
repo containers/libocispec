@@ -59,8 +59,8 @@ def append_header_arr(obj, header, prefix):
             header.write("    unsigned int %s_present : 1;\n" % (i.fixname))
     typename = helpers.get_name_substr(obj.name, prefix)
     header.write("}\n%s;\n\n" % typename)
-    header.write("void free_%s(%s *ptr);\n\n" % (typename, typename))
-    header.write("%s *make_%s(yajl_val tree, const struct parser_context *ctx, parser_error *err);"\
+    header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
+    header.write("%s *make_%s (yajl_val tree, const struct parser_context *ctx, parser_error *err);"\
         "\n\n" % (typename, typename))
 
 
@@ -157,10 +157,10 @@ def append_type_c_header(obj, header, prefix):
                 header.write("    unsigned int %s_present : 1;\n" % (i.fixname))
     typename = helpers.get_prefixed_name(obj.name, prefix)
     header.write("}\n%s;\n\n" % typename)
-    header.write("void free_%s(%s *ptr);\n\n" % (typename, typename))
-    header.write("%s *make_%s(yajl_val tree, const struct parser_context *ctx, parser_error *err)"\
+    header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
+    header.write("%s *make_%s (yajl_val tree, const struct parser_context *ctx, parser_error *err)"\
         ";\n\n" % (typename, typename))
-    header.write("yajl_gen_status gen_%s(yajl_gen g, const %s *ptr, const struct parser_context "\
+    header.write("yajl_gen_status gen_%s (yajl_gen g, const %s *ptr, const struct parser_context "\
         "*ctx, parser_error *err);\n\n" % (typename, typename))
 
 
@@ -198,7 +198,7 @@ def header_reflect(structs, schema_info, header):
         header.write("char *%s_generate_json(const %s *ptr, const struct parser_context *ctx, "\
             "parser_error *err);\n\n" % (prefix, prefix))
     elif toptype == 'array':
-        header.write("void free_%s(%s_element **ptr, size_t len);\n\n" % (prefix, prefix))
+        header.write("void free_%s (%s_element **ptr, size_t len);\n\n" % (prefix, prefix))
         header.write("%s_element **%s_parse_file(const char *filename, const struct "\
             "parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, prefix))
         header.write("%s_element **%s_parse_file_stream(FILE *stream, const struct "\
