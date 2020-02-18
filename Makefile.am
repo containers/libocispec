@@ -7,7 +7,7 @@ GITIGNOREFILES = build-aux/ gtk-doc.make config.h.in aclocal.m4
 noinst_LTLIBRARIES = libocispec.la
 noinst_LIBRARIES = libocispec.a
 
-SOURCE_FILES = src/json_common.c \
+SOURCE_FILES = \
 	src/image_spec_schema_config_schema.c \
 	src/image_spec_schema_content_descriptor.c \
 	src/image_spec_schema_defs.c \
