@@ -131,7 +131,7 @@ def make_basic_map_name(mapname):
     if len(parts) != 3 or parts[0] != 'map' or \
             (parts[1] not in basic_map_types) or \
             (parts[2] not in basic_map_types):
-        print('Invalid map name: %s') % mapname
+        print('Invalid map name: %s' % mapname)
         sys.exit(1)
     return "json_map_%s_%s" % (parts[1], parts[2])
 
