@@ -639,7 +639,7 @@ def parse_schema(schema_info, schema, prefix):
         return helpers.Unite(helpers.CombinateName(prefix), 'array', None, item_type.typ, \
                             item_type.children, None, item_type.required)
     else:
-        print("Not supported type '%s'") % schema['type']
+        print("Not supported type '%s'" % schema['type'])
     return prefix, None
 
 
@@ -694,7 +694,7 @@ def reflection(schema_info, gen_ref):
                 sources.src_reflect(structs, schema_info, source_file, tree.typ)
             except RuntimeError:
                 traceback.print_exc()
-                print("Failed to parse schema file: %s") % schema_info.name.name
+                print("Failed to parse schema file: %s" % schema_info.name.name)
                 sys.exit(1)
             finally:
                 pass
@@ -724,7 +724,7 @@ def handle_single_file(args, srcpath, gen_ref, schemapath):
     History: 2019-06-17
     """
     if not os.path.exists(schemapath.name) or not os.path.exists(srcpath.name):
-        print('Path %s is not exist') % schemapath.name
+        print('Path %s is not exist' % schemapath.name)
         sys.exit(1)
 
     if os.path.isdir(schemapath.name):
@@ -748,7 +748,7 @@ def handle_single_file(args, srcpath, gen_ref, schemapath):
             schema_info = schema_from_file(schemapath.name, srcpath.name)
             reflection(schema_info, gen_ref)
         else:
-            print('File %s is not ends with .json') % schemapath.name
+            print('File %s is not ends with .json' % schemapath.name)
 
 
 def handle_files(args, srcpath):
@@ -801,7 +801,7 @@ def main():
 
     root_path = os.path.realpath(args.root)
     if not os.path.exists(root_path):
-        print('Root %s is not exist') % args.root
+        print('Root %s is not exist' % args.root)
         sys.exit(1)
 
     MyRoot.root_path = root_path
