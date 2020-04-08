@@ -1,7 +1,7 @@
 libocispec
 ==========
 
-[![Build Status](https://travis-ci.org/giuseppe/libocispec.svg?branch=master)](https://travis-ci.org/giuseppe/libocispec)
+[![Build Status](https://travis-ci.org/containers/libocispec.svg?branch=master)](https://travis-ci.org/containers/libocispec)
 
 A library for easily parsing
 of [OCI runtime](https://github.com/opencontainers/runtime-spec)
