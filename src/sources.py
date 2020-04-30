@@ -433,10 +433,11 @@ def get_obj_arr_obj(obj, c_file, prefix):
 (const unsigned char *)("%s"), %d /* strlen ("%s") */);\n' % (obj.origname, l, obj.origname))
         c_file.write("        if (stat != yajl_gen_status_ok)\n")
         c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-        c_file.write("        if (ptr != NULL && ptr->%s != NULL) {\n" % obj.fixname)
+        c_file.write("        if (ptr != NULL && ptr->%s != NULL)\n" % obj.fixname)
+        c_file.write("          {\n")
         c_file.write("            num = (%s)*(ptr->%s);\n" \
                      % (helpers.get_map_c_types(numtyp), obj.fixname))
-        c_file.write("        }\n")
+        c_file.write("          }\n")
         json_value_generator(c_file, 2, "num", 'g', 'ctx', numtyp)
         c_file.write("      }\n")
     elif obj.typ == 'boolean':
@@ -655,7 +656,8 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%s  }\n' % ('    ' * level))
     elif helpers.judge_data_type(typ):
         c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
-        c_file.write('%sif (val != NULL) {\n' % ('    ' * (level)))
+        c_file.write('%sif (val != NULL)\n' % ('    ' * (level)))
+        c_file.write('%s  {\n' % ('    ' * (level)))
         if typ.startswith("uint") or \
                 (typ.startswith("int") and typ != "integer") or typ == "double":
             c_file.write('%sint invalid = common_safe_%s (YAJL_GET_NUMBER (val), &%s);\n' \
@@ -960,7 +962,9 @@ def get_c_epilog(c_file, prefix, typ):
         return
     if typ == 'array':
         c_file.write("""\n
-%s_element **make_%s (yajl_val tree, const struct parser_context *ctx, parser_error *err, size_t *len) {
+%s_element
+**make_%s (yajl_val tree, const struct parser_context *ctx, parser_error *err, size_t *len)
+{
     %s_element **ptr = NULL;
     size_t i, alen;
     if (tree == NULL || err == NULL || !len || YAJL_GET_ARRAY (tree) == NULL)
@@ -976,17 +980,19 @@ def get_c_epilog(c_file, prefix, typ):
       {
         yajl_val val = YAJL_GET_ARRAY_NO_CHECK (tree)->values[i];
         ptr[i] = make_%s_element(val, ctx, err);
-        if (ptr[i] == NULL) {
+        if (ptr[i] == NULL)
+          {
             free_%s (ptr, alen);
             return NULL;
-        }
+          }
       }
     *len = alen;
     return ptr;
 }
 """ % (prefix, prefix, prefix, prefix, prefix, prefix))
         c_file.write("""\n
-void free_%s (%s_element **ptr, size_t len) {
+void free_%s (%s_element **ptr, size_t len)
+{
     size_t i;
 
     if (ptr == NULL || len == 0)
@@ -1027,7 +1033,9 @@ yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const st
 }
 """ % (prefix, prefix, prefix))
     c_file.write("""
-%s%s*%s_parse_file (const char *filename, const struct parser_context *ctx, parser_error *err%s) {
+%s%s *
+%s_parse_file (const char *filename, const struct parser_context *ctx, parser_error *err%s)
+{
     %s%s*ptr = NULL;""" % (prefix, ' ' if typ == 'object' else '_element *', \
                            prefix, '' if typ == 'object' else ', size_t *len', \
                            prefix, ' ' if typ == 'object' else '_element *'))
