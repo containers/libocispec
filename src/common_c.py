@@ -867,38 +867,23 @@ append_json_map_int_string (json_map_int_string * map, int key,
     return -1;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (int));
+  keys = realloc (map->keys, len * sizeof (int));
   if (keys == NULL)
-    {
-      free (keys);
-      return -1;
-    }
-  vals = calloc (1, len * sizeof (char *));
+    return -1;
+  map->keys = keys;
+
+  vals = realloc (map->values, len * sizeof (char *));
   if (vals == NULL)
-    {
-      free (keys);
-      return -1;
-    }
+    return -1;
+  map->values = vals;
 
   new_value = strdup (val ? val : "");
   if (new_value == NULL)
-    {
-      free (keys);
-      free (vals);
-      return -1;
-    }
+    return -1;
 
-  if (map->len)
-    {
-      (void) memcpy (keys, map->keys, map->len * sizeof (int));
-      (void) memcpy (vals, map->values, map->len * sizeof (char *));
-    }
-  free (map->keys);
-  map->keys = keys;
-  free (map->values);
-  map->values = vals;
   map->keys[map->len] = key;
   map->values[map->len] = new_value;
+
   map->len++;
   return 0;
 }
@@ -1048,32 +1033,18 @@ append_json_map_string_int (json_map_string_int * map, const char *key,
     return -1;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (char *));
+  keys = realloc (map->keys, len * sizeof (char *));
   if (keys == NULL)
     return -1;
-  vals = calloc (1, len * sizeof (int));
+  map->keys = keys;
+  vals = realloc (map->values, len * sizeof (int));
   if (vals == NULL)
-    {
-      free (keys);
-      return -1;
-    }
+    return -1;
+  map->values = vals;
+
   new_value = strdup (key ? key : "");
   if (new_value == NULL)
-    {
-      free (vals);
-      free (keys);
-      return -1;
-    }
-
-  if (map->len)
-    {
-      (void) memcpy (keys, map->keys, map->len * sizeof (char *));
-      (void) memcpy (vals, map->values, map->len * sizeof (int));
-    }
-  free (map->keys);
-  map->keys = keys;
-  free (map->values);
-  map->values = vals;
+    return -1;
   map->keys[map->len] = new_value;
   map->values[map->len] = val;
 
@@ -1384,7 +1355,7 @@ append_json_map_string_string (json_map_string_string * map, const char *key,
 {
   size_t len, i;
   char **keys = NULL;
-  char **vals = NULL;
+  char **values = NULL;
   char *new_key = NULL;
   char *new_value = NULL;
 
@@ -1410,38 +1381,32 @@ append_json_map_string_string (json_map_string_string * map, const char *key,
   new_key = strdup (key ? key : "");
   if (new_key == NULL)
     goto cleanup;
+
   new_value = strdup (val ? val : "");
   if (new_value == NULL)
     goto cleanup;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (char *));
+  keys = realloc (map->keys, len * sizeof (char *));
   if (keys == NULL)
     goto cleanup;
-  vals = calloc (1, len * sizeof (char *));
-  if (vals == NULL)
+  map->keys = keys;
+  map->keys[map->len] = NULL;
+
+  values = realloc (map->values, len * sizeof (char *));
+  if (values == NULL)
     goto cleanup;
 
-  if (map->len)
-    {
-      (void) memcpy (keys, map->keys, map->len * sizeof (char *));
-      (void) memcpy (vals, map->values, map->len * sizeof (char *));
-    }
-  free (map->keys);
-  map->keys = keys;
-  free (map->values);
-  map->values = vals;
   map->keys[map->len] = new_key;
+  map->values = values;
   map->values[map->len] = new_value;
 
   map->len++;
   return 0;
- cleanup:
 
-  free (keys);
-  free (vals);
-  free (new_key);
+ cleanup:
   free (new_value);
+  free (new_key);
   return -1;
 }
 
