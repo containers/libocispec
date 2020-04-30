@@ -710,7 +710,16 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%s%s = YAJL_IS_TRUE(val);\n' % ('    ' * (level + 1), dest))
         if '[' not in dest:
             c_file.write('%s%s_present = 1;\n' % ('    ' * (level + 1), dest))
-        c_file.write('%s}\n' % ('    ' * (level)))
+            c_file.write('%s  }\n' % ('    ' * (level)))
+            c_file.write('%selse\n' % ('    ' * (level)))
+            c_file.write('%s  {\n' % ('    ' * (level)))
+            c_file.write('%sval = %s;\n' % ('    ' * (level+1), src.replace('yajl_t_true', 'yajl_t_false')))
+            c_file.write('%sif (val != NULL)\n' % ('    ' * (level+1)))
+            c_file.write('%s  {\n' % ('    ' * (level+1)))
+            c_file.write('%s%s = 0;\n' % ('    ' * (level + 2), dest))
+            c_file.write('%s%s_present = 1;\n' % ('    ' * (level + 2), dest))
+            c_file.write('%s  }\n' % ('    ' * (level+1)))
+        c_file.write('%s  }\n' % ('    ' * (level)))
     elif typ == 'booleanPointer':
         c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
         c_file.write('%sif (val != NULL)\n' % ('    ' * (level)))
