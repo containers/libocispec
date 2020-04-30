@@ -432,7 +432,7 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
       ret = calloc (1, sizeof (*ret));
       if (ret == NULL)
         return NULL;
-      ret->len = len;
+      ret->len = 0;
       ret->keys = calloc (len + 1, sizeof (int));
       if (ret->keys == NULL)
         {
@@ -450,6 +450,10 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
 	{
 	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
 	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+          ret->keys[i] = 0;
+          ret->values[i] = 0;
+          ret->len = i + 1;
 
 	  if (srckey != NULL)
 	    {
@@ -609,7 +613,7 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
       ret = calloc (1, sizeof (*ret));
       if (ret == NULL)
         return NULL;
-      ret->len = len;
+      ret->len = 0;
       ret->keys = calloc (len + 1, sizeof (int));
       if (ret->keys == NULL)
         {
@@ -627,6 +631,10 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
 	{
 	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
 	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+          ret->keys[i] = 0;
+          ret->values[i] = false;
+          ret->len = i + 1;
 
 	  if (srckey != NULL)
 	    {
@@ -786,7 +794,7 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
       if (ret == NULL)
         return NULL;
 
-      ret->len = len;
+      ret->len = 0;
       ret->keys = calloc (len + 1, sizeof (int));
       if (ret->keys == NULL)
         {
@@ -804,6 +812,10 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
 	{
 	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
 	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+          ret->keys[i] = 0;
+          ret->values[i] = NULL;
+          ret->len = i + 1;
 
 	  if (srckey != NULL)
 	    {
@@ -945,7 +957,7 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
           *(err) = strdup ("error allocating memory");
           return NULL;
         }
-      ret->len = len;
+      ret->len = 0;
       ret->keys = calloc (len + 1, sizeof (char *));
       if (ret->keys == NULL)
         {
@@ -965,6 +977,11 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
 	{
 	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
 	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+          ret->keys[i] = NULL;
+          ret->values[i] = 0;
+          ret->len = i + 1;
+
 	  ret->keys[i] = strdup (srckey ? srckey : "");
           if (ret->keys[i] == NULL)
             {
@@ -1104,7 +1121,7 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
       ret = calloc (1, sizeof (*ret));
       if (ret == NULL)
         return NULL;
-      ret->len = len;
+      ret->len = 0;
       ret->keys = calloc (len + 1, sizeof (char *));
       if (ret->keys == NULL)
         {
@@ -1122,6 +1139,11 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
 	{
 	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
 	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+          ret->keys[i] = NULL;
+          ret->values[i] = NULL;
+          ret->len = i + 1;
+
 	  ret->keys[i] = strdup (srckey ? srckey : "");
 	  if (ret->keys[i] == NULL)
             {
@@ -1278,7 +1300,7 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
           *(err) = strdup ("error allocating memory");
           return NULL;
         }
-      ret->len = len;
+      ret->len = 0;
       ret->keys = calloc (len + 1, sizeof (char *));
       if (ret->keys == NULL)
         {
@@ -1298,6 +1320,10 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 	{
 	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
 	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+          ret->keys[i] = NULL;
+          ret->values[i] = NULL;
+          ret->len = i + 1;
 
 	  ret->keys[i] = strdup (srckey ? srckey : "");
           if (ret->keys[i] == NULL)
