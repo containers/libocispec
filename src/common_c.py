@@ -433,13 +433,13 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
       if (ret == NULL)
         return NULL;
       ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (int));
+      ret->keys = calloc (len + 1, sizeof (int));
       if (ret->keys == NULL)
         {
           free (ret);
           return NULL;
         }
-      ret->values = calloc (1, (len + 1) * sizeof (int));
+      ret->values = calloc (len + 1, sizeof (int));
       if (ret->values == NULL)
         {
           free (ret->keys);
@@ -616,13 +616,13 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
       if (ret == NULL)
         return NULL;
       ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (int));
+      ret->keys = calloc (len + 1, sizeof (int));
       if (ret->keys == NULL)
         {
           free (ret);
           return NULL;
         }
-      ret->values = calloc (1, (len + 1) * sizeof (bool));
+      ret->values = calloc (len + 1, sizeof (bool));
       if (ret->values == NULL)
         {
           free (ret->keys);
@@ -689,10 +689,10 @@ append_json_map_int_bool (json_map_int_bool * map, int key, bool val)
     return -1;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (int));
+  keys = calloc (len, sizeof (int));
   if (keys == NULL)
     return -1;
-  vals = calloc (1, len * sizeof (bool));
+  vals = calloc (len, sizeof (bool));
   if (vals == NULL)
     {
       free (keys);
@@ -799,13 +799,13 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
         return NULL;
 
       ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (int));
+      ret->keys = calloc (len + 1, sizeof (int));
       if (ret->keys == NULL)
         {
           free (ret);
           return NULL;
         }
-      ret->values = calloc (1, (len + 1) * sizeof (char *));
+      ret->values = calloc (len + 1, sizeof (char *));
       if (ret->values == NULL)
         {
           free (ret->keys);
@@ -961,14 +961,14 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
           return NULL;
         }
       ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (char *));
+      ret->keys = calloc (len + 1, sizeof (char *));
       if (ret->keys == NULL)
         {
           *(err) = strdup ("error allocating memory");
           free (ret);
           return NULL;
         }
-      ret->values = calloc (1, (len + 1) * sizeof (int));
+      ret->values = calloc (len + 1, sizeof (int));
       if (ret->values == NULL)
         {
           *(err) = strdup ("error allocating memory");
@@ -1124,13 +1124,13 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
       if (ret == NULL)
         return NULL;
       ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (char *));
+      ret->keys = calloc (len + 1, sizeof (char *));
       if (ret->keys == NULL)
         {
           free (ret);
           return NULL;
         }
-      ret->values = calloc (1, (len + 1) * sizeof (bool));
+      ret->values = calloc (len + 1, sizeof (bool));
       if (ret->values == NULL)
         {
           free (ret->values);
@@ -1186,10 +1186,10 @@ append_json_map_string_bool (json_map_string_bool * map, const char *key,
     return -1;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (char *));
+  keys = calloc (len, sizeof (char *));
   if (keys == NULL)
     return -1;
-  vals = calloc (1, len * sizeof (bool));
+  vals = calloc (len, sizeof (bool));
   if (vals == NULL)
     {
       free (keys);
@@ -1299,14 +1299,14 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
           return NULL;
         }
       ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (char *));
+      ret->keys = calloc (len + 1, sizeof (char *));
       if (ret->keys == NULL)
         {
           *(err) = strdup ("error allocating memory");
           free (ret);
           return NULL;
         }
-      ret->values = calloc (1, (len + 1) * sizeof (char *));
+      ret->values = calloc (len + 1, sizeof (char *));
       if (ret->values == NULL)
         {
           *(err) = strdup ("error allocating memory");
