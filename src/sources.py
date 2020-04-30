@@ -56,12 +56,12 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
             childname = child.subtypname
         else:
             childname = helpers.get_prefixed_name(child.name, prefix)
-    c_file.write('    if (YAJL_GET_OBJECT (tree) != NULL && YAJL_GET_OBJECT(tree)->len > 0)\n')
+    c_file.write('    if (YAJL_GET_OBJECT (tree) != NULL && YAJL_GET_OBJECT_NO_CHECK(tree)->len > 0)\n')
     c_file.write('      {\n')
     c_file.write('        size_t i;\n')
-    c_file.write('        size_t len = YAJL_GET_OBJECT (tree)->len;\n')
-    c_file.write('        const char **keys = YAJL_GET_OBJECT (tree)->keys;\n')
-    c_file.write('        yajl_val *values = YAJL_GET_OBJECT (tree)->values;\n')
+    c_file.write('        size_t len = YAJL_GET_OBJECT_NO_CHECK (tree)->len;\n')
+    c_file.write('        const char **keys = YAJL_GET_OBJECT_NO_CHECK (tree)->keys;\n')
+    c_file.write('        yajl_val *values = YAJL_GET_OBJECT_NO_CHECK (tree)->values;\n')
     c_file.write('        ret->len = len;\n')
     c_file.write('        ret->keys = calloc (len + 1, sizeof (*ret->keys));\n')
     c_file.write('        if (ret->keys == NULL)\n')
@@ -159,11 +159,11 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
         c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' \
                      % (obj.origname))
         c_file.write('        if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL &&' \
-                     ' YAJL_GET_ARRAY (tmp)->len > 0)\n')
+                     ' YAJL_GET_ARRAY_NO_CHECK (tmp)->len > 0)\n')
         c_file.write('          {\n')
         c_file.write('            size_t i;\n')
-        c_file.write('            size_t len = YAJL_GET_ARRAY (tmp)->len;\n')
-        c_file.write('            yajl_val *values = YAJL_GET_ARRAY (tmp)->values;\n')
+        c_file.write('            size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;\n')
+        c_file.write('            yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;\n')
         c_file.write('            ret->%s_len = len;\n' % (obj.fixname))
         c_file.write('            ret->%s = calloc (len + 1, sizeof (*ret->%s));\n' % \
                      (obj.fixname, obj.fixname))
@@ -209,11 +209,11 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
         c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' \
                      % (obj.origname))
         c_file.write('        if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL &&'  \
-                     ' YAJL_GET_ARRAY (tmp)->len > 0)\n')
+                     ' YAJL_GET_ARRAY_NO_CHECK (tmp)->len > 0)\n')
         c_file.write('          {\n')
         c_file.write('            size_t i;\n')
-        c_file.write('            size_t len = YAJL_GET_ARRAY (tmp)->len;\n')
-        c_file.write('            yajl_val *values = YAJL_GET_ARRAY (tmp)->values;\n')
+        c_file.write('            size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;\n')
+        c_file.write('            yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;\n')
         c_file.write('            ret->%s_len = len;\n' % (obj.fixname))
         c_file.write('            ret->%s = calloc (len + 1, sizeof (*ret->%s));\n' \
                      % (obj.fixname, obj.fixname))
@@ -943,6 +943,8 @@ def src_reflect(structs, schema_info, c_file, root_typ):
     c_file.write('#include <string.h>\n')
     c_file.write('#include <read-file.h>\n')
     c_file.write('#include "%s"\n\n' % schema_info.header.basename)
+    c_file.write('#define YAJL_GET_ARRAY_NO_CHECK(v) (&(v)->u.array)\n')
+    c_file.write('#define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)\n')
     for i in structs:
         append_c_code(i, c_file, schema_info.prefix)
     get_c_epilog(c_file, schema_info.prefix, root_typ)
@@ -964,7 +966,7 @@ def get_c_epilog(c_file, prefix, typ):
     if (tree == NULL || err == NULL || !len || YAJL_GET_ARRAY (tree) == NULL)
       return NULL;
     *err = NULL;
-    alen = YAJL_GET_ARRAY (tree)->len;
+    alen = YAJL_GET_ARRAY_NO_CHECK (tree)->len;
     if (alen == 0)
       return NULL;
     ptr = calloc (alen + 1, sizeof (%s_element *));
@@ -972,7 +974,7 @@ def get_c_epilog(c_file, prefix, typ):
       return NULL;
     for (i = 0; i < alen; i++)
       {
-        yajl_val val = YAJL_GET_ARRAY (tree)->values[i];
+        yajl_val val = YAJL_GET_ARRAY_NO_CHECK (tree)->values[i];
         ptr[i] = make_%s_element(val, ctx, err);
         if (ptr[i] == NULL) {
             free_%s (ptr, alen);

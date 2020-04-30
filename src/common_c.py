@@ -49,6 +49,9 @@ def generate_json_common_c(out):
 # include <limits.h>
 # include "json_common.h"
 
+#define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)
+#define YAJL_GET_STRING_NO_CHECK(v) ((v)->u.string)
+
 # define MAX_NUM_STR_LEN 21
 
 yajl_gen_status
@@ -425,7 +428,7 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
   if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
     {
       size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
+      size_t len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
       ret = calloc (1, sizeof (*ret));
       if (ret == NULL)
         return NULL;
@@ -445,8 +448,8 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
         }
       for (i = 0; i < len; i++)
 	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
 	  if (srckey != NULL)
 	    {
@@ -608,7 +611,7 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
   if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
     {
       size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
+      size_t len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
       ret = calloc (1, sizeof (*ret));
       if (ret == NULL)
         return NULL;
@@ -628,8 +631,8 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
         }
       for (i = 0; i < len; i++)
 	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
 	  if (srckey != NULL)
 	    {
@@ -790,7 +793,7 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
   if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
     {
       size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
+      size_t len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
       ret = calloc (1, sizeof (*ret));
       if (ret == NULL)
         return NULL;
@@ -811,8 +814,8 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
         }
       for (i = 0; i < len; i++)
 	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
 	  if (srckey != NULL)
 	    {
@@ -842,7 +845,7 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
 		  free_json_map_int_string (ret);
 		  return NULL;
 		}
-	      char *str = YAJL_GET_STRING (srcval);
+	      char *str = YAJL_GET_STRING_NO_CHECK (srcval);
 	      ret->values[i] = strdup (str ? str : "");
 	    }
 	}
@@ -950,7 +953,7 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
   if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
     {
       size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
+      size_t len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
       ret = calloc (1, sizeof (*ret));
       if (ret->keys == NULL)
         {
@@ -975,8 +978,8 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
         }
       for (i = 0; i < len; i++)
 	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 	  ret->keys[i] = strdup (srckey ? srckey : "");
           if (ret->keys[i] == NULL)
             {
@@ -1116,7 +1119,7 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
   if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
     {
       size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
+      size_t len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
       ret = calloc (1, sizeof (*ret));
       if (ret == NULL)
         return NULL;
@@ -1136,8 +1139,8 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
         }
       for (i = 0; i < len; i++)
 	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 	  ret->keys[i] = strdup (srckey ? srckey : "");
 	  if (ret->keys[i] == NULL)
             {
@@ -1288,7 +1291,7 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
   if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
     {
       size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
+      size_t len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
       ret = malloc (sizeof (*ret));
       if (ret == NULL)
         {
@@ -1313,8 +1316,8 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
         }
       for (i = 0; i < len; i++)
 	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+	  const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+	  yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
 	  ret->keys[i] = strdup (srckey ? srckey : "");
           if (ret->keys[i] == NULL)
@@ -1336,7 +1339,7 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 		  return NULL;
 		}
 
-	      str = YAJL_GET_STRING (srcval);
+	      str = YAJL_GET_STRING_NO_CHECK (srcval);
 	      ret->values[i] = strdup (str ? str : "");
               if (ret->values[i] == NULL)
                 {
