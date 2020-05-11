@@ -30,7 +30,7 @@ SOURCE_FILES = \
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
 
-src/json_common.h src/json_common.c:
+src/json_common.h src/json_common.c: src/common_h.py src/common_c.py
 	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/runtime-spec/schema ${srcdir}/image-spec/schema
 	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/imageManifestItems
 

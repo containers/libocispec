@@ -49,6 +49,9 @@ def generate_json_common_c(out):
 # include <limits.h>
 # include "json_common.h"
 
+#define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)
+#define YAJL_GET_STRING_NO_CHECK(v) ((v)->u.string)
+
 # define MAX_NUM_STR_LEN 21
 
 yajl_gen_status
@@ -420,77 +423,79 @@ json_map_int_int *
 make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
 		       parser_error * err)
 {
-  (void) ctx;			/* Silence compiler warning.  */
   json_map_int_int *ret = NULL;
-  if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
+  size_t i;
+  size_t len;
+
+  (void) ctx;			/* Silence compiler warning.  */
+
+  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+    return NULL;
+
+  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
+    return NULL;
+
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (int));
+  if (ret->keys == NULL)
     {
-      size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
-      ret = calloc (1, sizeof (*ret));
-      if (ret == NULL)
-        return NULL;
-      ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (int));
-      if (ret->keys == NULL)
-        {
-          free (ret);
-          return NULL;
-        }
-      ret->values = calloc (1, (len + 1) * sizeof (int));
-      if (ret->values == NULL)
-        {
-          free (ret->keys);
-          free (ret);
-          return NULL;
-        }
-      for (i = 0; i < len; i++)
-	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+      free (ret);
+      return NULL;
+    }
 
-	  if (srckey != NULL)
-	    {
-	      int invalid;
-	      invalid = common_safe_int (srckey, &(ret->keys[i]));
-	      if (invalid)
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid key '%s' with type 'int': %s",
-				   srckey, strerror (-invalid)) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_int_int (ret);
-		  return NULL;
-		}
-	    }
+  ret->values = calloc (len + 1, sizeof (int));
+  if (ret->values == NULL)
+    {
+      free (ret->keys);
+      free (ret);
+      return NULL;
+    }
 
-	  if (srcval != NULL)
-	    {
-	      int invalid;
-	      if (!YAJL_IS_NUMBER (srcval))
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid value with type 'int' for key '%s'",
-				   srckey) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_int_int (ret);
-		  return NULL;
-		}
-	      invalid =
-		common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
-	      if (invalid)
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid value with type 'int' for key '%s': %s",
-				   srckey, strerror (-invalid)) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_int_int (ret);
-		  return NULL;
-		}
-	    }
-	}
+  for (i = 0; i < len; i++)
+    {
+      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+      ret->keys[i] = 0;
+      ret->values[i] = 0;
+      ret->len = i + 1;
+
+      if (srckey != NULL)
+        {
+          int invalid = common_safe_int (srckey, &(ret->keys[i]));
+          if (invalid)
+            {
+              free_json_map_int_int (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid key '%s' with type 'int': %s",
+                          srckey, strerror (-invalid));
+              return NULL;
+            }
+        }
+
+      if (srcval != NULL)
+        {
+          int invalid;
+          if (!YAJL_IS_NUMBER (srcval))
+            {
+              free_json_map_int_int (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid value with type 'int' for key '%s'",
+                          srckey);
+              return NULL;
+            }
+          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
+          if (invalid)
+            {
+              free_json_map_int_int (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid value with type 'int' for key '%s': %s",
+                          srckey, strerror (-invalid));
+              return NULL;
+            }
+        }
     }
   return ret;
 }
@@ -558,8 +563,8 @@ gen_json_map_int_bool (void *ctx, const json_map_int_bool * map,
 		  (long long int) map->keys[i]);
       if (nret < 0 || (size_t) nret >= sizeof (numstr))
 	{
-	  if (!*err && asprintf (err, "Error to print string") < 0)
-	    *(err) = strdup ("error allocating memory");
+	  if (!*err)
+            asprintf (err, "Error to print string");
 	  return yajl_gen_in_error_state;
 	}
       stat =
@@ -603,70 +608,70 @@ json_map_int_bool *
 make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
 			parser_error * err)
 {
-  (void) ctx;			/* Silence compiler warning.  */
   json_map_int_bool *ret = NULL;
-  if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
+  size_t i;
+  size_t len;
+
+  (void) ctx;			/* Silence compiler warning.  */
+
+  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+    return NULL;
+
+  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
+    return NULL;
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (int));
+  if (ret->keys == NULL)
     {
-      size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
-      ret = calloc (1, sizeof (*ret));
-      if (ret == NULL)
-        return NULL;
-      ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (int));
-      if (ret->keys == NULL)
-        {
-          free (ret);
-          return NULL;
-        }
-      ret->values = calloc (1, (len + 1) * sizeof (bool));
-      if (ret->values == NULL)
-        {
-          free (ret->keys);
-          free (ret);
-          return NULL;
-        }
-      for (i = 0; i < len; i++)
-	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+      free (ret);
+      return NULL;
+    }
+  ret->values = calloc (len + 1, sizeof (bool));
+  if (ret->values == NULL)
+    {
+      free (ret->keys);
+      free (ret);
+      return NULL;
+    }
+  for (i = 0; i < len; i++)
+    {
+      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-	  if (srckey != NULL)
-	    {
-	      int invalid;
-	      invalid = common_safe_int (srckey, &(ret->keys[i]));
-	      if (invalid)
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid key '%s' with type 'int': %s",
-				   srckey, strerror (-invalid)) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_int_bool (ret);
-		  return NULL;
-		}
-	    }
+      ret->keys[i] = 0;
+      ret->values[i] = false;
+      ret->len = i + 1;
 
-	  if (srcval != NULL)
-	    {
-	      if (YAJL_IS_TRUE (srcval))
-		ret->values[i] = true;
-	      else if (YAJL_IS_FALSE (srcval))
-		ret->values[i] = false;
-	      else
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid value with type 'bool' for key '%s'",
-				   srckey) < 0)
-		    {
-		      *(err) = strdup ("error allocating memory");
-		    }
-		  free_json_map_int_bool (ret);
-		  return NULL;
-		}
-	    }
-	}
+      if (srckey != NULL)
+        {
+          int invalid = common_safe_int (srckey, &(ret->keys[i]));
+          if (invalid)
+            {
+              free_json_map_int_bool (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid key '%s' with type 'int': %s",
+                          srckey, strerror (-invalid));
+              return NULL;
+            }
+        }
+
+      if (srcval != NULL)
+        {
+          if (YAJL_IS_TRUE (srcval))
+            ret->values[i] = true;
+          else if (YAJL_IS_FALSE (srcval))
+            ret->values[i] = false;
+          else
+            {
+              free_json_map_int_bool (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid value with type 'bool' for key '%s'",
+                          srckey);
+              return NULL;
+            }
+        }
     }
   return ret;
 }
@@ -686,10 +691,10 @@ append_json_map_int_bool (json_map_int_bool * map, int key, bool val)
     return -1;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (int));
+  keys = calloc (len, sizeof (int));
   if (keys == NULL)
     return -1;
-  vals = calloc (1, len * sizeof (bool));
+  vals = calloc (len, sizeof (bool));
   if (vals == NULL)
     {
       free (keys);
@@ -736,8 +741,8 @@ gen_json_map_int_string (void *ctx, const json_map_int_string * map,
 		  (long long int) map->keys[i]);
       if (nret < 0 || (size_t) nret >= sizeof (numstr))
 	{
-	  if (!*err && asprintf (err, "Error to print string") < 0)
-	    *(err) = strdup ("error allocating memory");
+	  if (!*err)
+            asprintf (err, "Error to print string");
 	  return yajl_gen_in_error_state;
 	}
       stat =
@@ -785,67 +790,73 @@ json_map_int_string *
 make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
 			  parser_error * err)
 {
-  (void) ctx;			/* Silence compiler warning.  */
+  size_t i;
+  size_t len;
   json_map_int_string *ret = NULL;
-  if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
+
+  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+    return NULL;
+
+  (void) ctx;			/* Silence compiler warning.  */
+
+  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
+    return NULL;
+
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (int));
+  if (ret->keys == NULL)
     {
-      size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
-      ret = calloc (1, sizeof (*ret));
-      if (ret == NULL)
-        return NULL;
+      free (ret);
+      return NULL;
+    }
 
-      ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (int));
-      if (ret->keys == NULL)
+  ret->values = calloc (len + 1, sizeof (char *));
+  if (ret->values == NULL)
+    {
+      free (ret->keys);
+      free (ret);
+      return NULL;
+    }
+
+  for (i = 0; i < len; i++)
+    {
+      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+      ret->keys[i] = 0;
+      ret->values[i] = NULL;
+      ret->len = i + 1;
+
+      if (srckey != NULL)
         {
-          free (ret);
-          return NULL;
+          int invalid;
+          invalid = common_safe_int (srckey, &(ret->keys[i]));
+          if (invalid)
+            {
+              free_json_map_int_string (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid key '%s' with type 'int': %s",
+                          srckey, strerror (-invalid));
+              return NULL;
+            }
         }
-      ret->values = calloc (1, (len + 1) * sizeof (char *));
-      if (ret->values == NULL)
+
+      if (srcval != NULL)
         {
-          free (ret->keys);
-          free (ret);
-          return NULL;
+          if (!YAJL_IS_STRING (srcval))
+            {
+              free_json_map_int_string (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid value with type 'string' for key '%s'",
+                          srckey);
+              return NULL;
+            }
+          char *str = YAJL_GET_STRING_NO_CHECK (srcval);
+          ret->values[i] = strdup (str ? str : "");
         }
-      for (i = 0; i < len; i++)
-	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
-
-	  if (srckey != NULL)
-	    {
-	      int invalid;
-	      invalid = common_safe_int (srckey, &(ret->keys[i]));
-	      if (invalid)
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid key '%s' with type 'int': %s",
-				   srckey, strerror (-invalid)) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_int_string (ret);
-		  return NULL;
-		}
-	    }
-
-	  if (srcval != NULL)
-	    {
-	      if (!YAJL_IS_STRING (srcval))
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid value with type 'string' for key '%s'",
-				   srckey) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_int_string (ret);
-		  return NULL;
-		}
-	      char *str = YAJL_GET_STRING (srcval);
-	      ret->values[i] = strdup (str ? str : "");
-	    }
-	}
     }
   return ret;
 }
@@ -867,38 +878,23 @@ append_json_map_int_string (json_map_int_string * map, int key,
     return -1;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (int));
+  keys = realloc (map->keys, len * sizeof (int));
   if (keys == NULL)
-    {
-      free (keys);
-      return -1;
-    }
-  vals = calloc (1, len * sizeof (char *));
+    return -1;
+  map->keys = keys;
+
+  vals = realloc (map->values, len * sizeof (char *));
   if (vals == NULL)
-    {
-      free (keys);
-      return -1;
-    }
+    return -1;
+  map->values = vals;
 
   new_value = strdup (val ? val : "");
   if (new_value == NULL)
-    {
-      free (keys);
-      free (vals);
-      return -1;
-    }
+    return -1;
 
-  if (map->len)
-    {
-      (void) memcpy (keys, map->keys, map->len * sizeof (int));
-      (void) memcpy (vals, map->values, map->len * sizeof (char *));
-    }
-  free (map->keys);
-  map->keys = keys;
-  free (map->values);
-  map->values = vals;
   map->keys[map->len] = key;
   map->values[map->len] = new_value;
+
   map->len++;
   return 0;
 }
@@ -960,73 +956,76 @@ json_map_string_int *
 make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
 			  parser_error * err)
 {
-  (void) ctx;			/* Silence compiler warning.  */
   json_map_string_int *ret = NULL;
-  if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
+  size_t i;
+  size_t len;
+
+  (void) ctx;			/* Silence compiler warning.  */
+
+  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+    return NULL;
+
+  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
     {
-      size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
-      ret = calloc (1, sizeof (*ret));
-      if (ret->keys == NULL)
+      *(err) = strdup ("error allocating memory");
+      return NULL;
+    }
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (char *));
+  if (ret->keys == NULL)
+    {
+      free (ret);
+      *(err) = strdup ("error allocating memory");
+      return NULL;
+    }
+  ret->values = calloc (len + 1, sizeof (int));
+  if (ret->values == NULL)
+    {
+      free (ret->keys);
+      free (ret);
+      *(err) = strdup ("error allocating memory");
+      return NULL;
+    }
+  for (i = 0; i < len; i++)
+    {
+      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+      ret->keys[i] = NULL;
+      ret->values[i] = 0;
+      ret->len = i + 1;
+
+      ret->keys[i] = strdup (srckey ? srckey : "");
+      if (ret->keys[i] == NULL)
         {
+          free_json_map_string_int (ret);
           *(err) = strdup ("error allocating memory");
           return NULL;
         }
-      ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (char *));
-      if (ret->keys == NULL)
+
+      if (srcval != NULL)
         {
-          *(err) = strdup ("error allocating memory");
-          free (ret);
-          return NULL;
-        }
-      ret->values = calloc (1, (len + 1) * sizeof (int));
-      if (ret->values == NULL)
-        {
-          *(err) = strdup ("error allocating memory");
-          free (ret->keys);
-          free (ret);
-          return NULL;
-        }
-      for (i = 0; i < len; i++)
-	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
-	  ret->keys[i] = strdup (srckey ? srckey : "");
-          if (ret->keys[i] == NULL)
+          int invalid;
+          if (!YAJL_IS_NUMBER (srcval))
             {
-              *(err) = strdup ("error allocating memory");
               free_json_map_string_int (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid value with type 'int' for key '%s'",
+                          srckey);
               return NULL;
             }
-
-	  if (srcval != NULL)
-	    {
-	      int invalid;
-	      if (!YAJL_IS_NUMBER (srcval))
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid value with type 'int' for key '%s'",
-				   srckey) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_string_int (ret);
-		  return NULL;
-		}
-	      invalid =
-		common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
-	      if (invalid)
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid value with type 'int' for key '%s': %s",
-				   srckey, strerror (-invalid)) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_string_int (ret);
-		  return NULL;
-		}
-	    }
-	}
+          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
+          if (invalid)
+            {
+              free_json_map_string_int (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid value with type 'int' for key '%s': %s",
+                          srckey, strerror (-invalid));
+              return NULL;
+            }
+        }
     }
   return ret;
 }
@@ -1048,32 +1047,18 @@ append_json_map_string_int (json_map_string_int * map, const char *key,
     return -1;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (char *));
+  keys = realloc (map->keys, len * sizeof (char *));
   if (keys == NULL)
     return -1;
-  vals = calloc (1, len * sizeof (int));
+  map->keys = keys;
+  vals = realloc (map->values, len * sizeof (int));
   if (vals == NULL)
-    {
-      free (keys);
-      return -1;
-    }
+    return -1;
+  map->values = vals;
+
   new_value = strdup (key ? key : "");
   if (new_value == NULL)
-    {
-      free (vals);
-      free (keys);
-      return -1;
-    }
-
-  if (map->len)
-    {
-      (void) memcpy (keys, map->keys, map->len * sizeof (char *));
-      (void) memcpy (vals, map->values, map->len * sizeof (int));
-    }
-  free (map->keys);
-  map->keys = keys;
-  free (map->values);
-  map->values = vals;
+    return -1;
   map->keys[map->len] = new_value;
   map->values[map->len] = val;
 
@@ -1140,57 +1125,66 @@ json_map_string_bool *
 make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
 			   parser_error * err)
 {
-  (void) ctx;			/* Silence compiler warning.  */
   json_map_string_bool *ret = NULL;
-  if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
+  size_t i;
+  size_t len;
+
+  (void) ctx;			/* Silence compiler warning.  */
+
+  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+
+  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+    return NULL;
+
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
+    return NULL;
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (char *));
+  if (ret->keys == NULL)
     {
-      size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
-      ret = calloc (1, sizeof (*ret));
-      if (ret == NULL)
-        return NULL;
-      ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (char *));
-      if (ret->keys == NULL)
+      free (ret);
+      return NULL;
+    }
+
+  ret->values = calloc (len + 1, sizeof (bool));
+  if (ret->values == NULL)
+    {
+      free (ret->values);
+      free (ret);
+      return NULL;
+    }
+  for (i = 0; i < len; i++)
+    {
+      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+      ret->keys[i] = NULL;
+      ret->values[i] = NULL;
+      ret->len = i + 1;
+
+      ret->keys[i] = strdup (srckey ? srckey : "");
+      if (ret->keys[i] == NULL)
         {
-          free (ret);
+          free_json_map_string_bool (ret);
+          *(err) = strdup ("error allocating memory");
           return NULL;
         }
-      ret->values = calloc (1, (len + 1) * sizeof (bool));
-      if (ret->values == NULL)
+      if (srcval != NULL)
         {
-          free (ret->values);
-          free (ret);
-          return NULL;
-        }
-      for (i = 0; i < len; i++)
-	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
-	  ret->keys[i] = strdup (srckey ? srckey : "");
-	  if (ret->keys[i] == NULL)
+          if (YAJL_IS_TRUE (srcval))
+            ret->values[i] = true;
+          else if (YAJL_IS_FALSE (srcval))
+            ret->values[i] = false;
+          else
             {
-              *(err) = strdup ("error allocating memory");
               free_json_map_string_bool (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid value with type 'bool' for key '%s'",
+                          srckey);
+              return NULL;
             }
-	  if (srcval != NULL)
-	    {
-	      if (YAJL_IS_TRUE (srcval))
-		ret->values[i] = true;
-	      else if (YAJL_IS_FALSE (srcval))
-		ret->values[i] = false;
-	      else
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid value with type 'bool' for key '%s'",
-				   srckey) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_string_bool (ret);
-		  return NULL;
-		}
-	    }
-	}
+        }
     }
   return ret;
 }
@@ -1212,10 +1206,10 @@ append_json_map_string_bool (json_map_string_bool * map, const char *key,
     return -1;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (char *));
+  keys = calloc (len, sizeof (char *));
   if (keys == NULL)
     return -1;
-  vals = calloc (1, len * sizeof (bool));
+  vals = calloc (len, sizeof (bool));
   if (vals == NULL)
     {
       free (keys);
@@ -1312,68 +1306,77 @@ json_map_string_string *
 make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 			     parser_error * err)
 {
-  (void) ctx;			/* Silence compiler warning.  */
   json_map_string_string *ret = NULL;
-  if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
-    {
-      size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
-      ret = malloc (sizeof (*ret));
-      if (ret == NULL)
-        {
-          *(err) = strdup ("error allocating memory");
-          return NULL;
-        }
-      ret->len = len;
-      ret->keys = calloc (1, (len + 1) * sizeof (char *));
-      if (ret->keys == NULL)
-        {
-          *(err) = strdup ("error allocating memory");
-          free (ret);
-          return NULL;
-        }
-      ret->values = calloc (1, (len + 1) * sizeof (char *));
-      if (ret->values == NULL)
-        {
-          *(err) = strdup ("error allocating memory");
-          free (ret->keys);
-          free (ret);
-          return NULL;
-        }
-      for (i = 0; i < len; i++)
-	{
-	  const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-	  yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+  size_t i;
+  size_t len;
 
-	  ret->keys[i] = strdup (srckey ? srckey : "");
-          if (ret->keys[i] == NULL)
+  (void) ctx;			/* Silence compiler warning.  */
+  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+    return NULL;
+
+  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+
+  ret = malloc (sizeof (*ret));
+  if (ret == NULL)
+    {
+      *(err) = strdup ("error allocating memory");
+      return NULL;
+    }
+
+  ret->len = 0;
+
+  ret->keys = calloc (len + 1, sizeof (char *));
+  if (ret->keys == NULL)
+    {
+      free (ret);
+      *(err) = strdup ("error allocating memory");
+      return NULL;
+    }
+
+  ret->values = calloc (len + 1, sizeof (char *));
+  if (ret->values == NULL)
+    {
+      free (ret->keys);
+      free (ret);
+      *(err) = strdup ("error allocating memory");
+      return NULL;
+    }
+  for (i = 0; i < len; i++)
+    {
+      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
+      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+
+      ret->keys[i] = NULL;
+      ret->values[i] = NULL;
+      ret->len = i + 1;
+
+      ret->keys[i] = strdup (srckey ? srckey : "");
+      if (ret->keys[i] == NULL)
+        {
+          free_json_map_string_string (ret);
+          return NULL;
+        }
+      if (srcval != NULL)
+        {
+          char *str;
+          if (!YAJL_IS_STRING (srcval))
+            {
+              free_json_map_string_string (ret);
+              if (*err == NULL)
+                asprintf (err, "Invalid value with type 'string' for key '%s'",
+                          srckey);
+              return NULL;
+            }
+
+          str = YAJL_GET_STRING_NO_CHECK (srcval);
+
+          ret->values[i] = strdup (str ? str : "");
+          if (ret->values[i] == NULL)
             {
               free_json_map_string_string (ret);
               return NULL;
             }
-	  if (srcval != NULL)
-	    {
-	      char *str;
-	      if (!YAJL_IS_STRING (srcval))
-		{
-		  if (*err == NULL
-		      && asprintf (err,
-				   "Invalid value with type 'string' for key '%s'",
-				   srckey) < 0)
-		    *(err) = strdup ("error allocating memory");
-		  free_json_map_string_string (ret);
-		  return NULL;
-		}
-
-	      str = YAJL_GET_STRING (srcval);
-	      ret->values[i] = strdup (str ? str : "");
-              if (ret->values[i] == NULL)
-                {
-		  free_json_map_string_string (ret);
-		  return NULL;
-		}
-	    }
-	}
+        }
     }
   return ret;
 }
@@ -1384,7 +1387,7 @@ append_json_map_string_string (json_map_string_string * map, const char *key,
 {
   size_t len, i;
   char **keys = NULL;
-  char **vals = NULL;
+  char **values = NULL;
   char *new_key = NULL;
   char *new_value = NULL;
 
@@ -1410,38 +1413,32 @@ append_json_map_string_string (json_map_string_string * map, const char *key,
   new_key = strdup (key ? key : "");
   if (new_key == NULL)
     goto cleanup;
+
   new_value = strdup (val ? val : "");
   if (new_value == NULL)
     goto cleanup;
 
   len = map->len + 1;
-  keys = calloc (1, len * sizeof (char *));
+  keys = realloc (map->keys, len * sizeof (char *));
   if (keys == NULL)
     goto cleanup;
-  vals = calloc (1, len * sizeof (char *));
-  if (vals == NULL)
+  map->keys = keys;
+  map->keys[map->len] = NULL;
+
+  values = realloc (map->values, len * sizeof (char *));
+  if (values == NULL)
     goto cleanup;
 
-  if (map->len)
-    {
-      (void) memcpy (keys, map->keys, map->len * sizeof (char *));
-      (void) memcpy (vals, map->values, map->len * sizeof (char *));
-    }
-  free (map->keys);
-  map->keys = keys;
-  free (map->values);
-  map->values = vals;
   map->keys[map->len] = new_key;
+  map->values = values;
   map->values[map->len] = new_value;
 
   map->len++;
   return 0;
- cleanup:
 
-  free (keys);
-  free (vals);
-  free (new_key);
+ cleanup:
   free (new_value);
+  free (new_key);
   return -1;
 }
 
@@ -1471,11 +1468,7 @@ json_marshal_string (const char *str, size_t length,
   stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) str, length);
   if (yajl_gen_status_ok != stat)
     {
-      if (asprintf (err, "error generating json, errcode: %d", (int) stat) <
-	  0)
-	{
-	  *err = strdup ("error allocating memory");
-	}
+      asprintf (err, "error generating json, errcode: %d", (int) stat);
       goto free_out;
     }
   yajl_gen_get_buf (g, &gen_buf, &gen_len);
