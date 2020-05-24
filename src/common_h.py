@@ -65,8 +65,10 @@ extern "C" {
 # define OPT_GEN_KEY_VALUE 0x02
 // options to generate simplify(no indent) json string
 # define OPT_GEN_SIMPLIFY 0x04
+// options to keep all keys and values, even do not known
+# define OPT_PARSE_FULLKEY 0x08
 // options not to validate utf8 data
-# define OPT_GEN_NO_VALIDATE_UTF8 0x08
+# define OPT_GEN_NO_VALIDATE_UTF8 0x10
 
 # define GEN_SET_ERROR_AND_RETURN(stat, err) { \\
     if (*(err) == NULL) {\\
@@ -84,6 +86,8 @@ struct parser_context
   unsigned int options;
   FILE *errfile;
 };
+
+yajl_gen_status gen_yajl_object_residual (yajl_val obj, yajl_gen g, parser_error *err);
 
 yajl_gen_status map_uint (void *ctx, long long unsigned int num);
 

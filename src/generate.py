@@ -736,6 +736,7 @@ def handle_single_file(args, srcpath, gen_ref, schemapath):
                         schema_info = schema_from_file(os.path.join(dirpath, target_file), \
                                                        srcpath.name)
                         reflection(schema_info, gen_ref)
+                        print("\033[1;34mReflection:\033[0m\t%-60s \033[1;32mSuccess\033[0m" % (target_file))
         else:
             # only parse files in current direcotory
             for target_file in os.listdir(schemapath.name):
@@ -743,10 +744,12 @@ def handle_single_file(args, srcpath, gen_ref, schemapath):
                 if fullpath.endswith(JSON_SUFFIX) and os.path.isfile(fullpath):
                     schema_info = schema_from_file(fullpath, srcpath.name)
                     reflection(schema_info, gen_ref)
+                    print("\033[1;34mReflection:\033[0m\t%-60s \033[1;32mSuccess\033[0m" % (fullpath))
     else:
         if schemapath.name.endswith(JSON_SUFFIX):
             schema_info = schema_from_file(schemapath.name, srcpath.name)
             reflection(schema_info, gen_ref)
+            print("\033[1;34mReflection:\033[0m\t%-60s \033[1;32mSuccess\033[0m" % (schemapath.name))
         else:
             print('File %s is not ends with .json' % schemapath.name)
 

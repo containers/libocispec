@@ -54,6 +54,113 @@ def generate_json_common_c(out):
 
 # define MAX_NUM_STR_LEN 21
 
+static yajl_gen_status gen_yajl_val (yajl_val obj, yajl_gen g, parser_error *err);
+
+static yajl_gen_status gen_yajl_val_obj (yajl_val obj, yajl_gen g, parser_error *err)
+{
+    size_t i;
+    yajl_gen_status stat = yajl_gen_status_ok;
+
+    stat = yajl_gen_map_open (g);
+    if (yajl_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+
+    for (i = 0; i < obj->u.object.len; i++)
+    {
+        stat = yajl_gen_string (g, (const unsigned char *) obj->u.object.keys[i], strlen (obj->u.object.keys[i]));
+        if (yajl_gen_status_ok != stat)
+            GEN_SET_ERROR_AND_RETURN (stat, err);
+        stat = gen_yajl_val (obj->u.object.values[i], g, err);
+        if (yajl_gen_status_ok != stat)
+            GEN_SET_ERROR_AND_RETURN (stat, err);
+    }
+
+    stat = yajl_gen_map_close (g);
+    if (yajl_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+    return yajl_gen_status_ok;
+}
+
+static yajl_gen_status gen_yajl_val_array (yajl_val arr, yajl_gen g, parser_error *err)
+{
+    size_t i;
+    yajl_gen_status stat = yajl_gen_status_ok;
+
+    stat = yajl_gen_array_open (g);
+    if (yajl_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+
+    for (i = 0; i < arr->u.array.len; i++)
+    {
+        stat = gen_yajl_val (arr->u.array.values[i], g, err);
+        if (yajl_gen_status_ok != stat)
+            GEN_SET_ERROR_AND_RETURN (stat, err);
+    }
+
+    stat = yajl_gen_array_close (g);
+    if (yajl_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+    return yajl_gen_status_ok;
+}
+
+static yajl_gen_status gen_yajl_val (yajl_val obj, yajl_gen g, parser_error *err)
+{
+    yajl_gen_status __stat = yajl_gen_status_ok;
+    char *__tstr;
+
+    switch(obj->type)
+    {
+        case yajl_t_string:
+            __tstr = YAJL_GET_STRING (obj);
+            if (__tstr == NULL) {
+                return __stat;
+            }
+            __stat = yajl_gen_string (g, (const unsigned char *) __tstr, strlen (__tstr));
+            GEN_SET_ERROR_AND_RETURN (__stat, err);
+        case yajl_t_number:
+            __tstr = YAJL_GET_NUMBER (obj);
+            if (__tstr == NULL) {
+                return __stat;
+            }
+            __stat = yajl_gen_number (g, __tstr, strlen (__tstr));
+            GEN_SET_ERROR_AND_RETURN (__stat, err);
+        case yajl_t_object:
+            return gen_yajl_val_obj (obj, g, err);
+        case yajl_t_array:
+            return gen_yajl_val_array (obj, g, err);
+        case yajl_t_true:
+            return yajl_gen_bool (g, true);
+        case yajl_t_false:
+            return yajl_gen_bool (g, false);
+        case yajl_t_null:
+        case yajl_t_any:
+            return __stat;
+    }
+    return __stat;
+}
+
+yajl_gen_status gen_yajl_object_residual (yajl_val obj, yajl_gen g, parser_error *err)
+{
+    size_t i;
+    yajl_gen_status stat = yajl_gen_status_ok;
+
+    for (i = 0; i < obj->u.object.len; i++)
+    {
+        if (obj->u.object.keys[i] == NULL)
+        {
+            continue;
+        }
+        stat = yajl_gen_string (g, (const unsigned char *) obj->u.object.keys[i], strlen (obj->u.object.keys[i]));
+        if (yajl_gen_status_ok != stat)
+            GEN_SET_ERROR_AND_RETURN (stat, err);
+        stat = gen_yajl_val (obj->u.object.values[i], g, err);
+        if (yajl_gen_status_ok != stat)
+            GEN_SET_ERROR_AND_RETURN (stat, err);
+    }
+
+    return yajl_gen_status_ok;
+}
+
 yajl_gen_status
 map_uint (void *ctx, long long unsigned int num)
 {
