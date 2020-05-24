@@ -155,6 +155,8 @@ def append_type_c_header(obj, header, prefix):
                 append_header_child_others(i, header, prefix)
             if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
                 header.write("    unsigned int %s_present : 1;\n" % (i.fixname))
+        if obj.children is not None:
+            header.write("    yajl_val _residual;\n")
     typename = helpers.get_prefixed_name(obj.name, prefix)
     header.write("}\n%s;\n\n" % typename)
     header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))

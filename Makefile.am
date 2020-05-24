@@ -94,6 +94,9 @@ tests_test_7_LDADD = $(TESTS_LDADD)
 tests_test_8_SOURCES = tests/test-8.c
 tests_test_8_LDADD = $(TESTS_LDADD)
 
+tests_test_9_SOURCES = tests/test-9.c
+tests_test_9_LDADD = $(TESTS_LDADD)
+
 src_validate_SOURCES = src/validate.c
 src_validate_LDADD = $(TESTS_LDADD)
 
@@ -104,7 +107,8 @@ TESTS = tests/test-1 \
 	tests/test-5 \
 	tests/test-6 \
 	tests/test-7 \
-	tests/test-8
+	tests/test-8 \
+	tests/test-9
 
 noinst_PROGRAMS = src/validate $(TESTS)
 
@@ -124,6 +128,7 @@ EXTRA_DIST = autogen.sh \
 	tests/data/image_config.json \
 	tests/data/config.nocwd.json \
 	tests/data/image_manifest_item.json \
+	tests/data/residual_image_layout_config.json \
 	tests/test-spec \
 	src/generate.py \
 	src/common_c.py \
