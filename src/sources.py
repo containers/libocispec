@@ -1165,6 +1165,7 @@ yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const st
         return NULL;
       }
     ptr = make_%s (tree, ctx, err%s);
+    yajl_tree_free (tree);
     return ptr;
 }
 """ % (prefix, '' if typ == 'object' else ', len'))
