@@ -116,14 +116,18 @@ static yajl_gen_status gen_yajl_val (yajl_val obj, yajl_gen g, parser_error *err
                 return __stat;
             }
             __stat = yajl_gen_string (g, (const unsigned char *) __tstr, strlen (__tstr));
-            GEN_SET_ERROR_AND_RETURN (__stat, err);
+            if (yajl_gen_status_ok != __stat)
+                GEN_SET_ERROR_AND_RETURN (__stat, err);
+            return yajl_gen_status_ok;
         case yajl_t_number:
             __tstr = YAJL_GET_NUMBER (obj);
             if (__tstr == NULL) {
                 return __stat;
             }
             __stat = yajl_gen_number (g, __tstr, strlen (__tstr));
-            GEN_SET_ERROR_AND_RETURN (__stat, err);
+            if (yajl_gen_status_ok != __stat)
+                GEN_SET_ERROR_AND_RETURN (__stat, err);
+            return yajl_gen_status_ok;
         case yajl_t_object:
             return gen_yajl_val_obj (obj, g, err);
         case yajl_t_array:

@@ -1,4 +1,4 @@
-/* Copyright (C) 2017 Wang Long <w@laoqinren.net>
+/* Copyright (C) 2020 duguhaotian <knowledgehao@163.com>
 
 libocispec is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -40,11 +40,13 @@ main ()
   json_buf = image_spec_schema_image_layout_schema_generate_json(image_layout, &ctx, &err);
   if (json_buf == NULL) {
     printf("gen error %s\n", err);
+    free(err);
     exit (1);
   }
   image_layout_gen = image_spec_schema_image_layout_schema_parse_data(json_buf, 0, &err);
   if (image_layout_gen == NULL) {
     printf("parse error %s\n", err);
+    free(err);
     exit(1);
   }
 
