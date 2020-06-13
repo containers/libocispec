@@ -4,7 +4,7 @@ AM_CFLAGS = $(WARN_CFLAGS) -I$(top_srcdir)/src -I$(top_builddir)/src
 
 GITIGNOREFILES = build-aux/ gtk-doc.make config.h.in aclocal.m4
 
-noinst_LTLIBRARIES = libocispec.la
+lib_LTLIBRARIES = libocispec.la
 noinst_LIBRARIES = libocispec.a
 
 SOURCE_FILES = \
