@@ -495,8 +495,8 @@ gen_json_map_int_int (void *ctx, const json_map_int_int * map,
 		  (long long int) map->keys[i]);
       if (nret < 0 || (size_t) nret >= sizeof (numstr))
 	{
-	  if (!*err && asprintf (err, "Error to print string") < 0)
-	    *(err) = strdup ("error allocating memory");
+	  if (!*err)
+            *err = strdup ("Error to print string");
 	  return yajl_gen_in_error_state;
 	}
       stat =
@@ -530,11 +530,14 @@ free_json_map_int_int (json_map_int_int * map)
     }
 }
 
+define_cleaner_function (json_map_int_int *, free_json_map_int_int)
+
 json_map_int_int *
 make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
 		       parser_error * err)
 {
   json_map_int_int *ret = NULL;
+  __auto_cleanup(free_json_map_int_int) json_map_int_int *tmp = NULL;
   size_t i;
   size_t len;
 
@@ -544,23 +547,20 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
     return NULL;
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
-  ret = calloc (1, sizeof (*ret));
-  if (ret == NULL)
+  tmp = calloc (1, sizeof (*tmp));
+  if (tmp == NULL)
     return NULL;
 
-  ret->len = 0;
-  ret->keys = calloc (len + 1, sizeof (int));
-  if (ret->keys == NULL)
+  tmp->len = 0;
+  tmp->keys = calloc (len + 1, sizeof (int));
+  if (tmp->keys == NULL)
     {
-      free (ret);
       return NULL;
     }
 
-  ret->values = calloc (len + 1, sizeof (int));
-  if (ret->values == NULL)
+  tmp->values = calloc (len + 1, sizeof (int));
+  if (tmp->values == NULL)
     {
-      free (ret->keys);
-      free (ret);
       return NULL;
     }
 
@@ -569,19 +569,20 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      ret->keys[i] = 0;
-      ret->values[i] = 0;
-      ret->len = i + 1;
+      tmp->keys[i] = 0;
+      tmp->values[i] = 0;
+      tmp->len = i + 1;
 
       if (srckey != NULL)
         {
-          int invalid = common_safe_int (srckey, &(ret->keys[i]));
+          int invalid = common_safe_int (srckey, &(tmp->keys[i]));
           if (invalid)
             {
-              free_json_map_int_int (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid key '%s' with type 'int': %s",
-                          srckey, strerror (-invalid));
+              if (*err == NULL && asprintf (err, "Invalid key '%s' with type 'int': %s",
+                    srckey, strerror (-invalid)) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
         }
@@ -591,23 +592,27 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
           int invalid;
           if (!YAJL_IS_NUMBER (srcval))
             {
-              free_json_map_int_int (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid value with type 'int' for key '%s'",
-                          srckey);
+              if (*err == NULL && asprintf (err,
+                    "Invalid value with type 'int' for key '%s'", srckey) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
-          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
+          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(tmp->values[i]));
           if (invalid)
             {
-              free_json_map_int_int (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid value with type 'int' for key '%s': %s",
-                          srckey, strerror (-invalid));
+              if (*err == NULL && asprintf (err, "Invalid value with type 'int' for key '%s': %s",
+                    srckey, strerror (-invalid)) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
         }
     }
+  ret = tmp;
+  tmp = NULL;
   return ret;
 }
 
@@ -615,8 +620,8 @@ int
 append_json_map_int_int (json_map_int_int * map, int key, int val)
 {
   size_t len;
-  int *keys = NULL;
-  int *vals = NULL;
+  __auto_free int *keys = NULL;
+  __auto_free int *vals = NULL;
 
   if (map == NULL)
     return -1;
@@ -631,7 +636,6 @@ append_json_map_int_int (json_map_int_int * map, int key, int val)
   vals = calloc (1, len * sizeof (int));
   if (vals == NULL)
     {
-      free (keys);
       return -1;
     }
 
@@ -642,8 +646,10 @@ append_json_map_int_int (json_map_int_int * map, int key, int val)
     }
   free (map->keys);
   map->keys = keys;
+  keys = NULL;
   free (map->values);
   map->values = vals;
+  vals = NULL;
   map->keys[map->len] = key;
   map->values[map->len] = val;
 
@@ -675,7 +681,7 @@ gen_json_map_int_bool (void *ctx, const json_map_int_bool * map,
       if (nret < 0 || (size_t) nret >= sizeof (numstr))
 	{
 	  if (!*err)
-            asprintf (err, "Error to print string");
+            *err = strdup ("Error to print string");
 	  return yajl_gen_in_error_state;
 	}
       stat =
@@ -715,11 +721,14 @@ free_json_map_int_bool (json_map_int_bool * map)
     }
 }
 
+define_cleaner_function (json_map_int_bool *, free_json_map_int_bool)
+
 json_map_int_bool *
 make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
 			parser_error * err)
 {
   json_map_int_bool *ret = NULL;
+  __auto_cleanup(free_json_map_int_bool) json_map_int_bool *tmp = NULL;
   size_t i;
   size_t len;
 
@@ -729,21 +738,18 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
     return NULL;
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
-  ret = calloc (1, sizeof (*ret));
-  if (ret == NULL)
+  tmp = calloc (1, sizeof (*tmp));
+  if (tmp == NULL)
     return NULL;
-  ret->len = 0;
-  ret->keys = calloc (len + 1, sizeof (int));
-  if (ret->keys == NULL)
+  tmp->len = 0;
+  tmp->keys = calloc (len + 1, sizeof (int));
+  if (tmp->keys == NULL)
     {
-      free (ret);
       return NULL;
     }
-  ret->values = calloc (len + 1, sizeof (bool));
-  if (ret->values == NULL)
+  tmp->values = calloc (len + 1, sizeof (bool));
+  if (tmp->values == NULL)
     {
-      free (ret->keys);
-      free (ret);
       return NULL;
     }
   for (i = 0; i < len; i++)
@@ -751,19 +757,20 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      ret->keys[i] = 0;
-      ret->values[i] = false;
-      ret->len = i + 1;
+      tmp->keys[i] = 0;
+      tmp->values[i] = false;
+      tmp->len = i + 1;
 
       if (srckey != NULL)
         {
-          int invalid = common_safe_int (srckey, &(ret->keys[i]));
+          int invalid = common_safe_int (srckey, &(tmp->keys[i]));
           if (invalid)
             {
-              free_json_map_int_bool (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid key '%s' with type 'int': %s",
-                          srckey, strerror (-invalid));
+              if (*err == NULL && asprintf (err, "Invalid key '%s' with type 'int': %s",
+                    srckey, strerror (-invalid)) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
         }
@@ -771,19 +778,22 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
       if (srcval != NULL)
         {
           if (YAJL_IS_TRUE (srcval))
-            ret->values[i] = true;
+            tmp->values[i] = true;
           else if (YAJL_IS_FALSE (srcval))
-            ret->values[i] = false;
+            tmp->values[i] = false;
           else
             {
-              free_json_map_int_bool (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid value with type 'bool' for key '%s'",
-                          srckey);
+              if (*err == NULL && asprintf (err,
+                    "Invalid value with type 'bool' for key '%s'", srckey) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
         }
     }
+  ret = tmp;
+  tmp = NULL;
   return ret;
 }
 
@@ -791,8 +801,8 @@ int
 append_json_map_int_bool (json_map_int_bool * map, int key, bool val)
 {
   size_t len;
-  int *keys = NULL;
-  bool *vals = NULL;
+  __auto_free int *keys = NULL;
+  __auto_free bool *vals = NULL;
 
   if (map == NULL)
     return -1;
@@ -808,7 +818,6 @@ append_json_map_int_bool (json_map_int_bool * map, int key, bool val)
   vals = calloc (len, sizeof (bool));
   if (vals == NULL)
     {
-      free (keys);
       return -1;
     }
 
@@ -819,8 +828,10 @@ append_json_map_int_bool (json_map_int_bool * map, int key, bool val)
     }
   free (map->keys);
   map->keys = keys;
+  keys = NULL;
   free (map->values);
   map->values = vals;
+  vals = NULL;
   map->keys[map->len] = key;
   map->values[map->len] = val;
 
@@ -853,7 +864,7 @@ gen_json_map_int_string (void *ctx, const json_map_int_string * map,
       if (nret < 0 || (size_t) nret >= sizeof (numstr))
 	{
 	  if (!*err)
-            asprintf (err, "Error to print string");
+            *err = strdup ("Error to print string");
 	  return yajl_gen_in_error_state;
 	}
       stat =
@@ -897,13 +908,16 @@ free_json_map_int_string (json_map_int_string * map)
     }
 }
 
+define_cleaner_function (json_map_int_string *, free_json_map_int_string)
+
 json_map_int_string *
 make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
 			  parser_error * err)
 {
+  json_map_int_string *ret = NULL;
+  __auto_cleanup(free_json_map_int_string) json_map_int_string *tmp = NULL;
   size_t i;
   size_t len;
-  json_map_int_string *ret = NULL;
 
   if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
     return NULL;
@@ -912,23 +926,20 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
 
-  ret = calloc (1, sizeof (*ret));
-  if (ret == NULL)
+  tmp = calloc (1, sizeof (*tmp));
+  if (tmp == NULL)
     return NULL;
 
-  ret->len = 0;
-  ret->keys = calloc (len + 1, sizeof (int));
-  if (ret->keys == NULL)
+  tmp->len = 0;
+  tmp->keys = calloc (len + 1, sizeof (int));
+  if (tmp->keys == NULL)
     {
-      free (ret);
       return NULL;
     }
 
-  ret->values = calloc (len + 1, sizeof (char *));
-  if (ret->values == NULL)
+  tmp->values = calloc (len + 1, sizeof (char *));
+  if (tmp->values == NULL)
     {
-      free (ret->keys);
-      free (ret);
       return NULL;
     }
 
@@ -937,20 +948,21 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      ret->keys[i] = 0;
-      ret->values[i] = NULL;
-      ret->len = i + 1;
+      tmp->keys[i] = 0;
+      tmp->values[i] = NULL;
+      tmp->len = i + 1;
 
       if (srckey != NULL)
         {
           int invalid;
-          invalid = common_safe_int (srckey, &(ret->keys[i]));
+          invalid = common_safe_int (srckey, &(tmp->keys[i]));
           if (invalid)
             {
-              free_json_map_int_string (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid key '%s' with type 'int': %s",
-                          srckey, strerror (-invalid));
+              if (*err == NULL && asprintf (err, "Invalid key '%s' with type 'int': %s",
+                    srckey, strerror (-invalid)) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
         }
@@ -959,16 +971,19 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
         {
           if (!YAJL_IS_STRING (srcval))
             {
-              free_json_map_int_string (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid value with type 'string' for key '%s'",
-                          srckey);
+              if (*err == NULL && asprintf (err,
+                   "Invalid value with type 'string' for key '%s'", srckey) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
           char *str = YAJL_GET_STRING_NO_CHECK (srcval);
-          ret->values[i] = strdup (str ? str : "");
+          tmp->values[i] = strdup (str ? str : "");
         }
     }
+  ret = tmp;
+  tmp = NULL;
   return ret;
 }
 
@@ -1063,11 +1078,14 @@ free_json_map_string_int (json_map_string_int * map)
     }
 }
 
+define_cleaner_function (json_map_string_int *, free_json_map_string_int)
+
 json_map_string_int *
 make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
 			  parser_error * err)
 {
   json_map_string_int *ret = NULL;
+  __auto_cleanup(free_json_map_string_int) json_map_string_int *tmp = NULL;
   size_t i;
   size_t len;
 
@@ -1077,25 +1095,22 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
     return NULL;
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
-  ret = calloc (1, sizeof (*ret));
-  if (ret == NULL)
+  tmp = calloc (1, sizeof (*tmp));
+  if (tmp == NULL)
     {
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
-  ret->len = 0;
-  ret->keys = calloc (len + 1, sizeof (char *));
-  if (ret->keys == NULL)
+  tmp->len = 0;
+  tmp->keys = calloc (len + 1, sizeof (char *));
+  if (tmp->keys == NULL)
     {
-      free (ret);
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
-  ret->values = calloc (len + 1, sizeof (int));
-  if (ret->values == NULL)
+  tmp->values = calloc (len + 1, sizeof (int));
+  if (tmp->values == NULL)
     {
-      free (ret->keys);
-      free (ret);
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
@@ -1104,14 +1119,13 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      ret->keys[i] = NULL;
-      ret->values[i] = 0;
-      ret->len = i + 1;
+      tmp->keys[i] = NULL;
+      tmp->values[i] = 0;
+      tmp->len = i + 1;
 
-      ret->keys[i] = strdup (srckey ? srckey : "");
-      if (ret->keys[i] == NULL)
+      tmp->keys[i] = strdup (srckey ? srckey : "");
+      if (tmp->keys[i] == NULL)
         {
-          free_json_map_string_int (ret);
           *(err) = strdup ("error allocating memory");
           return NULL;
         }
@@ -1121,23 +1135,27 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
           int invalid;
           if (!YAJL_IS_NUMBER (srcval))
             {
-              free_json_map_string_int (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid value with type 'int' for key '%s'",
-                          srckey);
+              if (*err == NULL && asprintf (err,
+                    "Invalid value with type 'int' for key '%s'", srckey) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
-          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
+          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(tmp->values[i]));
           if (invalid)
             {
-              free_json_map_string_int (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid value with type 'int' for key '%s': %s",
-                          srckey, strerror (-invalid));
+              if (*err == NULL && asprintf (err, "Invalid value with type 'int' for key '%s': %s",
+                    srckey, strerror (-invalid)) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
         }
     }
+  ret = tmp;
+  tmp = NULL;
   return ret;
 }
 
@@ -1232,11 +1250,14 @@ free_json_map_string_bool (json_map_string_bool * map)
     }
 }
 
+define_cleaner_function (json_map_string_bool *, free_json_map_string_bool)
+
 json_map_string_bool *
 make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
 			   parser_error * err)
 {
   json_map_string_bool *ret = NULL;
+  __auto_cleanup(free_json_map_string_bool) json_map_string_bool *tmp = NULL;
   size_t i;
   size_t len;
 
@@ -1247,22 +1268,19 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
   if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
     return NULL;
 
-  ret = calloc (1, sizeof (*ret));
-  if (ret == NULL)
+  tmp = calloc (1, sizeof (*tmp));
+  if (tmp == NULL)
     return NULL;
-  ret->len = 0;
-  ret->keys = calloc (len + 1, sizeof (char *));
-  if (ret->keys == NULL)
+  tmp->len = 0;
+  tmp->keys = calloc (len + 1, sizeof (char *));
+  if (tmp->keys == NULL)
     {
-      free (ret);
       return NULL;
     }
 
-  ret->values = calloc (len + 1, sizeof (bool));
-  if (ret->values == NULL)
+  tmp->values = calloc (len + 1, sizeof (bool));
+  if (tmp->values == NULL)
     {
-      free (ret->values);
-      free (ret);
       return NULL;
     }
   for (i = 0; i < len; i++)
@@ -1270,33 +1288,35 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      ret->keys[i] = NULL;
-      ret->values[i] = NULL;
-      ret->len = i + 1;
+      tmp->keys[i] = NULL;
+      tmp->values[i] = NULL;
+      tmp->len = i + 1;
 
-      ret->keys[i] = strdup (srckey ? srckey : "");
-      if (ret->keys[i] == NULL)
+      tmp->keys[i] = strdup (srckey ? srckey : "");
+      if (tmp->keys[i] == NULL)
         {
-          free_json_map_string_bool (ret);
           *(err) = strdup ("error allocating memory");
           return NULL;
         }
       if (srcval != NULL)
         {
           if (YAJL_IS_TRUE (srcval))
-            ret->values[i] = true;
+            tmp->values[i] = true;
           else if (YAJL_IS_FALSE (srcval))
-            ret->values[i] = false;
+            tmp->values[i] = false;
           else
             {
-              free_json_map_string_bool (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid value with type 'bool' for key '%s'",
-                          srckey);
+              if (*err == NULL && asprintf (err,
+                   "Invalid value with type 'bool' for key '%s'", srckey) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
         }
     }
+  ret = tmp;
+  tmp = NULL;
   return ret;
 }
 
@@ -1305,9 +1325,9 @@ append_json_map_string_bool (json_map_string_bool * map, const char *key,
 			     bool val)
 {
   size_t len;
-  char **keys = NULL;
-  bool *vals = NULL;
-  char *new_value;
+  __auto_free char **keys = NULL;
+  __auto_free bool *vals = NULL;
+  __auto_free char *new_value;
 
   if (map == NULL)
     return -1;
@@ -1323,15 +1343,12 @@ append_json_map_string_bool (json_map_string_bool * map, const char *key,
   vals = calloc (len, sizeof (bool));
   if (vals == NULL)
     {
-      free (keys);
       return -1;
     }
 
   new_value = strdup (key ? key : "");
   if (new_value == NULL)
     {
-      free (vals);
-      free (keys);
       return -1;
     }
 
@@ -1342,9 +1359,12 @@ append_json_map_string_bool (json_map_string_bool * map, const char *key,
     }
   free (map->keys);
   map->keys = keys;
+  keys = NULL;
   free (map->values);
   map->values = vals;
+  vals = NULL;
   map->keys[map->len] = new_value;
+  new_value = NULL;
   map->values[map->len] = val;
 
   map->len++;
@@ -1413,11 +1433,14 @@ free_json_map_string_string (json_map_string_string * map)
     }
 }
 
+define_cleaner_function (json_map_string_string *, free_json_map_string_string)
+
 json_map_string_string *
 make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 			     parser_error * err)
 {
   json_map_string_string *ret = NULL;
+  __auto_cleanup(free_json_map_string_string) json_map_string_string *tmp = NULL;
   size_t i;
   size_t len;
 
@@ -1427,28 +1450,25 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
 
-  ret = malloc (sizeof (*ret));
-  if (ret == NULL)
+  tmp = malloc (sizeof (*tmp));
+  if (tmp == NULL)
     {
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
 
-  ret->len = 0;
+  tmp->len = 0;
 
-  ret->keys = calloc (len + 1, sizeof (char *));
-  if (ret->keys == NULL)
+  tmp->keys = calloc (len + 1, sizeof (char *));
+  if (tmp->keys == NULL)
     {
-      free (ret);
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
 
-  ret->values = calloc (len + 1, sizeof (char *));
-  if (ret->values == NULL)
+  tmp->values = calloc (len + 1, sizeof (char *));
+  if (tmp->values == NULL)
     {
-      free (ret->keys);
-      free (ret);
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
@@ -1457,14 +1477,13 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      ret->keys[i] = NULL;
-      ret->values[i] = NULL;
-      ret->len = i + 1;
+      tmp->keys[i] = NULL;
+      tmp->values[i] = NULL;
+      tmp->len = i + 1;
 
-      ret->keys[i] = strdup (srckey ? srckey : "");
-      if (ret->keys[i] == NULL)
+      tmp->keys[i] = strdup (srckey ? srckey : "");
+      if (tmp->keys[i] == NULL)
         {
-          free_json_map_string_string (ret);
           return NULL;
         }
       if (srcval != NULL)
@@ -1472,23 +1491,25 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
           char *str;
           if (!YAJL_IS_STRING (srcval))
             {
-              free_json_map_string_string (ret);
-              if (*err == NULL)
-                asprintf (err, "Invalid value with type 'string' for key '%s'",
-                          srckey);
+              if (*err == NULL && asprintf (err,
+                   "Invalid value with type 'string' for key '%s'", srckey) < 0)
+                {
+                  *err = strdup ("error allocating memory");
+                }
               return NULL;
             }
 
           str = YAJL_GET_STRING_NO_CHECK (srcval);
 
-          ret->values[i] = strdup (str ? str : "");
-          if (ret->values[i] == NULL)
+          tmp->values[i] = strdup (str ? str : "");
+          if (tmp->values[i] == NULL)
             {
-              free_json_map_string_string (ret);
               return NULL;
             }
         }
     }
+  ret = tmp;
+  tmp = NULL;
   return ret;
 }
 
@@ -1497,10 +1518,10 @@ append_json_map_string_string (json_map_string_string * map, const char *key,
 			       const char *val)
 {
   size_t len, i;
-  char **keys = NULL;
-  char **values = NULL;
-  char *new_key = NULL;
-  char *new_value = NULL;
+  __auto_free char **keys = NULL;
+  __auto_free char **values = NULL;
+  __auto_free char *new_key = NULL;
+  __auto_free char *new_value = NULL;
 
   if (map == NULL)
     return -1;
@@ -1523,41 +1544,51 @@ append_json_map_string_string (json_map_string_string * map, const char *key,
 
   new_key = strdup (key ? key : "");
   if (new_key == NULL)
-    goto cleanup;
+    return -1;
 
   new_value = strdup (val ? val : "");
   if (new_value == NULL)
-    goto cleanup;
+    return -1;
 
   len = map->len + 1;
   keys = realloc (map->keys, len * sizeof (char *));
   if (keys == NULL)
-    goto cleanup;
+    return -1;
   map->keys = keys;
+  keys = NULL;
   map->keys[map->len] = NULL;
 
   values = realloc (map->values, len * sizeof (char *));
   if (values == NULL)
-    goto cleanup;
+    return -1;
 
   map->keys[map->len] = new_key;
+  new_key = NULL;
   map->values = values;
+  values = NULL;
   map->values[map->len] = new_value;
+  new_value = NULL;
 
   map->len++;
   return 0;
-
- cleanup:
-  free (new_value);
-  free (new_key);
-  return -1;
 }
+
+static void
+cleanup_yajl_gen(yajl_gen g)
+{
+  if (!g)
+    return;
+  yajl_gen_clear (g);
+  yajl_gen_free (g);
+}
+
+define_cleaner_function (yajl_gen, cleanup_yajl_gen)
 
 char *
 json_marshal_string (const char *str, size_t length,
 		     const struct parser_context *ctx, parser_error * err)
 {
-  yajl_gen g = NULL;
+  __auto_cleanup(cleanup_yajl_gen) yajl_gen g = NULL;
   struct parser_context tmp_ctx = { 0 };
   const unsigned char *gen_buf = NULL;
   char *json_buf = NULL;
@@ -1574,35 +1605,32 @@ json_marshal_string (const char *str, size_t length,
   if (!json_gen_init (&g, ctx))
     {
       *err = strdup ("Json_gen init failed");
-      goto out;
+      return json_buf;
     }
   stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) str, length);
   if (yajl_gen_status_ok != stat)
     {
-      asprintf (err, "error generating json, errcode: %d", (int) stat);
-      goto free_out;
+      if (asprintf (err, "error generating json, errcode: %d", (int) stat) < 0)
+          *err = strdup ("error allocating memory");
+      return json_buf;
     }
   yajl_gen_get_buf (g, &gen_buf, &gen_len);
   if (gen_buf == NULL)
     {
       *err = strdup ("Error to get generated json");
-      goto free_out;
+      return json_buf;
     }
 
   json_buf = calloc (1, gen_len + 1);
   if (json_buf == NULL)
     {
       *err = strdup ("error allocating memory");
-      goto free_out;
+      return json_buf;
     }
 
   (void) memcpy (json_buf, gen_buf, gen_len);
   json_buf[gen_len] = '\\0';
 
-free_out:
-  yajl_gen_clear (g);
-  yajl_gen_free (g);
-out:
   return json_buf;
 }
         """)
