@@ -70,7 +70,6 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
                  (child.fixname, child.fixname))
     c_file.write('        if (ret->%s == NULL)\n' % child.fixname)
     c_file.write('          {\n')
-    c_file.write('            free (ret->keys);\n')
     c_file.write('            return NULL;\n')
     c_file.write('          }\n')
     c_file.write('        for (i = 0; i < len; i++)\n')
@@ -80,7 +79,6 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     c_file.write('            ret->keys[i] = strdup (tmpkey ? tmpkey : "");\n')
     c_file.write('            if (ret->keys[i] == NULL)\n')
     c_file.write('              {\n')
-    c_file.write("                free_%s (ret);\n" % obj_typename)
     c_file.write("                return NULL;\n")
     c_file.write('              }\n')
     c_file.write('            val = values[i];\n')
@@ -88,7 +86,6 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
                  % (child.fixname, childname))
     c_file.write('            if (ret->%s[i] == NULL)\n' % (child.fixname))
     c_file.write('              {\n')
-    c_file.write("                free_%s (ret);\n" % obj_typename)
     c_file.write("                return NULL;\n")
     c_file.write('              }\n')
     c_file.write('        }\n')
@@ -146,7 +143,6 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
             % (obj.fixname, typename, obj.origname))
         c_file.write("    if (ret->%s == NULL && *err != 0)\n" % obj.fixname)
         c_file.write("      {\n")
-        c_file.write("        free_%s (ret);\n" % obj_typename)
         c_file.write("        return NULL;\n")
         c_file.write("      }\n")
     elif obj.typ == 'array' and (obj.subtypobj or obj.subtyp == 'object'):
@@ -169,7 +165,6 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
                      (obj.fixname, obj.fixname))
         c_file.write('            if (ret->%s == NULL)\n' % obj.fixname)
         c_file.write('              {\n')
-        c_file.write("                free_%s (ret);\n" % obj_typename)
         c_file.write('                return NULL;\n')
         c_file.write('              }\n')
         c_file.write('            for (i = 0; i < len; i++)\n')
@@ -179,7 +174,6 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
                      % (obj.fixname, typename))
         c_file.write('                if (ret->%s[i] == NULL)\n' % (obj.fixname))
         c_file.write('                  {\n')
-        c_file.write("                    free_%s (ret);\n" % obj_typename)
         c_file.write("                    return NULL;\n")
         c_file.write('                }\n')
         c_file.write('            }\n')
@@ -219,7 +213,6 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
                      % (obj.fixname, obj.fixname))
         c_file.write('            if (ret->%s == NULL)\n' % obj.fixname)
         c_file.write('              {\n')
-        c_file.write('                free_%s (ret);\n' % obj_typename)
         c_file.write('                return NULL;\n')
         c_file.write('              }\n')
         c_file.write('            for (i = 0; i < len; i++)\n')
@@ -248,7 +241,6 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
                      '"error allocating memory");\n')
         c_file.write('                free (*err);\n')
         c_file.write('                *err = new_error;\n')
-        c_file.write('                free_%s (ret);\n' % obj_typename)
         c_file.write('                return NULL;\n')
         c_file.write('            }\n')
         c_file.write('        }\n')
@@ -275,7 +267,6 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
         c_file.write('        if (asprintf (err, "Required field \'%%s\' not present", ' \
                      ' "%s") < 0)\n' % i.origname)
         c_file.write('            *err = strdup ("error allocating memory");\n')
-        c_file.write("        free_%s (ret);\n" % obj_typename)
         c_file.write("        return NULL;\n")
         c_file.write('      }\n')
 
@@ -296,21 +287,18 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
             resi = calloc (1, sizeof(*tree));
             if (resi == NULL)
             {
-                free_%s(ret);
                 return NULL;
             }
             resi->type = yajl_t_object;
             resi->u.object.keys = calloc (cnt, sizeof (const char *));
             if (resi->u.object.keys == NULL)
             {
-                free_%s(ret);
                 yajl_tree_free(resi);
                 return NULL;
             }
             resi->u.object.values = calloc (cnt, sizeof (yajl_val));
             if (resi->u.object.values == NULL)
             {
-                free_%s(ret);
                 yajl_tree_free(resi);
                 return NULL;
             }
@@ -339,7 +327,7 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
         if (ctx->options & OPT_PARSE_FULLKEY)
             ret->_residual = resi;
     }
-""" % (obj_typename, obj_typename, obj_typename, condition))
+""" % (condition))
 
 
 def parse_json_to_c(obj, c_file, prefix):
@@ -359,14 +347,15 @@ def parse_json_to_c(obj, c_file, prefix):
         objs = obj.subtypobj
         if objs is None or obj.subtypname:
             return
+    c_file.write("define_cleaner_function (%s *, free_%s)\n" % (typename, typename))
     c_file.write("%s *\nmake_%s (yajl_val tree, const struct parser_context *ctx, "\
         "parser_error *err)\n" % (typename, typename))
     c_file.write("{\n")
-    c_file.write("    %s *ret = NULL;\n" % (typename))
+    c_file.write("    __auto_cleanup(free_%s) %s *ret = NULL;\n" % (typename, typename))
     c_file.write("    *err = NULL;\n")
     c_file.write("    (void) ctx;  /* Silence compiler warning.  */\n")
     c_file.write("    if (tree == NULL)\n")
-    c_file.write("      return ret;\n")
+    c_file.write("      return NULL;\n")
     c_file.write("    ret = calloc (1, sizeof (*ret));\n")
     c_file.write("    if (ret == NULL)\n")
     c_file.write("      return NULL;\n")
@@ -375,7 +364,7 @@ def parse_json_to_c(obj, c_file, prefix):
 
     if obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
         parse_obj_arr_obj(obj, c_file, prefix, obj_typename)
-    c_file.write('    return ret;\n')
+    c_file.write('    return move_ptr (ret);\n')
     c_file.write("}\n\n")
 
 
@@ -689,7 +678,6 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
                      % ('    ' * (level + 1)))
         c_file.write('%s    free (*err);\n' % ('    ' * (level + 1)))
         c_file.write('%s    *err = new_error;\n' % ('    ' * (level + 1)))
-        c_file.write('%s    free_%s (ret);\n' % ('    ' * (level + 1), obj_typename))
         c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
         c_file.write('%s  }\n' % ('    ' * (level + 1)))
         c_file.write('%s}\n' % ('    ' * (level)))
@@ -701,7 +689,6 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%s%s = strdup (str ? str : "");\n' % ('    ' * (level + 1), dest))
         c_file.write('%sif (%s == NULL)\n' % ('    ' * (level + 1), dest))
         c_file.write('%s  {\n' % ('    ' * (level+1)))
-        c_file.write('%s    free_%s (ret);\n' % ('    ' * (level + 1), obj_typename))
         c_file.write('%s    return NULL;\n' % ('    ' * (level+1)))
         c_file.write('%s  }\n' % ('    ' * (level+1)))
         c_file.write('%s  }\n' % ('    ' * level))
@@ -726,7 +713,6 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
                      % ('    ' * (level + 1), typ, keyname))
         c_file.write('%s        *err = strdup ("error allocating memory");\n' \
                      % ('    ' * (level + 1)))
-        c_file.write('%s    free_%s (ret);\n' % ('    ' * (level + 1), obj_typename))
         c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
         c_file.write('%s}\n' % ('    ' * (level + 1)))
         if '[' not in dest:
@@ -752,7 +738,6 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
                      % ('    ' * (level + 1), typ, keyname))
         c_file.write('%s        *err = strdup ("error allocating memory");\n' \
                      % ('    ' * (level + 1)))
-        c_file.write('%s    free_%s (ret);\n' % ('    ' * (level + 1), obj_typename))
         c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
         c_file.write('%s}\n' % ('    ' * (level + 1)))
         c_file.write('%s}\n' % ('    ' * (level)))
@@ -1096,7 +1081,7 @@ yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const st
                            prefix, ' ' if typ == 'object' else '_element *'))
     c_file.write("""
     size_t filesize;
-    char *content = NULL;
+    __auto_free char *content = NULL;
 
     if (filename == NULL || err == NULL)
       return NULL;
@@ -1110,19 +1095,19 @@ yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const st
         return NULL;
       }
     ptr = %s_parse_data (content, ctx, err%s);
-    free (content);
     return ptr;
 }
 """ % (prefix, '' if typ == 'object' else ', len'))
     c_file.write("""
-%s%s*%s_parse_file_stream (FILE *stream, const struct parser_context *ctx, parser_error *err%s)
+%s%s*
+%s_parse_file_stream (FILE *stream, const struct parser_context *ctx, parser_error *err%s)
 {
     %s%s*ptr = NULL;""" % (prefix, ' ' if typ == 'object' else '_element *', \
                            prefix, '' if typ == 'object' else ', size_t *len', \
                            prefix, ' ' if typ == 'object' else '_element *'))
     c_file.write("""
     size_t filesize;
-    char *content = NULL ;
+    __auto_free char *content = NULL ;
 
     if (stream == NULL || err == NULL)
       return NULL;
@@ -1135,18 +1120,20 @@ yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const st
         return NULL;
       }
     ptr = %s_parse_data (content, ctx, err%s);
-    free (content);
     return ptr;
 }
 """ % (prefix, '' if typ == 'object' else ', len'))
     c_file.write("""
-%s%s*%s_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err%s)
+define_cleaner_function (yajl_val, yajl_tree_free)
+
+%s%s*
+%s_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err%s)
 {
     %s%s*ptr = NULL;""" % (prefix, ' ' if typ == 'object' else '_element *', \
                            prefix, '' if typ == 'object' else ', size_t *len', \
                            prefix, ' ' if typ == 'object' else '_element *'))
     c_file.write("""
-    yajl_val tree;
+    __auto_cleanup(yajl_tree_free) yajl_val tree;
     char errbuf[1024];
     struct parser_context tmp_ctx = { 0 };
 
@@ -1165,17 +1152,27 @@ yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const st
         return NULL;
       }
     ptr = make_%s (tree, ctx, err%s);
-    yajl_tree_free (tree);
     return ptr;
 }
 """ % (prefix, '' if typ == 'object' else ', len'))
-    c_file.write("char *%s_generate_json(const %s%s*ptr%s, const struct parser_context *ctx," \
+    c_file.write("""\nstatic void\ncleanup_yajl_gen (yajl_gen g)
+{
+    if (!g)
+      return;
+    yajl_gen_clear (g);
+    yajl_gen_free (g);
+}
+
+define_cleaner_function (yajl_gen, cleanup_yajl_gen)
+
+""")
+    c_file.write("char *\n%s_generate_json (const %s%s*ptr%s, const struct parser_context *ctx," \
                  " parser_error *err)" % (prefix, prefix, \
                                             ' ' if typ == 'object' else '_element *', \
                                             '' if typ == 'object' else ', size_t len'))
     c_file.write("""
 {
-    yajl_gen g = NULL;
+    __auto_cleanup(cleanup_yajl_gen) yajl_gen g = NULL;
     struct parser_context tmp_ctx = { 0 };
     const unsigned char *gen_buf = NULL;
     char *json_buf = NULL;
@@ -1191,36 +1188,32 @@ yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const st
     if (!json_gen_init(&g, ctx))
       {
         *err = strdup ("Json_gen init failed");
-        goto out;
+        return json_buf;
       }
 
     if (yajl_gen_status_ok != gen_%s (g, ptr%s, ctx, err))
       {
         if (*err == NULL)
             *err = strdup ("Failed to generate json");
-        goto free_out;
+        return json_buf;
       }
 
     yajl_gen_get_buf (g, &gen_buf, &gen_len);
     if (gen_buf == NULL)
       {
         *err = strdup ("Error to get generated json");
-        goto free_out;
+        return json_buf;
       }
 
     json_buf = calloc (1, gen_len + 1);
     if (json_buf == NULL)
       {
         *err = strdup ("Cannot allocate memory");
-        goto free_out;
+        return json_buf;
       }
-    (void) memcpy(json_buf, gen_buf, gen_len);
+    (void) memcpy (json_buf, gen_buf, gen_len);
     json_buf[gen_len] = '\\0';
 
-free_out:
-    yajl_gen_clear (g);
-    yajl_gen_free (g);
-out:
     return json_buf;
 }
 """ % (prefix, '' if typ == 'object' else ', len'))
