@@ -536,8 +536,7 @@ json_map_int_int *
 make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
 		       parser_error * err)
 {
-  json_map_int_int *ret = NULL;
-  __auto_cleanup(free_json_map_int_int) json_map_int_int *tmp = NULL;
+  __auto_cleanup(free_json_map_int_int) json_map_int_int *ret = NULL;
   size_t i;
   size_t len;
 
@@ -547,19 +546,19 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
     return NULL;
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
-  tmp = calloc (1, sizeof (*tmp));
-  if (tmp == NULL)
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
     return NULL;
 
-  tmp->len = 0;
-  tmp->keys = calloc (len + 1, sizeof (int));
-  if (tmp->keys == NULL)
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (int));
+  if (ret->keys == NULL)
     {
       return NULL;
     }
 
-  tmp->values = calloc (len + 1, sizeof (int));
-  if (tmp->values == NULL)
+  ret->values = calloc (len + 1, sizeof (int));
+  if (ret->values == NULL)
     {
       return NULL;
     }
@@ -569,13 +568,13 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      tmp->keys[i] = 0;
-      tmp->values[i] = 0;
-      tmp->len = i + 1;
+      ret->keys[i] = 0;
+      ret->values[i] = 0;
+      ret->len = i + 1;
 
       if (srckey != NULL)
         {
-          int invalid = common_safe_int (srckey, &(tmp->keys[i]));
+          int invalid = common_safe_int (srckey, &(ret->keys[i]));
           if (invalid)
             {
               if (*err == NULL && asprintf (err, "Invalid key '%s' with type 'int': %s",
@@ -599,7 +598,7 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
                 }
               return NULL;
             }
-          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(tmp->values[i]));
+          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
           if (invalid)
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'int' for key '%s': %s",
@@ -611,9 +610,7 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx,
             }
         }
     }
-  ret = tmp;
-  tmp = NULL;
-  return ret;
+  return move_ptr (ret);
 }
 
 int
@@ -727,8 +724,7 @@ json_map_int_bool *
 make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
 			parser_error * err)
 {
-  json_map_int_bool *ret = NULL;
-  __auto_cleanup(free_json_map_int_bool) json_map_int_bool *tmp = NULL;
+  __auto_cleanup(free_json_map_int_bool) json_map_int_bool *ret = NULL;
   size_t i;
   size_t len;
 
@@ -738,17 +734,17 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
     return NULL;
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
-  tmp = calloc (1, sizeof (*tmp));
-  if (tmp == NULL)
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
     return NULL;
-  tmp->len = 0;
-  tmp->keys = calloc (len + 1, sizeof (int));
-  if (tmp->keys == NULL)
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (int));
+  if (ret->keys == NULL)
     {
       return NULL;
     }
-  tmp->values = calloc (len + 1, sizeof (bool));
-  if (tmp->values == NULL)
+  ret->values = calloc (len + 1, sizeof (bool));
+  if (ret->values == NULL)
     {
       return NULL;
     }
@@ -757,13 +753,13 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      tmp->keys[i] = 0;
-      tmp->values[i] = false;
-      tmp->len = i + 1;
+      ret->keys[i] = 0;
+      ret->values[i] = false;
+      ret->len = i + 1;
 
       if (srckey != NULL)
         {
-          int invalid = common_safe_int (srckey, &(tmp->keys[i]));
+          int invalid = common_safe_int (srckey, &(ret->keys[i]));
           if (invalid)
             {
               if (*err == NULL && asprintf (err, "Invalid key '%s' with type 'int': %s",
@@ -778,9 +774,9 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
       if (srcval != NULL)
         {
           if (YAJL_IS_TRUE (srcval))
-            tmp->values[i] = true;
+            ret->values[i] = true;
           else if (YAJL_IS_FALSE (srcval))
-            tmp->values[i] = false;
+            ret->values[i] = false;
           else
             {
               if (*err == NULL && asprintf (err,
@@ -792,9 +788,7 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx,
             }
         }
     }
-  ret = tmp;
-  tmp = NULL;
-  return ret;
+  return move_ptr (ret);
 }
 
 int
@@ -914,8 +908,7 @@ json_map_int_string *
 make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
 			  parser_error * err)
 {
-  json_map_int_string *ret = NULL;
-  __auto_cleanup(free_json_map_int_string) json_map_int_string *tmp = NULL;
+  __auto_cleanup(free_json_map_int_string) json_map_int_string *ret = NULL;
   size_t i;
   size_t len;
 
@@ -926,19 +919,19 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
 
-  tmp = calloc (1, sizeof (*tmp));
-  if (tmp == NULL)
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
     return NULL;
 
-  tmp->len = 0;
-  tmp->keys = calloc (len + 1, sizeof (int));
-  if (tmp->keys == NULL)
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (int));
+  if (ret->keys == NULL)
     {
       return NULL;
     }
 
-  tmp->values = calloc (len + 1, sizeof (char *));
-  if (tmp->values == NULL)
+  ret->values = calloc (len + 1, sizeof (char *));
+  if (ret->values == NULL)
     {
       return NULL;
     }
@@ -948,14 +941,14 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      tmp->keys[i] = 0;
-      tmp->values[i] = NULL;
-      tmp->len = i + 1;
+      ret->keys[i] = 0;
+      ret->values[i] = NULL;
+      ret->len = i + 1;
 
       if (srckey != NULL)
         {
           int invalid;
-          invalid = common_safe_int (srckey, &(tmp->keys[i]));
+          invalid = common_safe_int (srckey, &(ret->keys[i]));
           if (invalid)
             {
               if (*err == NULL && asprintf (err, "Invalid key '%s' with type 'int': %s",
@@ -979,12 +972,10 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx,
               return NULL;
             }
           char *str = YAJL_GET_STRING_NO_CHECK (srcval);
-          tmp->values[i] = strdup (str ? str : "");
+          ret->values[i] = strdup (str ? str : "");
         }
     }
-  ret = tmp;
-  tmp = NULL;
-  return ret;
+  return move_ptr (ret);
 }
 
 int
@@ -1084,8 +1075,7 @@ json_map_string_int *
 make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
 			  parser_error * err)
 {
-  json_map_string_int *ret = NULL;
-  __auto_cleanup(free_json_map_string_int) json_map_string_int *tmp = NULL;
+  __auto_cleanup(free_json_map_string_int) json_map_string_int *ret = NULL;
   size_t i;
   size_t len;
 
@@ -1095,21 +1085,21 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
     return NULL;
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
-  tmp = calloc (1, sizeof (*tmp));
-  if (tmp == NULL)
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
     {
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
-  tmp->len = 0;
-  tmp->keys = calloc (len + 1, sizeof (char *));
-  if (tmp->keys == NULL)
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (char *));
+  if (ret->keys == NULL)
     {
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
-  tmp->values = calloc (len + 1, sizeof (int));
-  if (tmp->values == NULL)
+  ret->values = calloc (len + 1, sizeof (int));
+  if (ret->values == NULL)
     {
       *(err) = strdup ("error allocating memory");
       return NULL;
@@ -1119,12 +1109,12 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      tmp->keys[i] = NULL;
-      tmp->values[i] = 0;
-      tmp->len = i + 1;
+      ret->keys[i] = NULL;
+      ret->values[i] = 0;
+      ret->len = i + 1;
 
-      tmp->keys[i] = strdup (srckey ? srckey : "");
-      if (tmp->keys[i] == NULL)
+      ret->keys[i] = strdup (srckey ? srckey : "");
+      if (ret->keys[i] == NULL)
         {
           *(err) = strdup ("error allocating memory");
           return NULL;
@@ -1142,7 +1132,7 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
                 }
               return NULL;
             }
-          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(tmp->values[i]));
+          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
           if (invalid)
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'int' for key '%s': %s",
@@ -1154,9 +1144,7 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx,
             }
         }
     }
-  ret = tmp;
-  tmp = NULL;
-  return ret;
+  return move_ptr (ret);
 }
 
 int
@@ -1256,8 +1244,7 @@ json_map_string_bool *
 make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
 			   parser_error * err)
 {
-  json_map_string_bool *ret = NULL;
-  __auto_cleanup(free_json_map_string_bool) json_map_string_bool *tmp = NULL;
+  __auto_cleanup(free_json_map_string_bool) json_map_string_bool *ret = NULL;
   size_t i;
   size_t len;
 
@@ -1268,18 +1255,18 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
   if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
     return NULL;
 
-  tmp = calloc (1, sizeof (*tmp));
-  if (tmp == NULL)
+  ret = calloc (1, sizeof (*ret));
+  if (ret == NULL)
     return NULL;
-  tmp->len = 0;
-  tmp->keys = calloc (len + 1, sizeof (char *));
-  if (tmp->keys == NULL)
+  ret->len = 0;
+  ret->keys = calloc (len + 1, sizeof (char *));
+  if (ret->keys == NULL)
     {
       return NULL;
     }
 
-  tmp->values = calloc (len + 1, sizeof (bool));
-  if (tmp->values == NULL)
+  ret->values = calloc (len + 1, sizeof (bool));
+  if (ret->values == NULL)
     {
       return NULL;
     }
@@ -1288,12 +1275,12 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      tmp->keys[i] = NULL;
-      tmp->values[i] = NULL;
-      tmp->len = i + 1;
+      ret->keys[i] = NULL;
+      ret->values[i] = NULL;
+      ret->len = i + 1;
 
-      tmp->keys[i] = strdup (srckey ? srckey : "");
-      if (tmp->keys[i] == NULL)
+      ret->keys[i] = strdup (srckey ? srckey : "");
+      if (ret->keys[i] == NULL)
         {
           *(err) = strdup ("error allocating memory");
           return NULL;
@@ -1301,9 +1288,9 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
       if (srcval != NULL)
         {
           if (YAJL_IS_TRUE (srcval))
-            tmp->values[i] = true;
+            ret->values[i] = true;
           else if (YAJL_IS_FALSE (srcval))
-            tmp->values[i] = false;
+            ret->values[i] = false;
           else
             {
               if (*err == NULL && asprintf (err,
@@ -1315,9 +1302,7 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx,
             }
         }
     }
-  ret = tmp;
-  tmp = NULL;
-  return ret;
+  return move_ptr (ret);
 }
 
 int
@@ -1439,8 +1424,7 @@ json_map_string_string *
 make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 			     parser_error * err)
 {
-  json_map_string_string *ret = NULL;
-  __auto_cleanup(free_json_map_string_string) json_map_string_string *tmp = NULL;
+  __auto_cleanup(free_json_map_string_string) json_map_string_string *ret = NULL;
   size_t i;
   size_t len;
 
@@ -1450,24 +1434,24 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
 
-  tmp = malloc (sizeof (*tmp));
-  if (tmp == NULL)
+  ret = malloc (sizeof (*ret));
+  if (ret == NULL)
     {
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
 
-  tmp->len = 0;
+  ret->len = 0;
 
-  tmp->keys = calloc (len + 1, sizeof (char *));
-  if (tmp->keys == NULL)
+  ret->keys = calloc (len + 1, sizeof (char *));
+  if (ret->keys == NULL)
     {
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
 
-  tmp->values = calloc (len + 1, sizeof (char *));
-  if (tmp->values == NULL)
+  ret->values = calloc (len + 1, sizeof (char *));
+  if (ret->values == NULL)
     {
       *(err) = strdup ("error allocating memory");
       return NULL;
@@ -1477,12 +1461,12 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
       const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
       yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
-      tmp->keys[i] = NULL;
-      tmp->values[i] = NULL;
-      tmp->len = i + 1;
+      ret->keys[i] = NULL;
+      ret->values[i] = NULL;
+      ret->len = i + 1;
 
-      tmp->keys[i] = strdup (srckey ? srckey : "");
-      if (tmp->keys[i] == NULL)
+      ret->keys[i] = strdup (srckey ? srckey : "");
+      if (ret->keys[i] == NULL)
         {
           return NULL;
         }
@@ -1501,16 +1485,14 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 
           str = YAJL_GET_STRING_NO_CHECK (srcval);
 
-          tmp->values[i] = strdup (str ? str : "");
-          if (tmp->values[i] == NULL)
+          ret->values[i] = strdup (str ? str : "");
+          if (ret->values[i] == NULL)
             {
               return NULL;
             }
         }
     }
-  ret = tmp;
-  tmp = NULL;
-  return ret;
+  return move_ptr (ret);
 }
 
 int

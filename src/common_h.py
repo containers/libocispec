@@ -82,7 +82,15 @@ extern "C" {
 static inline void ptr_free_function(void *p) {
     free(*(void**)p);
 }
+
 #define __auto_free __auto_cleanup(ptr_free)
+
+#define move_ptr(ptr)                                 \
+        ({                                            \
+                typeof(ptr) moved_ptr = (ptr);        \
+                (ptr) = NULL;                         \
+                moved_ptr;                            \
+        })
 
 # define GEN_SET_ERROR_AND_RETURN(stat, err) { \\
     if (*(err) == NULL) {\\
