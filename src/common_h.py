@@ -70,11 +70,11 @@ extern "C" {
 // options not to validate utf8 data
 # define OPT_GEN_NO_VALIDATE_UTF8 0x10
 
-#define define_cleaner_function(type, cleaner)           \
-        static inline void cleaner##_function(type *ptr) \
-        {                                                \
-                if (*ptr)                                \
-                        cleaner(*ptr);                   \
+#define define_cleaner_function(type, cleaner)           \\
+        static inline void cleaner##_function(type *ptr) \\
+        {                                                \\
+                if (*ptr)                                \\
+                        cleaner(*ptr);                   \\
         }
 
 #define __auto_cleanup(cleaner) __attribute__((__cleanup__(cleaner##_function)))
@@ -85,11 +85,11 @@ static inline void ptr_free_function(void *p) {
 
 #define __auto_free __auto_cleanup(ptr_free)
 
-#define move_ptr(ptr)                                 \
-        ({                                            \
-                typeof(ptr) moved_ptr = (ptr);        \
-                (ptr) = NULL;                         \
-                moved_ptr;                            \
+#define move_ptr(ptr)                                 \\
+        ({                                            \\
+                typeof(ptr) moved_ptr = (ptr);        \\
+                (ptr) = NULL;                         \\
+                moved_ptr;                            \\
         })
 
 # define GEN_SET_ERROR_AND_RETURN(stat, err) { \\

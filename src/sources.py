@@ -276,57 +276,57 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
             ['strcmp (tree->u.object.keys[i], "%s")' % i.origname for i in obj.children])
         c_file.write("""
     if (tree->type == yajl_t_object)
-    {
+      {
         size_t i;
         size_t j = 0;
         size_t cnt = tree->u.object.len;
         yajl_val resi = NULL;
 
         if (ctx->options & OPT_PARSE_FULLKEY)
-        {
+          {
             resi = calloc (1, sizeof(*tree));
             if (resi == NULL)
-            {
+              {
                 return NULL;
-            }
+              }
             resi->type = yajl_t_object;
             resi->u.object.keys = calloc (cnt, sizeof (const char *));
             if (resi->u.object.keys == NULL)
-            {
-                yajl_tree_free(resi);
+              {
+                yajl_tree_free (resi);
                 return NULL;
-            }
+              }
             resi->u.object.values = calloc (cnt, sizeof (yajl_val));
             if (resi->u.object.values == NULL)
-            {
-                yajl_tree_free(resi);
+              {
+                yajl_tree_free (resi);
                 return NULL;
-            }
-        }
+              }
+          }
 
         for (i = 0; i < tree->u.object.len; i++)
-        {
+          {
             if (%s)
-            {
+              {
                 if (ctx->options & OPT_PARSE_FULLKEY)
-                {
+                  {
                     resi->u.object.keys[j] = tree->u.object.keys[i];
                     tree->u.object.keys[i] = NULL;
                     resi->u.object.values[j] = tree->u.object.values[i];
                     tree->u.object.values[i] = NULL;
                     resi->u.object.len++;
-                }
+                  }
                 j++;
-            }
-        }
+              }
+          }
         if (ctx->options & OPT_PARSE_STRICT)
-        {
-            if (j > 0 && ctx->errfile > 0)
-                (void)fprintf (ctx->errfile, "WARNING: unknown key found\\n");
-        }
+          {
+            if (j > 0 && ctx->errfile != NULL)
+                (void) fprintf (ctx->errfile, "WARNING: unknown key found\\n");
+          }
         if (ctx->options & OPT_PARSE_FULLKEY)
             ret->_residual = resi;
-    }
+      }
 """ % (condition))
 
 
