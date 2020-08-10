@@ -321,7 +321,7 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
           }
         if (ctx->options & OPT_PARSE_STRICT)
           {
-            if (j > 0 && ctx->errfile > 0)
+            if (j > 0 && ctx->errfile != NULL)
                 (void) fprintf (ctx->errfile, "WARNING: unknown key found\\n");
           }
         if (ctx->options & OPT_PARSE_FULLKEY)
