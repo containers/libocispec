@@ -41,6 +41,8 @@ tests/test-7.log
 tests/test-7.trs
 tests/test-8.log
 tests/test-8.trs
+tests/test-9.log
+tests/test-9.trs
 tests/test-1
 tests/test-2
 tests/test-3
@@ -49,6 +51,7 @@ tests/test-5
 tests/test-6
 tests/test-7
 tests/test-8
+tests/test-9
 libocispec.la
 libtool
 m4/*
