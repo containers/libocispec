@@ -22,6 +22,10 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "image_spec_schema_image_layout_schema.h"
 
+#ifndef OPT_PARSE_FULLKEY
+# define OPT_PARSE_FULLKEY 0x08
+#endif
+
 int
 main ()
 {
