@@ -26,6 +26,8 @@ SOURCE_FILES = \
 	src/runtime_spec_schema_defs_windows.c \
 	src/runtime_spec_schema_state_schema.c \
 	src/image_manifest_items_image_manifest_items_schema.c \
+	src/basic_test_double_array_item.c \
+	src/basic_test_double_array.c \
 	src/json_common.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
@@ -33,6 +35,7 @@ HEADER_FILES = $(SOURCE_FILES:.c=.h)
 src/json_common.h src/json_common.c: src/common_h.py src/common_c.py
 	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/runtime-spec/schema ${srcdir}/image-spec/schema
 	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/imageManifestItems
+	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/basic
 
 
 src/image_spec_schema_config_schema.c \
@@ -52,6 +55,8 @@ src/image_spec_schema_config_schema.c \
 	src/runtime_spec_schema_defs_vm.c \
 	src/runtime_spec_schema_defs_windows.c \
 	src/runtime_spec_schema_state_schema.c \
+	src/basic_test_double_array_item.c \
+	src/basic_test_double_array.c \
 	src/image_manifest_items_image_manifest_items_schema.c: src/json_common.h
 
 $(HEADER_FILES): %.h: %.c src/generate.py
@@ -97,6 +102,9 @@ tests_test_8_LDADD = $(TESTS_LDADD)
 tests_test_9_SOURCES = tests/test-9.c
 tests_test_9_LDADD = $(TESTS_LDADD)
 
+tests_test_10_SOURCES = tests/test-10.c
+tests_test_10_LDADD = $(TESTS_LDADD)
+
 src_validate_SOURCES = src/validate.c
 src_validate_LDADD = $(TESTS_LDADD)
 
@@ -108,7 +116,8 @@ TESTS = tests/test-1 \
 	tests/test-6 \
 	tests/test-7 \
 	tests/test-8 \
-	tests/test-9
+	tests/test-9 \
+	tests/test-10
 
 noinst_PROGRAMS = src/validate $(TESTS)
 
@@ -129,6 +138,7 @@ EXTRA_DIST = autogen.sh \
 	tests/data/config.nocwd.json \
 	tests/data/image_manifest_item.json \
 	tests/data/residual_image_layout_config.json \
+	tests/data/doublearray.json \
 	tests/test-spec \
 	src/generate.py \
 	src/common_c.py \
@@ -148,3 +158,4 @@ sync:
 generate:
 	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/runtime-spec/schema ${srcdir}/image-spec/schema
 	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/imageManifestItems
+	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/basic

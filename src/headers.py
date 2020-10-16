@@ -100,12 +100,20 @@ def append_header_child_arr(child, header, prefix):
     else:
         c_typ = helpers.get_prefixed_pointer(child.name, child.subtyp, prefix)
 
+    dflag = ""
+    if child.doublearray:
+        dflag = "*"
+
     if helpers.valid_basic_map_name(child.subtyp):
         header.write("    %s **%s;\n" % (helpers.make_basic_map_name(child.subtyp), child.fixname))
     elif not helpers.judge_complex(child.subtyp):
-        header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", child.fixname))
+        header.write("    %s%s*%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", dflag, child.fixname))
     else:
-        header.write("    %s%s**%s;\n" % (c_typ, " " if '*' not in c_typ else "", child.fixname))
+        header.write("    %s%s**%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", dflag, child.fixname))
+
+    if child.doublearray and not helpers.valid_basic_map_name(child.subtyp):
+        header.write("    size_t *%s;\n" % (child.fixname + "_item_lens"))
+
     header.write("    size_t %s;\n\n" % (child.fixname + "_len"))
 
 def append_header_child_others(child, header, prefix):
@@ -200,15 +208,18 @@ def header_reflect(structs, schema_info, header):
         header.write("char *%s_generate_json(const %s *ptr, const struct parser_context *ctx, "\
             "parser_error *err);\n\n" % (prefix, prefix))
     elif toptype == 'array':
-        header.write("void free_%s (%s_element **ptr, size_t len);\n\n" % (prefix, prefix))
-        header.write("%s_element **%s_parse_file(const char *filename, const struct "\
-            "parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, prefix))
-        header.write("%s_element **%s_parse_file_stream(FILE *stream, const struct "\
-            "parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, prefix))
-        header.write("%s_element **%s_parse_data(const char *jsondata, const struct "\
-            "parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, prefix))
-        header.write("char *%s_generate_json(const %s_element **ptr, size_t len, "\
-            "const struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix))
+        dflag = ""
+        if structs[length - 1].doublearray:
+            dflag = "*"
+        header.write("void free_%s (%s_element %s**ptr, size_t len);\n\n" % (prefix, prefix, dflag))
+        header.write("%s_element %s**%s_parse_file(const char *filename, const struct "\
+            "parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, dflag, prefix))
+        header.write("%s_element %s**%s_parse_file_stream(FILE *stream, const struct "\
+            "parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, dflag, prefix))
+        header.write("%s_element %s**%s_parse_data(const char *jsondata, const struct "\
+            "parser_context *ctx, parser_error *err, size_t *len);\n\n" % (prefix, dflag, prefix))
+        header.write("char *%s_generate_json(const %s_element %s**ptr, size_t len, "\
+            "const struct parser_context *ctx, parser_error *err);\n\n" % (prefix, prefix, dflag))
 
     header.write("#ifdef __cplusplus\n")
     header.write("}\n")

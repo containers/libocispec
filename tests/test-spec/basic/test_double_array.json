@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "manifest item set",
+  "type": "object",
+  "properties": {
+    "strarrays": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "intarrays": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "int32"
+        }
+      }
+    },
+    "boolarrays": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "boolean"
+        }
+      }
+    },
+    "objectarrays": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "first": {
+              "type": "boolean"
+            },
+            "second": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "refobjarrays": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "$ref": "test_double_array_item.json"
+        }
+      }
+    }
+  }
+}

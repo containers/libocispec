@@ -398,6 +398,10 @@ def gen_type_arr_typnode(node_info, src, typ, refname):
     curfile = node_info.curfile
 
     item_type, src = resolve_type(schema_info, name, src, cur["items"], curfile)
+    if typ == 'array' and typ == item_type.typ and not helpers.valid_basic_map_name(item_type.subtyp):
+        item_type.doublearray = True
+        return item_type, src
+
     return helpers.Unite(name,
                         typ,
                         None,
@@ -636,6 +640,10 @@ def parse_schema(schema_info, schema, prefix):
     elif 'array' in schema['type']:
         item_type, _ = resolve_type(schema_info, helpers.CombinateName(""), \
                                     schema['items'], schema['items'], schema_info.name.name)
+        if item_type.typ == 'array' and not helpers.valid_basic_map_name(item_type.subtyp):
+            item_type.doublearray = True
+            return item_type
+
         return helpers.Unite(helpers.CombinateName(prefix), 'array', None, item_type.typ, \
                             item_type.children, None, item_type.required)
     else:

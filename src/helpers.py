@@ -264,6 +264,7 @@ class Unite(object):
         self.name = conv_to_c_style(name.name.replace('.', '_'))
         self.origname = name.leaf or name.name
         self.fixname = conv_to_c_style(self.origname.replace('.', '_'))
+        self.doublearray = False
 
 
 
