@@ -28,6 +28,11 @@ SOURCE_FILES = \
 	src/image_manifest_items_image_manifest_items_schema.c \
 	src/basic_test_double_array_item.c \
 	src/basic_test_double_array.c \
+	src/basic_test_top_array_int.c \
+	src/basic_test_top_array_string.c \
+	src/basic_test_top_double_array_int.c \
+	src/basic_test_top_double_array_obj.c \
+	src/basic_test_top_double_array_string.c \
 	src/json_common.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
@@ -57,6 +62,11 @@ src/image_spec_schema_config_schema.c \
 	src/runtime_spec_schema_state_schema.c \
 	src/basic_test_double_array_item.c \
 	src/basic_test_double_array.c \
+	src/basic_test_top_array_int.c \
+	src/basic_test_top_array_string.c \
+	src/basic_test_top_double_array_int.c \
+	src/basic_test_top_double_array_obj.c \
+	src/basic_test_top_double_array_string.c \
 	src/image_manifest_items_image_manifest_items_schema.c: src/json_common.h
 
 $(HEADER_FILES): %.h: %.c src/generate.py
@@ -139,6 +149,11 @@ EXTRA_DIST = autogen.sh \
 	tests/data/image_manifest_item.json \
 	tests/data/residual_image_layout_config.json \
 	tests/data/doublearray.json \
+	tests/data/top_array_int.json \
+	tests/data/top_array_string.json \
+	tests/data/top_double_array_int.json \
+	tests/data/top_double_array_obj.json \
+	tests/data/top_double_array_string.json \
 	tests/test-spec \
 	src/generate.py \
 	src/common_c.py \

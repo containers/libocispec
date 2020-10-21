@@ -541,7 +541,7 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
             c_file.write("            size_t i;\n")
             c_file.write("            for (i = 0; i < ptr->%s_len; i++)\n" % (obj.fixname))
             c_file.write("              {\n")
-            c_file.write("                if (ptr->%s[i] != NULL)\n")
+            c_file.write("                if (ptr->%s[i] != NULL)\n" % obj.fixname)
             c_file.write("                    str = (const char *)ptr->%s[i];\n" % obj.fixname)
             c_file.write("                else ()\n")
             c_file.write("                    str = "";\n")
@@ -1133,101 +1133,342 @@ def src_reflect(structs, schema_info, c_file, root_typ):
         append_c_code(i, c_file, schema_info.prefix)
 
     length = len(structs)
-    get_c_epilog(c_file, schema_info.prefix, root_typ, structs[length - 1].doublearray)
+    get_c_epilog(c_file, schema_info.prefix, root_typ, structs[length - 1])
 
-
-def get_c_epilog(c_file, prefix, typ, doublearray):
-    """
-    Description: generate c language epilogue
-    Interface: None
-    History: 2019-06-17
-    """
-    if typ != 'array' and typ != 'object':
+def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
+    c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
+        helpers.get_map_c_types(obj.subtyp)
+    if obj.subtypobj is not None:
+        c_typ = helpers.get_name_substr(obj.name, prefix)
+    if c_typ == "":
         return
-    if typ == 'array':
-        c_file.write("""\n
-%s_element
-**make_%s (yajl_val tree, const struct parser_context *ctx, parser_error *err, size_t *len)
+    typename = helpers.get_top_array_type_name(obj.name, prefix)
+
+    c_file.write("""\n
+define_cleaner_function (%s *, free_%s)\n
+%s
+*make_%s (yajl_val tree, const struct parser_context *ctx, parser_error *err)
 {
-    %s_element **ptr = NULL;
+    __auto_cleanup(free_%s) %s *ptr = NULL;
     size_t i, alen;
-    if (tree == NULL || err == NULL || !len || YAJL_GET_ARRAY (tree) == NULL)
+    if (tree == NULL || err == NULL || YAJL_GET_ARRAY (tree) == NULL)
       return NULL;
     *err = NULL;
     alen = YAJL_GET_ARRAY_NO_CHECK (tree)->len;
     if (alen == 0)
       return NULL;
-    ptr = calloc (alen + 1, sizeof (%s_element *));
+    ptr = calloc (1, sizeof (%s));
     if (ptr == NULL)
       return NULL;
+    ptr->items = calloc (alen + 1, sizeof(*ptr->items));
+    if (ptr->items == NULL)
+      return NULL;
+    ptr->len = alen;
+""" % (typename, typename, typename, typename, typename, typename, typename))
+
+    if obj.doublearray:
+        c_file.write('    ptr->subitem_lens = calloc ( alen + 1, sizeof (size_t));\n')
+        c_file.write('    if (ptr->subitem_lens == NULL)\n')
+        c_file.write('        return NULL;')
+
+    c_file.write("""\n
     for (i = 0; i < alen; i++)
       {
-        yajl_val val = YAJL_GET_ARRAY_NO_CHECK (tree)->values[i];
-        ptr[i] = make_%s_element(val, ctx, err);
-        if (ptr[i] == NULL)
-          {
-            free_%s (ptr, alen);
-            return NULL;
-          }
-      }
-    *len = alen;
-    return ptr;
-}
-""" % (prefix, prefix, prefix, prefix, prefix, prefix))
+        yajl_val work = YAJL_GET_ARRAY_NO_CHECK (tree)->values[i];
+""");
 
-        c_file.write("""\n
-void free_%s (%s_element **ptr, size_t len)
+    if obj.subtypobj or obj.subtyp == 'object':
+        if obj.subtypname:
+            subtypename = obj.subtypname
+        else:
+            subtypename = helpers.get_name_substr(obj.name, prefix)
+
+        if obj.doublearray:
+            c_file.write('        size_t j;\n')
+            c_file.write('        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));\n')
+            c_file.write('        if (ptr->items[i] == NULL)\n')
+            c_file.write('           return NULL;\n')
+            c_file.write('        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;\n')
+            c_file.write('        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)\n')
+            c_file.write('          {\n')
+            c_file.write('              ptr->items[i][j] = make_%s (tmps[j], ctx, err);\n' \
+                    % (subtypename))
+            c_file.write('              if (ptr->items[i][j] == NULL)\n')
+            c_file.write("                  return NULL;\n")
+            c_file.write('              ptr->subitem_lens[i] += 1;\n')
+            c_file.write('          };\n')
+        else:
+            c_file.write('        ptr->items[i] = make_%s (work, ctx, err);\n' \
+                         % (subtypename))
+            c_file.write('        if (ptr->items[i] == NULL)\n')
+            c_file.write("            return NULL;\n")
+    elif obj.subtyp == 'byte':
+        if obj.doublearray:
+            c_file.write('        char *str = YAJL_GET_STRING (work);\n')
+            c_file.write('        ptr->items[j] = (uint8_t *)strdup (str ? str : "");\n')
+            c_file.write('        if (ptr->items[j] == NULL)\n')
+            c_file.write("            return NULL;\n")
+        else:
+            c_file.write('        char *str = YAJL_GET_STRING (tree);\n')
+            c_file.write('        memcpy(ptr->items, str ? str : "", strlen(str ? str : ""));\n')
+            c_file.write('        break;\n')
+    else:
+        if obj.doublearray:
+            c_file.write('        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));\n')
+            c_file.write('        if (ptr->items[i] == NULL)\n')
+            c_file.write('            return NULL;\n')
+            c_file.write('        size_t j;\n')
+            c_file.write('        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;\n')
+            c_file.write('        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)\n')
+            c_file.write('          {\n')
+            read_val_generator(c_file, 3, 'tmps[j]', \
+                                "ptr->items[i][j]", obj.subtyp, obj.origname, c_typ)
+            c_file.write('            ptr->subitem_lens[i] += 1;\n')
+            c_file.write('          };\n')
+        else:
+            read_val_generator(c_file, 2, 'work', \
+                                "ptr->items[i]", obj.subtyp, obj.origname, c_typ)
+
+    c_file.write("""\n
+      }
+    return move_ptr(ptr);
+}
+""")
+
+def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
+    c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
+        helpers.get_map_c_types(obj.subtyp)
+    if obj.subtypobj is not None:
+        c_typ = helpers.get_name_substr(obj.name, prefix)
+    if c_typ == "":
+        return
+    typename = helpers.get_top_array_type_name(obj.name, prefix)
+
+    c_file.write("""\n
+void free_%s (%s *ptr)
 {
     size_t i;
 
-    if (ptr == NULL || len == 0)
+    if (ptr == NULL)
         return;
 
-    for (i = 0; i < len; i++)
+    for (i = 0; i < ptr->len; i++)
       {
-        if (ptr[i] != NULL)
-          {
-            free_%s_element (ptr[i]);
-            ptr[i] = NULL;
-          }
+""" % (typename, typename))
+
+    if helpers.valid_basic_map_name(obj.subtyp):
+        free_func = helpers.make_basic_map_name(obj.subtyp)
+        c_file.write("        if (ptr->items[i] != NULL)\n")
+        c_file.write("          {\n")
+        c_file.write("            free_%s (ptr->items[i]);\n" % (free_func))
+        c_file.write("            ptr->items[i] = NULL;\n")
+        c_file.write("          }\n")
+    elif obj.subtyp == 'string':
+        if obj.doublearray:
+            c_file.write("    size_t j;\n")
+            c_file.write("    for (j = 0; j < ptr->subitem_lens[i]; j++);\n")
+            c_file.write("    {\n")
+            c_file.write("       free(ptr->items[i][j]);\n")
+            c_file.write("       ptr->items[i][j] = NULL;\n")
+            c_file.write("    }\n")
+            c_file.write("    free(ptr->items[i]);\n")
+            c_file.write("    ptr->items[i] = NULL;\n")
+        else:
+            c_file.write("    free(ptr->items[i]);\n")
+            c_file.write("    ptr->items[i] = NULL;\n")
+    elif not helpers.judge_complex(obj.subtyp):
+        if obj.doublearray:
+            c_file.write("    free(ptr->items[i]);\n")
+            c_file.write("    ptr->items[i] = NULL;\n")
+    elif obj.subtyp == 'object' or obj.subtypobj is not None:
+        if obj.subtypname is not None:
+            free_func = obj.subtypname
+        else:
+            free_func = helpers.get_name_substr(obj.name, prefix)
+
+        if obj.doublearray:
+            c_file.write("          size_t j;\n");
+            c_file.write("          for (j = 0; j < ptr->subitem_lens[i]; j++)\n");
+            c_file.write("            {\n");
+            c_file.write("              free_%s (ptr->items[i][j]);\n" % (free_func))
+            c_file.write("              ptr->items[i][j] = NULL;\n");
+            c_file.write("            }\n");
+        else:
+            c_file.write("              free_%s (ptr->items[i]);\n" % (free_func))
+            c_file.write("              ptr->items[i] = NULL;\n")
+
+    c_file.write("""
       }
+""")
+
+    c_typ = helpers.obtain_pointer(obj.name, obj.subtypobj, prefix)
+    if c_typ != "":
+        if obj.subobj is not None:
+            c_typ = c_typ + "_element"
+        c_file.write("    free_%s (ptr->items);\n" % (c_typ))
+        c_file.write("    ptr->items = NULL;\n")
+        return
+    else:
+        c_file.write("""
+    free(ptr->items);
+    ptr->items = NULL;
+""")
+
+    c_file.write("""\n
     free (ptr);
 }
-""" % (prefix, prefix, prefix))
+""")
 
-        c_file.write("""\n
-yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const struct parser_context *ctx,
+def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
+    c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
+        helpers.get_map_c_types(obj.subtyp)
+    if obj.subtypobj is not None:
+        c_typ = helpers.get_name_substr(obj.name, prefix)
+    if c_typ == "":
+        return
+    typename = helpers.get_top_array_type_name(obj.name, prefix)
+
+    c_file.write("""\n
+yajl_gen_status gen_%s (yajl_gen g, const %s *ptr, const struct parser_context *ctx,
                        parser_error *err)
 {
     yajl_gen_status stat;
     size_t i;
 
+    if (ptr == NULL)
+        return yajl_gen_status_ok;
     *err = NULL;
+""" % (typename, typename))
+
+    if obj.subtypobj or obj.subtyp == 'object':
+        c_file.write("""\n
     stat = yajl_gen_array_open ((yajl_gen) g);
     if (stat != yajl_gen_status_ok)
         GEN_SET_ERROR_AND_RETURN (stat, err);
-    for (i = 0; i < len; i++)
+    for (i = 0; i < ptr->len; i++)
       {
-        stat = gen_%s_element (g, ptr[i], ctx, err);
-        if (stat != yajl_gen_status_ok)
-            GEN_SET_ERROR_AND_RETURN (stat, err);
+""")
+
+        if obj.subtypname:
+            subtypename = obj.subtypname
+        else:
+            subtypename = helpers.get_name_substr(obj.name, prefix)
+        c_file.write('      {\n')
+        if obj.doublearray:
+            c_file.write('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
+            c_file.write("            if (stat != yajl_gen_status_ok)\n")
+            c_file.write("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            c_file.write("            size_t j;\n")
+            c_file.write('            for (j = 0; j < ptr->subitem_lens[i]; j++)\n')
+            c_file.write('              {\n')
+            c_file.write('                stat = gen_%s (g, ptr->items[i][j], ctx, err);\n' \
+                    % (subtypename))
+            c_file.write("                if (stat != yajl_gen_status_ok)\n")
+            c_file.write("                    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            c_file.write('              }\n')
+            c_file.write('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
+        else:
+            c_file.write('            stat = gen_%s (g, ptr->items[i], ctx, err);\n' \
+                         % (subtypename))
+            c_file.write("            if (stat != yajl_gen_status_ok)\n")
+            c_file.write("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        c_file.write("""\n
+            }
       }
     stat = yajl_gen_array_close ((yajl_gen) g);
+""")
+    elif obj.subtyp == 'byte':
+        c_file.write('    {\n')
+        c_file.write('            const char *str = NULL;\n')
+        if obj.doublearray:
+            c_file.write('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
+            c_file.write("            if (stat != yajl_gen_status_ok)\n")
+            c_file.write("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            c_file.write("            {\n")
+            c_file.write("                size_t i;\n")
+            c_file.write("                for (i = 0; i < ptr->len; i++)\n")
+            c_file.write("                 {\n")
+            c_file.write("                    if (ptr->items[i] != NULL)\n")
+            c_file.write("                        str = (const char *)ptr->items[i];\n")
+            c_file.write("                    else ()\n")
+            c_file.write("                        str = "";\n")
+            c_file.write('                    stat = yajl_gen_string ((yajl_gen) g, \
+                    (const unsigned char *)str, strlen(str));\n')
+            c_file.write("                 }\n")
+            c_file.write("            }\n")
+            c_file.write('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
+        else:
+            c_file.write("        if (ptr != NULL && ptr->items != NULL)\n")
+            c_file.write("          {\n")
+            c_file.write("            str = (const char *)ptr->items;\n")
+            c_file.write("          }\n")
+            c_file.write('        stat = yajl_gen_string ((yajl_gen) g, \
+    (const unsigned char *)str, ptr->len);\n')
+        c_file.write('    }\n')
+    else:
+        c_file.write("""\n
+    stat = yajl_gen_array_open ((yajl_gen) g);
+    if (stat != yajl_gen_status_ok)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+    for (i = 0; i < ptr->len; i++)
+      {
+""")
+        c_file.write('        {\n')
+        if obj.doublearray:
+            c_file.write('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
+            c_file.write("            if (stat != yajl_gen_status_ok)\n")
+            c_file.write("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            c_file.write("            size_t j;\n")
+            c_file.write('            for (j = 0; j < ptr->subitem_lens[i]; j++)\n')
+            c_file.write('              {\n')
+            json_value_generator(c_file, 4, "ptr->items[i][j]", 'g', 'ctx', obj.subtyp)
+            c_file.write('            }\n')
+            c_file.write('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
+        else:
+            json_value_generator(c_file, 3, "ptr->items[i]", 'g', 'ctx', obj.subtyp)
+
+        c_file.write("""\n
+            }
+      }
+    stat = yajl_gen_array_close ((yajl_gen) g);
+""")
+
+
+    c_file.write("""\n
+    if (ptr->len > 0 && !(ctx->options & OPT_GEN_SIMPLIFY))
+        yajl_gen_config (g, yajl_gen_beautify, 1);
     if (stat != yajl_gen_status_ok)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     return yajl_gen_status_ok;
 }
-""" % (prefix, prefix, prefix))
+""")
+
+def get_c_epilog_for_array(c_file, prefix, typ, obj):
+    typename = helpers.get_top_array_type_name(obj.name, prefix)
+
+    get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj)
+    get_c_epilog_for_array_make_free(c_file, prefix, typ, obj)
+    get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj)
+
+
+def get_c_epilog(c_file, prefix, typ, obj):
+    """
+    Description: generate c language epilogue
+    Interface: None
+    History: 2019-06-17
+    """
+    typename = prefix
+    if typ != 'array' and typ != 'object':
+        return
+    if typ == 'array':
+        typename = helpers.get_top_array_type_name(obj.name, prefix)
+        get_c_epilog_for_array(c_file, prefix, typ, obj)
 
     c_file.write("""
-%s%s *
-%s_parse_file (const char *filename, const struct parser_context *ctx, parser_error *err%s)
+%s *
+%s_parse_file (const char *filename, const struct parser_context *ctx, parser_error *err)
 {
-    %s%s*ptr = NULL;""" % (prefix, ' ' if typ == 'object' else '_element *', \
-                           prefix, '' if typ == 'object' else ', size_t *len', \
-                           prefix, ' ' if typ == 'object' else '_element *'))
-
-    c_file.write("""
+    %s *ptr = NULL;
     size_t filesize;
     __auto_free char *content = NULL;
 
@@ -1242,20 +1483,16 @@ yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const st
             *err = strdup ("error allocating memory");
         return NULL;
       }
-    ptr = %s_parse_data (content, ctx, err%s);
+    ptr = %s_parse_data (content, ctx, err);
     return ptr;
 }
-""" % (prefix, '' if typ == 'object' else ', len'))
+""" % (typename, typename, typename, typename))
 
     c_file.write("""
-%s%s*
-%s_parse_file_stream (FILE *stream, const struct parser_context *ctx, parser_error *err%s)
+%s *
+%s_parse_file_stream (FILE *stream, const struct parser_context *ctx, parser_error *err)
 {
-    %s%s*ptr = NULL;""" % (prefix, ' ' if typ == 'object' else '_element *', \
-                           prefix, '' if typ == 'object' else ', size_t *len', \
-                           prefix, ' ' if typ == 'object' else '_element *'))
-
-    c_file.write("""
+    %s *ptr = NULL;
     size_t filesize;
     __auto_free char *content = NULL ;
 
@@ -1269,22 +1506,18 @@ yajl_gen_status gen_%s (yajl_gen g, const %s_element **ptr, size_t len, const st
         *err = strdup ("cannot read the file");
         return NULL;
       }
-    ptr = %s_parse_data (content, ctx, err%s);
+    ptr = %s_parse_data (content, ctx, err);
     return ptr;
 }
-""" % (prefix, '' if typ == 'object' else ', len'))
+""" % (typename, typename, typename, typename))
 
     c_file.write("""
 define_cleaner_function (yajl_val, yajl_tree_free)
 
-%s%s*
-%s_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err%s)
+%s *
+%s_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err)
 {
-    %s%s*ptr = NULL;""" % (prefix, ' ' if typ == 'object' else '_element *', \
-                           prefix, '' if typ == 'object' else ', size_t *len', \
-                           prefix, ' ' if typ == 'object' else '_element *'))
-
-    c_file.write("""
+    %s *ptr = NULL;
     __auto_cleanup(yajl_tree_free) yajl_val tree;
     char errbuf[1024];
     struct parser_context tmp_ctx = { 0 };
@@ -1303,10 +1536,10 @@ define_cleaner_function (yajl_val, yajl_tree_free)
             *err = strdup ("error allocating memory");
         return NULL;
       }
-    ptr = make_%s (tree, ctx, err%s);
+    ptr = make_%s (tree, ctx, err);
     return ptr;
 }
-""" % (prefix, '' if typ == 'object' else ', len'))
+""" % (typename, typename, typename, typename))
 
     c_file.write("""\nstatic void\ncleanup_yajl_gen (yajl_gen g)
 {
@@ -1320,12 +1553,9 @@ define_cleaner_function (yajl_gen, cleanup_yajl_gen)
 
 """)
 
-    c_file.write("char *\n%s_generate_json (const %s%s*ptr%s, const struct parser_context *ctx," \
-                 " parser_error *err)" % (prefix, prefix, \
-                                            ' ' if typ == 'object' else '_element *', \
-                                            '' if typ == 'object' else ', size_t len'))
-
     c_file.write("""
+char *
+%s_generate_json (const %s *ptr, const struct parser_context *ctx, parser_error *err)
 {
     __auto_cleanup(cleanup_yajl_gen) yajl_gen g = NULL;
     struct parser_context tmp_ctx = { 0 };
@@ -1346,7 +1576,7 @@ define_cleaner_function (yajl_gen, cleanup_yajl_gen)
         return json_buf;
       }
 
-    if (yajl_gen_status_ok != gen_%s (g, ptr%s, ctx, err))
+    if (yajl_gen_status_ok != gen_%s (g, ptr, ctx, err))
       {
         if (*err == NULL)
             *err = strdup ("Failed to generate json");
@@ -1371,4 +1601,4 @@ define_cleaner_function (yajl_gen, cleanup_yajl_gen)
 
     return json_buf;
 }
-""" % (prefix, '' if typ == 'object' else ', len'))
+""" % (typename, typename, typename))

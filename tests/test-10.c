@@ -21,6 +21,11 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include "basic_test_double_array.h"
+#include "basic_test_top_array_int.h"
+#include "basic_test_top_array_string.h"
+#include "basic_test_top_double_array_int.h"
+#include "basic_test_top_double_array_obj.h"
+#include "basic_test_top_double_array_string.h"
 
 int
 do_test_object_double_array()
@@ -235,6 +240,343 @@ do_test_object_double_array()
   return 0;
 }
 
+int do_test_top_array_of_int()
+{
+  parser_error err;
+  struct parser_context ctx = { 0 };
+  int ret = 0;
+
+  basic_test_top_array_int_container *test_data = basic_test_top_array_int_container_parse_file(
+          "tests/data/top_array_int.json", &ctx, &err);
+  char *json_buf = NULL;
+
+  if (test_data == NULL)
+  {
+    printf("top int array parse error %s\n", err);
+    free(err);
+    return 1;
+  }
+  size_t i;
+  uint8_t expect[3] = {1, 2, 3};
+  if (test_data->len != 3)
+  {
+    printf("top int array expect len: 3, get: %zu\n", test_data->len);
+    ret = 1;
+    goto out;
+  }
+
+  for (i = 0; i < 3; i++)
+  {
+      if (test_data->items[i] != expect[i])
+      {
+        printf("item %zu: top int array expect: %u, get: %u\n", i, expect[i], test_data->items[i]);
+        ret = 1;
+        goto out;
+      }
+  }
+  test_data->items[0] = 111;
+  json_buf = basic_test_top_array_int_container_generate_json(test_data, &ctx, &err);
+  if (json_buf == NULL)
+  {
+    printf("gen error %s\n", err);
+    ret = 1;
+    goto out;
+  }
+  if (strstr(json_buf, "111") == NULL)
+  {
+    printf("change not work %s\n", err);
+    ret = 1;
+    goto out;
+  }
+
+out:
+  free(err);
+  free_basic_test_top_array_int_container(test_data);
+  free(json_buf);
+  return ret;
+}
+
+int do_test_top_array_of_string()
+{
+  parser_error err;
+  struct parser_context ctx = { 0 };
+  int ret = 0;
+
+  basic_test_top_array_string_container *test_data = basic_test_top_array_string_container_parse_file(
+          "tests/data/top_array_string.json", &ctx, &err);
+  char *json_buf = NULL;
+
+  if (test_data == NULL)
+  {
+    printf("top int array parse error %s\n", err);
+    free(err);
+    return 1;
+  }
+  size_t i;
+  char *expect[3] = {"topstr1", "topstr2"};
+  if (test_data->len != 2)
+  {
+    printf("top int array expect len: 3, get: %zu\n", test_data->len);
+    ret = 1;
+    goto out;
+  }
+
+  for (i = 0; i < 2; i++)
+  {
+      if (test_data->items[i] == NULL || strcmp(test_data->items[i], expect[i]) != 0)
+      {
+        printf("item %zu: top int array expect: %s, get: %s\n", i, expect[i], test_data->items[i]);
+        ret = 1;
+        goto out;
+      }
+  }
+  free(test_data->items[0]);
+  test_data->items[0] = strdup("hello");
+  json_buf = basic_test_top_array_string_container_generate_json(test_data, &ctx, &err);
+  if (json_buf == NULL)
+  {
+    printf("gen error %s\n", err);
+    ret = 1;
+    goto out;
+  }
+  if (strstr(json_buf, "hello") == NULL)
+  {
+    printf("change not work %s\n", err);
+    ret = 1;
+    goto out;
+  }
+
+out:
+  free(err);
+  free_basic_test_top_array_string_container(test_data);
+  free(json_buf);
+  return ret;
+}
+
+int do_test_top_double_array_of_string()
+{
+  parser_error err;
+  struct parser_context ctx = { 0 };
+  int ret = 0;
+
+  basic_test_top_double_array_string_container *test_data = basic_test_top_double_array_string_container_parse_file(
+          "tests/data/top_double_array_string.json", &ctx, &err);
+  char *json_buf = NULL;
+
+  if (test_data == NULL)
+  {
+    printf("top string double array parse error %s\n", err);
+    free(err);
+    return 1;
+  }
+  size_t i;
+  char *expect[3][2] = {{"doublestr11"}, {"doublestr21", "doublestr22"}, {"doublestr31", "doublestr32"}};
+  size_t expect_lens[3] = {1, 2, 2};
+  if (test_data->len != 3)
+  {
+    printf("top string double array expect len: 3, get: %zu\n", test_data->len);
+    ret = 1;
+    goto out;
+  }
+
+  for (i = 0; i < 3; i++)
+  {
+      size_t j;
+      if (test_data->subitem_lens[i] != expect_lens[i])
+      {
+        printf("item %zu: top string double array expect len: %zu, get: %zu\n", i, expect_lens[i], test_data->subitem_lens[i]);
+        ret = 1;
+        goto out;
+      }
+      for (j = 0; j < expect_lens[i]; j++)
+      {
+          if (test_data->items[i][j] == NULL || strcmp(test_data->items[i][j], expect[i][j]) != 0)
+          {
+            printf("item %zu: top int array expect: %s, get: %s\n", i, expect[i][j], test_data->items[i][j]);
+            ret = 1;
+            goto out;
+          }
+      }
+  }
+  free(test_data->items[0][0]);
+  test_data->items[0][0] = strdup("hello");
+  json_buf = basic_test_top_double_array_string_container_generate_json(test_data, &ctx, &err);
+  if (json_buf == NULL)
+  {
+    printf("gen error %s\n", err);
+    ret = 1;
+    goto out;
+  }
+  if (strstr(json_buf, "hello") == NULL)
+  {
+    printf("change not work %s\n", err);
+    ret = 1;
+    goto out;
+  }
+
+out:
+  free(err);
+  free_basic_test_top_double_array_string_container(test_data);
+  free(json_buf);
+  return ret;
+}
+
+int do_test_top_double_array_of_int()
+{
+  parser_error err;
+  struct parser_context ctx = { 0 };
+  int ret = 0;
+
+  basic_test_top_double_array_int_container *test_data = basic_test_top_double_array_int_container_parse_file(
+          "tests/data/top_double_array_int.json", &ctx, &err);
+  char *json_buf = NULL;
+
+  if (test_data == NULL)
+  {
+    printf("top int double array parse error %s\n", err);
+    free(err);
+    return 1;
+  }
+  size_t i;
+  int32_t expect[3][3] = {{1, 2, 3}, {1, 2}, {1}};
+  size_t expect_lens[3] = {3, 2, 1};
+  if (test_data->len != 3)
+  {
+    printf("top int double array expect len: 3, get: %zu\n", test_data->len);
+    ret = 1;
+    goto out;
+  }
+
+  for (i = 0; i < 3; i++)
+  {
+      size_t j;
+      if (test_data->subitem_lens[i] != expect_lens[i])
+      {
+        printf("item %zu: top int double array expect len: %zu, get: %zu\n", i, expect_lens[i], test_data->subitem_lens[i]);
+        ret = 1;
+        goto out;
+      }
+      for (j = 0; j < expect_lens[i]; j++)
+      {
+          if (test_data->items[i][j] != expect[i][j])
+          {
+            printf("item %zu: top int array expect: %d, get: %d\n", i, expect[i][j], test_data->items[i][j]);
+            ret = 1;
+            goto out;
+          }
+      }
+  }
+  test_data->items[0][0] = 888;
+  json_buf = basic_test_top_double_array_int_container_generate_json(test_data, &ctx, &err);
+  if (json_buf == NULL)
+  {
+    printf("gen error %s\n", err);
+    ret = 1;
+    goto out;
+  }
+  if (strstr(json_buf, "888") == NULL)
+  {
+    printf("change not work %s\n", err);
+    ret = 1;
+    goto out;
+  }
+
+out:
+  free(err);
+  free_basic_test_top_double_array_int_container(test_data);
+  free(json_buf);
+  return ret;
+}
+
+int do_test_top_double_array_of_obj()
+{
+  parser_error err;
+  struct parser_context ctx = { 0 };
+  int ret = 0;
+
+  basic_test_top_double_array_obj_container *test_data = basic_test_top_double_array_obj_container_parse_file(
+          "tests/data/top_double_array_obj.json", &ctx, &err);
+  char *json_buf = NULL;
+
+  if (test_data == NULL)
+  {
+    printf("top int double array parse error %s\n", err);
+    free(err);
+    return 1;
+  }
+  size_t i;
+  bool expect_bools[2][2] = {{true, false}, {false, true}};
+  int32_t expect_ints[2][2] = {{11, 12}, {21, 22}};
+  char *expect_strs[2][2] = {{"doubleobj11", "doubleobj12"}, {"doubleobj21", "doubleobj22"}};
+  size_t expect_lens[3] = {2, 2};
+  if (test_data->len != 2)
+  {
+    printf("top obj double array expect len: 2, get: %zu\n", test_data->len);
+    ret = 1;
+    goto out;
+  }
+
+  for (i = 0; i < 2; i++)
+  {
+      size_t j;
+      if (test_data->subitem_lens[i] != expect_lens[i])
+      {
+        printf("item %zu: top obj double array expect len: %zu, get: %zu\n", i, expect_lens[i], test_data->subitem_lens[i]);
+        ret = 1;
+        goto out;
+      }
+      for (j = 0; j < expect_lens[i]; j++)
+      {
+          if (test_data->items[i][j]->first != expect_bools[i][j])
+          {
+            printf("item %zu: top int array first expect: %d, get: %d\n", i, expect_bools[i][j], test_data->items[i][j]->first);
+            ret = 1;
+            goto out;
+          }
+          if (test_data->items[i][j]->second != expect_ints[i][j])
+          {
+            printf("item %zu: top int array second expect: %d, get: %d\n", i, expect_ints[i][j], test_data->items[i][j]->second);
+            ret = 1;
+            goto out;
+          }
+          if (test_data->items[i][j]->third == NULL || strcmp(test_data->items[i][j]->third, expect_strs[i][j]) != 0)
+          {
+            printf("item %zu: top int array third expect: %s, get: %s\n", i, expect_strs[i][j], test_data->items[i][j]->third);
+            ret = 1;
+            goto out;
+          }
+      }
+  }
+  test_data->items[0][0]->second = 999;
+  free(test_data->items[0][1]->third);
+  test_data->items[0][1]->third = strdup("hello");
+  json_buf = basic_test_top_double_array_obj_container_generate_json(test_data, &ctx, &err);
+  if (json_buf == NULL)
+  {
+    printf("gen error %s\n", err);
+    ret = 1;
+    goto out;
+  }
+  if (strstr(json_buf, "999") == NULL)
+  {
+    printf("change second not work %s\n", err);
+    ret = 1;
+    goto out;
+  }
+  if (strstr(json_buf, "hello") == NULL)
+  {
+    printf("change third not work %s\n", err);
+    ret = 1;
+    goto out;
+  }
+
+out:
+  free(err);
+  free_basic_test_top_double_array_obj_container(test_data);
+  free(json_buf);
+  return ret;
+}
+
 int
 main ()
 {
@@ -243,6 +585,33 @@ main ()
     ret = do_test_object_double_array();
     if (ret != 0) {
         printf("do_test_object_double_array failed with: %d\n", ret);
+        exit(ret);
+    }
+
+    ret = do_test_top_array_of_int();
+    if (ret != 0) {
+        printf("do_test_top_array_of_int failed with: %d\n", ret);
+        exit(ret);
+    }
+    ret = do_test_top_array_of_string();
+    if (ret != 0) {
+        printf("do_test_top_array_of_string failed with: %d\n", ret);
+        exit(ret);
+    }
+
+    ret = do_test_top_double_array_of_string();
+    if (ret != 0) {
+        printf("do_test_top_double_array_of_string failed with: %d\n", ret);
+        exit(ret);
+    }
+    ret = do_test_top_double_array_of_int();
+    if (ret != 0) {
+        printf("do_test_top_double_array_of_int failed with: %d\n", ret);
+        exit(ret);
+    }
+    ret = do_test_top_double_array_of_obj();
+    if (ret != 0) {
+        printf("do_test_top_double_array_of_obj failed with: %d\n", ret);
         exit(ret);
     }
 

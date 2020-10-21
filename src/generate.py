@@ -398,17 +398,24 @@ def gen_type_arr_typnode(node_info, src, typ, refname):
     curfile = node_info.curfile
 
     item_type, src = resolve_type(schema_info, name, src, cur["items"], curfile)
-    if typ == 'array' and typ == item_type.typ and not helpers.valid_basic_map_name(item_type.subtyp):
-        item_type.doublearray = True
-        return item_type, src
 
-    return helpers.Unite(name,
+    if typ == 'array' and typ == item_type.typ and not helpers.valid_basic_map_name(item_type.subtyp):
+        return helpers.Unite(name,
+                        typ,
+                        None,
+                        subtyp=item_type.subtyp,
+                        subtypobj=item_type.subtypobj,
+                        subtypname=item_type.subtypname,
+                        required=item_type.required, doublearray=True), src
+    else:
+        return helpers.Unite(name,
                         typ,
                         None,
                         subtyp=item_type.typ,
                         subtypobj=item_type.children,
                         subtypname=refname,
                         required=item_type.required), src
+
 
 
 def gen_arr_typnode(node_info, src, typ, refname):
@@ -643,9 +650,10 @@ def parse_schema(schema_info, schema, prefix):
         if item_type.typ == 'array' and not helpers.valid_basic_map_name(item_type.subtyp):
             item_type.doublearray = True
             return item_type
-
-        return helpers.Unite(helpers.CombinateName(prefix), 'array', None, item_type.typ, \
+        else:
+            return helpers.Unite(helpers.CombinateName(prefix), 'array', None, item_type.typ, \
                             item_type.children, None, item_type.required)
+
     else:
         print("Not supported type '%s'" % schema['type'])
     return prefix, None

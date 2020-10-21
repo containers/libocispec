@@ -136,6 +136,15 @@ def make_basic_map_name(mapname):
     return "json_map_%s_%s" % (parts[1], parts[2])
 
 
+def get_top_array_type_name(name, prefix):
+    '''
+    Description: Make top array type to contain subtype and length
+    Interface: None
+    History: 2020-10-24
+    '''
+    return "%s_container" % prefix if name is None or name == "" or prefix == name \
+        else "%s_%s_container" % (prefix, name)
+
 def get_name_substr(name, prefix):
     '''
     Description: Make array name
@@ -254,7 +263,7 @@ class Unite(object):
     History: 2019-06-17
     '''
     def __init__(self, name, typ, children, subtyp=None, subtypobj=None, subtypname=None, \
-        required=None):
+        required=None, doublearray=False):
         self.typ = typ
         self.children = children
         self.subtyp = subtyp
@@ -264,7 +273,7 @@ class Unite(object):
         self.name = conv_to_c_style(name.name.replace('.', '_'))
         self.origname = name.leaf or name.name
         self.fixname = conv_to_c_style(self.origname.replace('.', '_'))
-        self.doublearray = False
+        self.doublearray = doublearray
 
 
 
