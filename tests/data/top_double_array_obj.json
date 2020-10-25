@@ -1,0 +1,10 @@
+[
+    [
+        {"first": true, "second": 11, "third": "doubleobj11"},
+        {"first": false, "second": 12, "third": "doubleobj12"}
+    ],
+    [
+        {"first": false, "second": 21, "third": "doubleobj21"},
+        {"first": true, "second": 22, "third": "doubleobj22"}
+    ]
+]

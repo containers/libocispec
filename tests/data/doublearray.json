@@ -1,0 +1,112 @@
+{
+  "strarrays": [
+    [
+      "stra",
+      "strb",
+      "strc"
+    ],
+    [
+      "str2a",
+      "str2b"
+    ],
+    [
+      "str3a"
+    ]
+  ],
+  "intarrays": [
+    [
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      1,
+      2,
+      3
+    ]
+  ],
+  "boolarrays": [
+    [
+      true,
+      false
+    ],
+    [
+      false,
+      true
+    ],
+    [
+      true
+    ],
+    [
+      false
+    ]
+  ],
+  "objectarrays": [
+    [
+      {
+        "first": true,
+        "second": "item1"
+      },
+      {
+        "first": false,
+        "second": "item2"
+      },
+      {
+        "first": true,
+        "second": "item3"
+      }
+    ],
+    [
+      {
+        "first": false,
+        "second": "item11"
+      },
+      {
+        "first": true,
+        "second": "item12"
+      },
+      {
+        "first": false,
+        "second": "item13"
+      }
+    ]
+  ],
+  "refobjarrays": [
+    [
+      {
+        "item1": "first1",
+        "item2": 1,
+        "item3": false
+      },
+      {
+        "item1": "first2",
+        "item2": 2,
+        "item3": true
+      },
+      {
+        "item1": "first3",
+        "item2": 3,
+        "item3": false
+      }
+    ],
+    [
+      {
+        "item1": "second1",
+        "item2": 11,
+        "item3": true
+      },
+      {
+        "item1": "second2",
+        "item2": 12,
+        "item3": false
+      },
+      {
+        "item1": "second3",
+        "item2": 13,
+        "item3": true
+      }
+    ]
+  ]
+}

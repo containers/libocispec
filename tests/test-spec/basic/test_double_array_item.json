@@ -1,0 +1,16 @@
+{
+  "description": "description array item object, use by double array",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "item1": {
+      "type": "string"
+    },
+    "item2": {
+      "type": "int32"
+    },
+    "item3": {
+      "type": "boolean"
+    }
+  }
+}

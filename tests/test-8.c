@@ -27,41 +27,45 @@ int
 main ()
 {
   parser_error err = NULL;
-  size_t len, len_gen;
-  image_manifest_items_image_manifest_items_schema_element **image_items = image_manifest_items_image_manifest_items_schema_parse_file ("tests/data/image_manifest_item.json", 0, &err, &len);
-  image_manifest_items_image_manifest_items_schema_element **image_items_gen = NULL;
+  image_manifest_items_image_manifest_items_schema_container *image_items = 
+      image_manifest_items_image_manifest_items_schema_container_parse_file ("tests/data/image_manifest_item.json", 0, &err);
+  image_manifest_items_image_manifest_items_schema_container *image_items_gen = NULL;
   char *json_buf = NULL;
 
   if (image_items == NULL) {
     printf ("error %s\n", err);
     exit (1);
   }
-  json_buf = image_manifest_items_image_manifest_items_schema_generate_json ((const image_manifest_items_image_manifest_items_schema_element **)image_items, len, 0, &err);
+  json_buf = image_manifest_items_image_manifest_items_schema_container_generate_json (
+          (const image_manifest_items_image_manifest_items_schema_container*)image_items, 0, &err);
   if (json_buf == NULL) {
     printf ("gen error %s\n", err);
     exit (1);
   }
+  printf("%s\n", json_buf);
 
-  image_items_gen = image_manifest_items_image_manifest_items_schema_parse_data (json_buf, 0, &err, &len_gen);
+  image_items_gen = image_manifest_items_image_manifest_items_schema_container_parse_data (
+          json_buf, 0, &err);
   if (image_items_gen == NULL) {
     printf ("parse error %s\n", err);
     exit (1);
   }
 
-  if (len != 1 || len != len_gen)
+  if (image_items->len != 1 || image_items->len != image_items_gen->len)
     exit (5);
-  if (!image_items[0]->config || strcmp (image_items[0]->config, image_items_gen[0]->config) || \
-      strcmp (image_items_gen[0]->config, "5b117edd0b767986092e9f721ba2364951b0a271f53f1f41aff9dd1861c2d4fe.json"))
+  if (!image_items->items[0]->config || strcmp (image_items->items[0]->config, image_items_gen->items[0]->config) || \
+      strcmp (image_items_gen->items[0]->config, "5b117edd0b767986092e9f721ba2364951b0a271f53f1f41aff9dd1861c2d4fe.json"))
     exit (6);
-  if (image_items[0]->layers_len != 5 || image_items[0]->layers_len != image_items_gen[0]->layers_len || \
-      strcmp (image_items[0]->layers[2], image_items_gen[0]->layers[2]) || \
-      strcmp (image_items_gen[0]->layers[2], "e5ffeddba503ff2220cf4587030131c2cee5aef6083df1d2559e3d576bf04c99/layer.tar"))
+  if (image_items->items[0]->layers_len != 5 || image_items->items[0]->layers_len != image_items_gen->items[0]->layers_len || \
+      strcmp (image_items->items[0]->layers[2], image_items_gen->items[0]->layers[2]) || \
+      strcmp (image_items_gen->items[0]->layers[2], "e5ffeddba503ff2220cf4587030131c2cee5aef6083df1d2559e3d576bf04c99/layer.tar"))
     exit (7);
-  if (image_items[0]->repo_tags_len != 0 || image_items[0]->repo_tags_len != image_items_gen[0]->repo_tags_len || image_items[0]->repo_tags != NULL)
+  if (image_items->items[0]->repo_tags_len != 0 || image_items->items[0]->repo_tags_len != image_items_gen->items[0]->repo_tags_len || \
+          image_items->items[0]->repo_tags != NULL)
     exit (8);
 
   free (json_buf);
-  free_image_manifest_items_image_manifest_items_schema (image_items, len);
-  free_image_manifest_items_image_manifest_items_schema (image_items_gen, len_gen);
+  free_image_manifest_items_image_manifest_items_schema_container (image_items);
+  free_image_manifest_items_image_manifest_items_schema_container (image_items_gen);
   exit (0);
 }

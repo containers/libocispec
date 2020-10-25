@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "top double array of string",
+  "type": "array",
+  "items": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+          "first": {
+              "type": "boolean"
+          },
+          "second": {
+              "type": "int32"
+          },
+          "third": {
+              "type": "string"
+          }
+      }
+    }
+  }
+}
