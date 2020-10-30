@@ -948,9 +948,11 @@ def make_c_array_free (i, c_file, prefix):
             c_file.write("            size_t i;\n")
             c_file.write("            for (i = 0; i < ptr->%s_len; i++)\n" % i.fixname)
             c_file.write("              {\n")
-            c_file.write("                free(ptr->%s[i]);\n" % (i.fixname))
+            c_file.write("                free (ptr->%s[i]);\n" % (i.fixname))
             c_file.write("                ptr->%s[i] = NULL;\n" % (i.fixname))
             c_file.write("            }\n")
+            c_file.write("            free (ptr->%s_item_lens);\n" % (i.fixname))
+            c_file.write("            ptr->%s_item_lens = NULL;\n" % (i.fixname))
         c_file.write("        free (ptr->%s);\n" % (i.fixname))
         c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
         c_file.write("    }\n")
@@ -962,7 +964,8 @@ def make_c_array_free (i, c_file, prefix):
         c_file.write("    if (ptr->%s != NULL)\n" % i.fixname)
         c_file.write("      {\n")
         c_file.write("        size_t i;\n")
-        c_file.write("        for (i = 0; i < ptr->%s_len; i++) {\n" % i.fixname)
+        c_file.write("        for (i = 0; i < ptr->%s_len; i++)\n" % i.fixname)
+        c_file.write("          {\n")
 
         if i.doublearray:
             c_file.write("          size_t j;\n");
@@ -979,7 +982,11 @@ def make_c_array_free (i, c_file, prefix):
             c_file.write("              free_%s (ptr->%s[i]);\n" % (free_func, i.fixname))
             c_file.write("              ptr->%s[i] = NULL;\n" % (i.fixname))
             c_file.write("            }\n")
-        c_file.write("      }\n")
+        c_file.write("         }\n")
+
+        if i.doublearray:
+            c_file.write("        free (ptr->%s_item_lens);\n" % (i.fixname))
+            c_file.write("        ptr->%s_item_lens = NULL;\n" % (i.fixname))
 
         c_file.write("        free (ptr->%s);\n" % i.fixname)
         c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
@@ -1099,7 +1106,7 @@ def c_file_str(c_file, i):
         c_file.write("            size_t j;\n")
         c_file.write("            for (j = 0; j < ptr->%s_item_lens[i]; j++)\n" % (i.fixname))
         c_file.write("              {\n")
-        c_file.write("                free(ptr->%s[i][j]);\n" % (i.fixname))
+        c_file.write("                free (ptr->%s[i][j]);\n" % (i.fixname))
         c_file.write("                ptr->%s[i][j] = NULL;\n" % (i.fixname))
         c_file.write("            }\n")
     c_file.write("            if (ptr->%s[i] != NULL)\n" % (i.fixname))
@@ -1108,6 +1115,9 @@ def c_file_str(c_file, i):
     c_file.write("                ptr->%s[i] = NULL;\n" % (i.fixname))
     c_file.write("              }\n")
     c_file.write("          }\n")
+    if i.doublearray:
+        c_file.write("        free (ptr->%s_item_lens);\n" % (i.fixname))
+        c_file.write("        ptr->%s_item_lens = NULL;\n" % (i.fixname))
     c_file.write("        free (ptr->%s);\n" % (i.fixname))
     c_file.write("        ptr->%s = NULL;\n" % (i.fixname))
     c_file.write("    }\n")
@@ -1196,7 +1206,7 @@ define_cleaner_function (%s *, free_%s)\n
             c_file.write('              if (ptr->items[i][j] == NULL)\n')
             c_file.write("                  return NULL;\n")
             c_file.write('              ptr->subitem_lens[i] += 1;\n')
-            c_file.write('          };\n')
+            c_file.write('          }\n')
         else:
             c_file.write('        ptr->items[i] = make_%s (work, ctx, err);\n' \
                          % (subtypename))
@@ -1224,7 +1234,7 @@ define_cleaner_function (%s *, free_%s)\n
             read_val_generator(c_file, 3, 'tmps[j]', \
                                 "ptr->items[i][j]", obj.subtyp, obj.origname, c_typ)
             c_file.write('            ptr->subitem_lens[i] += 1;\n')
-            c_file.write('          };\n')
+            c_file.write('          }\n')
         else:
             read_val_generator(c_file, 2, 'work', \
                                 "ptr->items[i]", obj.subtyp, obj.origname, c_typ)
@@ -1265,21 +1275,21 @@ void free_%s (%s *ptr)
         c_file.write("          }\n")
     elif obj.subtyp == 'string':
         if obj.doublearray:
-            c_file.write("    size_t j;\n")
-            c_file.write("    for (j = 0; j < ptr->subitem_lens[i]; j++);\n")
-            c_file.write("    {\n")
-            c_file.write("       free(ptr->items[i][j]);\n")
-            c_file.write("       ptr->items[i][j] = NULL;\n")
-            c_file.write("    }\n")
-            c_file.write("    free(ptr->items[i]);\n")
-            c_file.write("    ptr->items[i] = NULL;\n")
+            c_file.write("        size_t j;\n")
+            c_file.write("        for (j = 0; j < ptr->subitem_lens[i]; j++)\n")
+            c_file.write("          {\n")
+            c_file.write("            free (ptr->items[i][j]);\n")
+            c_file.write("            ptr->items[i][j] = NULL;\n")
+            c_file.write("          }\n")
+            c_file.write("        free (ptr->items[i]);\n")
+            c_file.write("        ptr->items[i] = NULL;\n")
         else:
-            c_file.write("    free(ptr->items[i]);\n")
-            c_file.write("    ptr->items[i] = NULL;\n")
+            c_file.write("        free (ptr->items[i]);\n")
+            c_file.write("        ptr->items[i] = NULL;\n")
     elif not helpers.judge_complex(obj.subtyp):
         if obj.doublearray:
-            c_file.write("    free(ptr->items[i]);\n")
-            c_file.write("    ptr->items[i] = NULL;\n")
+            c_file.write("        free (ptr->items[i]);\n")
+            c_file.write("        ptr->items[i] = NULL;\n")
     elif obj.subtyp == 'object' or obj.subtypobj is not None:
         if obj.subtypname is not None:
             free_func = obj.subtypname
@@ -1293,13 +1303,18 @@ void free_%s (%s *ptr)
             c_file.write("              free_%s (ptr->items[i][j]);\n" % (free_func))
             c_file.write("              ptr->items[i][j] = NULL;\n");
             c_file.write("            }\n");
+            c_file.write("            free (ptr->items[i]);\n");
+            c_file.write("            ptr->items[i] = NULL;\n");
         else:
-            c_file.write("              free_%s (ptr->items[i]);\n" % (free_func))
-            c_file.write("              ptr->items[i] = NULL;\n")
+            c_file.write("          free_%s (ptr->items[i]);\n" % (free_func))
+            c_file.write("          ptr->items[i] = NULL;\n")
 
     c_file.write("""
       }
 """)
+    if obj.doublearray:
+        c_file.write("    free (ptr->subitem_lens);\n")
+        c_file.write("    ptr->subitem_lens = NULL;\n")
 
     c_typ = helpers.obtain_pointer(obj.name, obj.subtypobj, prefix)
     if c_typ != "":
@@ -1310,7 +1325,7 @@ void free_%s (%s *ptr)
         return
     else:
         c_file.write("""
-    free(ptr->items);
+    free (ptr->items);
     ptr->items = NULL;
 """)
 
