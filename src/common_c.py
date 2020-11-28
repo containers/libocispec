@@ -213,6 +213,31 @@ get_val (yajl_val tree, const char *name, yajl_type type)
   return yajl_tree_get (tree, path, type);
 }
 
+char *
+safe_strdup (const char *src)
+{
+    char *dst = NULL;
+
+    if (src == NULL)
+        return NULL;
+    dst = strdup (src);
+    if (dst == NULL)
+        abort ();
+    return dst;
+}
+
+void *
+safe_malloc (size_t size)
+{
+    void *ret = NULL;
+    if (size == 0)
+        abort ();
+    ret = calloc (1, size);
+    if (ret == NULL)
+        abort ();
+    return ret;
+}
+
 int
 common_safe_double (const char *numstr, double *converted)
 {
@@ -1181,6 +1206,136 @@ append_json_map_string_int (json_map_string_int * map, const char *key,
 
   map->len++;
   return 0;
+}
+
+yajl_gen_status
+gen_json_map_string_int64 (void *ctx, const json_map_string_int64 *map,
+                           const struct parser_context *ptx, parser_error *err)
+{
+    yajl_gen_status stat = yajl_gen_status_ok;
+    yajl_gen g = (yajl_gen) ctx;
+    size_t len = 0, i = 0;
+    if (map != NULL)
+        len = map->len;
+    if (!len && !(ptx->options & OPT_GEN_SIMPLIFY))
+        yajl_gen_config (g, yajl_gen_beautify, 0);
+    stat = yajl_gen_map_open ((yajl_gen)g);
+    if (yajl_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+
+    for (i = 0; i < len; i++)
+    {
+        stat = yajl_gen_string ((yajl_gen)g, (const unsigned char *)(map->keys[i]), strlen (map->keys[i]));
+        if (yajl_gen_status_ok != stat)
+            GEN_SET_ERROR_AND_RETURN (stat, err);
+        stat = map_int (g, map->values[i]);
+        if (yajl_gen_status_ok != stat)
+            GEN_SET_ERROR_AND_RETURN (stat, err);
+    }
+
+    stat = yajl_gen_map_close ((yajl_gen)g);
+    if (yajl_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+    if (!len && !(ptx->options & OPT_GEN_SIMPLIFY))
+        yajl_gen_config (g, yajl_gen_beautify, 1);
+    return yajl_gen_status_ok;
+}
+
+void
+free_json_map_string_int64 (json_map_string_int64 *map)
+{
+    if (map != NULL)
+    {
+        size_t i;
+        for (i = 0; i < map->len; i++)
+        {
+            free (map->keys[i]);
+            map->keys[i] = NULL;
+        }
+        free (map->keys);
+        map->keys = NULL;
+        free (map->values);
+        map->values = NULL;
+        free (map);
+    }
+}
+
+define_cleaner_function (json_map_string_int64 *, free_json_map_string_int64)
+
+json_map_string_int64 *
+make_json_map_string_int64 (yajl_val src, const struct parser_context *ctx, parser_error *err)
+{
+    __auto_cleanup(free_json_map_string_int64) json_map_string_int64 *ret = NULL;
+    if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
+    {
+        size_t i;
+        size_t len = YAJL_GET_OBJECT (src)->len;
+        ret = safe_malloc (sizeof(*ret));
+        ret->len = len;
+        ret->keys = safe_malloc ((len + 1) * sizeof (char *));
+        ret->values = safe_malloc ((len + 1) * sizeof (int64_t));
+        for (i = 0; i < len; i++)
+        {
+            const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
+            yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
+            ret->keys[i] = safe_strdup (srckey ? srckey : "");
+
+            if (srcval != NULL)
+            {
+                int64_t invalid;
+                if (!YAJL_IS_NUMBER (srcval))
+                {
+                    if (*err == NULL && asprintf (err, "Invalid value with type 'int' for key '%s'", srckey) < 0)
+                    {
+                        *(err) = safe_strdup ("error allocating memory");
+                    }
+                    return NULL;
+                }
+                invalid = common_safe_int64 (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
+                if (invalid)
+                {
+                    if (*err == NULL && asprintf (err, "Invalid value with type 'int' for key '%s': %s", srckey, strerror(-invalid)) < 0)
+                    {
+                        *(err) = safe_strdup ("error allocating memory");
+                    }
+                    return NULL;
+                }
+            }
+        }
+    }
+    return move_ptr (ret);
+}
+int
+append_json_map_string_int64 (json_map_string_int64 *map, const char *key, int64_t val)
+{
+    size_t len;
+    char **keys = NULL;
+    int64_t *vals = NULL;
+
+    if (map == NULL)
+        return -1;
+
+    if ((SIZE_MAX / sizeof (char *) - 1) < map->len || (SIZE_MAX / sizeof (int) - 1) < map->len)
+        return -1;
+
+    len = map->len + 1;
+    keys = safe_malloc (len * sizeof(char *));
+    vals = safe_malloc (len * sizeof(int64_t));
+
+    if (map->len)
+    {
+        (void)memcpy (keys, map->keys, map->len * sizeof (char *));
+        (void)memcpy (vals, map->values, map->len * sizeof (int64_t));
+    }
+    free (map->keys);
+    map->keys = keys;
+    free (map->values);
+    map->values = vals;
+    map->keys[map->len] = safe_strdup (key ? key : "");
+    map->values[map->len] = val;
+
+    map->len++;
+    return 0;
 }
 
 yajl_gen_status

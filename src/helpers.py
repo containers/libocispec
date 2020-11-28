@@ -126,7 +126,7 @@ def make_basic_map_name(mapname):
     Interface: None
     History: 2019-06-17
     '''
-    basic_map_types = ('string', 'int', 'bool')
+    basic_map_types = ('string', 'int', 'bool', 'int64')
     parts = conv_to_c_style(mapname).split('_')
     if len(parts) != 3 or parts[0] != 'map' or \
             (parts[1] not in basic_map_types) or \

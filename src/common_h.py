@@ -119,6 +119,10 @@ bool json_gen_init (yajl_gen * g, const struct parser_context *ctx);
 
 yajl_val get_val (yajl_val tree, const char *name, yajl_type type);
 
+char *safe_strdup (const char *src);
+
+void *safe_malloc (size_t size);
+
 int common_safe_double (const char *numstr, double *converted);
 
 int common_safe_uint8 (const char *numstr, uint8_t * converted);
@@ -234,6 +238,27 @@ void free_json_map_string_bool (json_map_string_bool * map);
 json_map_string_bool *make_json_map_string_bool (yajl_val src,
 						 const struct parser_context
 						 *ctx, parser_error * err);
+
+typedef struct
+{
+    char **keys;
+    int64_t *values;
+    size_t len;
+} json_map_string_int64;
+
+void free_json_map_string_int64 (json_map_string_int64 *map);
+
+json_map_string_int64 *make_json_map_string_int64 (yajl_val src,
+                                                   const struct
+                                                   parser_context *ctx,
+                                                   parser_error *err);
+
+yajl_gen_status gen_json_map_string_int64 (void *ctx,
+                                           const json_map_string_int64 *map,
+                                           const struct parser_context *ptx,
+                                           parser_error *err);
+
+int append_json_map_string_int64 (json_map_string_int64 *map, const char *key, int64_t val);
 
 yajl_gen_status gen_json_map_string_bool (void *ctx,
 					  const json_map_string_bool * map,
