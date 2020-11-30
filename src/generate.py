@@ -269,7 +269,8 @@ def get_type_pattern_incur(cur, schema_info, src, curfile):
         'object': 'Object',
         'string': 'String',
         'integer': 'Int',
-        'boolean': 'Bool'
+        'boolean': 'Bool',
+        'int64': 'Int64'
     }[val]
     map_val = m_key
 

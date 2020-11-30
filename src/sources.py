@@ -176,7 +176,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
             c_file.write('            ret->%s = (uint8_t *)strdup (str ? str : "");\n' \
                          % obj.fixname)
             c_file.write('            if (ret->%s == NULL)\n' % obj.fixname)
-            c_file.write('              return NULL;')
+            c_file.write('              return NULL;\n')
             c_file.write('            ret->%s_len = str != NULL ? strlen (str) : 0;\n' \
                          % obj.fixname)
         c_file.write('        }\n')
@@ -836,8 +836,8 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%s  {\n' % ('    ' * (level)))
         c_file.write('%s%s = calloc (1, sizeof (%s));\n' %
                      ('    ' * (level + 1), dest, helpers.get_map_c_types(num_type)))
-        c_file.write('%sif (%s == NULL\n' % ('    ' * (level + 1), dest))
-        c_file.write('%s    return NULL;' % ('    ' * (level + 1)))
+        c_file.write('%sif (%s == NULL)\n' % ('    ' * (level + 1), dest))
+        c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
         c_file.write('%sint invalid = common_safe_%s (YAJL_GET_NUMBER (val), %s);\n' \
                      % ('    ' * (level + 1), num_type, dest))
         c_file.write('%sif (invalid)\n' % ('    ' * (level + 1)))
@@ -872,8 +872,8 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%sif (val != NULL)\n' % ('    ' * (level)))
         c_file.write('%s  {\n' % ('    ' * (level)))
         c_file.write('%s%s = calloc (1, sizeof (bool));\n' % ('    ' * (level + 1), dest))
-        c_file.write('%sif (%s == NULL\n' % ('    ' * (level + 1), dest))
-        c_file.write('%s    return NULL;' % ('    ' * (level + 1)))
+        c_file.write('%sif (%s == NULL)\n' % ('    ' * (level + 1), dest))
+        c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
         c_file.write('%s*(%s) = YAJL_IS_TRUE(val);\n' % ('    ' * (level + 1), dest))
         c_file.write('%s  }\n' % ('    ' * (level)))
         c_file.write('%selse\n' % ('    ' * (level)))
@@ -883,8 +883,8 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%sif (val != NULL)\n' % ('    ' * (level + 1)))
         c_file.write('%s  {\n' % ('    ' * (level + 1)))
         c_file.write('%s%s = calloc (1, sizeof (bool));\n' % ('    ' * (level + 2), dest))
-        c_file.write('%sif (%s == NULL\n' % ('    ' * (level + 2), dest))
-        c_file.write('%s  return NULL;' % ('    ' * (level + 2)))
+        c_file.write('%sif (%s == NULL)\n' % ('    ' * (level + 2), dest))
+        c_file.write('%s  return NULL;\n' % ('    ' * (level + 2)))
         c_file.write('%s*(%s) = YAJL_IS_TRUE(val);\n' % ('    ' * (level + 2), dest))
         c_file.write('%s}\n' % ('    ' * (level + 1)))
         c_file.write('%s}\n' % ('    ' * (level)))
@@ -1533,7 +1533,7 @@ define_cleaner_function (yajl_val, yajl_tree_free)
 %s_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err)
 {
     %s *ptr = NULL;
-    __auto_cleanup(yajl_tree_free) yajl_val tree;
+    __auto_cleanup(yajl_tree_free) yajl_val tree = NULL;
     char errbuf[1024];
     struct parser_context tmp_ctx = { 0 };
 
