@@ -1161,6 +1161,9 @@ define_cleaner_function (%s *, free_%s)\n
 {
     __auto_cleanup(free_%s) %s *ptr = NULL;
     size_t i, alen;
+
+    (void) ctx;
+
     if (tree == NULL || err == NULL || YAJL_GET_ARRAY (tree) == NULL)
       return NULL;
     *err = NULL;
