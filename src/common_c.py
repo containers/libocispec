@@ -1266,6 +1266,9 @@ json_map_string_int64 *
 make_json_map_string_int64 (yajl_val src, const struct parser_context *ctx, parser_error *err)
 {
     __auto_cleanup(free_json_map_string_int64) json_map_string_int64 *ret = NULL;
+
+    (void) ctx;  /* Silence compiler warning.  */
+
     if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
     {
         size_t i;
