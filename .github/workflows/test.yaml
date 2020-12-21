@@ -1,0 +1,42 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  build_job:
+    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.arch }}
+
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+            distro: ubuntu20.04
+          - arch: aarch64
+            distro: ubuntu20.04
+          - arch: s390x
+            distro: ubuntu20.04
+          - arch: ppc64le
+            distro: ubuntu20.04
+    steps:
+      - uses: actions/checkout@v2.1.0
+      - uses: uraimo/run-on-arch-action@v2.0.5
+        name: Build
+        id: build
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.distro }}
+
+          githubToken: ${{ github.token }}
+
+          setup: |
+            git submodule update --init --recursive
+
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget libyajl-dev
+
+          run: |
+            ./autogen.sh
+            ./configure CFLAGS='-Wall -Werror'
+            make -j $(nproc) distcheck
