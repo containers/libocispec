@@ -116,7 +116,10 @@ libocispec_la_SOURCES = $(BUILT_SOURCES) \
 	src/read-file.c \
 	src/json_common.c
 
-CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES)
+TMP_C_FILES = $(HEADER_FILES:.h=.h.tmp)
+TMP_C_FILES = $(SOURCE_FILES:.c=.c.tmp)
+
+CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES) $(TMP_H_FILES) $(TMP_C_FILES)
 
 TESTS_LDADD = libocispec.la $(SELINUX_LIBS) $(YAJL_LIBS)
 

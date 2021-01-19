@@ -30,7 +30,6 @@ import traceback
 import os
 import sys
 import json
-import fcntl
 import argparse
 
 from collections import OrderedDict
@@ -692,30 +691,37 @@ def reflection(schema_info, gen_ref):
     Interface: None
     History: 2019-06-17
     """
-    with open(schema_info.header.name, "w") as \
-            header_file, open(schema_info.source.name, "w") as source_file:
-        fcntl.flock(header_file, fcntl.LOCK_EX)
-        fcntl.flock(source_file, fcntl.LOCK_EX)
+    with open(schema_info.header.name + ".tmp", "w") as \
+            header_file, open(schema_info.source.name + ".tmp", "w") as source_file:
 
-        with open(schema_info.name.name) as schema_file:
-            schema_json = json.loads(schema_file.read(), object_pairs_hook=OrderedDict)
-            try:
-                tree = parse_schema(schema_info, schema_json, schema_info.prefix)
-                if tree is None:
-                    print("Failed parse schema")
+        try:
+            with open(schema_info.name.name) as schema_file:
+                schema_json = json.loads(schema_file.read(), object_pairs_hook=OrderedDict)
+                try:
+                    tree = parse_schema(schema_info, schema_json, schema_info.prefix)
+                    if tree is None:
+                        print("Failed parse schema")
+                        sys.exit(1)
+                    structs = expand(tree, [], {})
+                    headers.header_reflect(structs, schema_info, header_file)
+                    sources.src_reflect(structs, schema_info, source_file, tree.typ)
+                except RuntimeError:
+                    traceback.print_exc()
+                    print("Failed to parse schema file: %s" % schema_info.name.name)
                     sys.exit(1)
-                structs = expand(tree, [], {})
-                headers.header_reflect(structs, schema_info, header_file)
-                sources.src_reflect(structs, schema_info, source_file, tree.typ)
-            except RuntimeError:
-                traceback.print_exc()
-                print("Failed to parse schema file: %s" % schema_info.name.name)
-                sys.exit(1)
-            finally:
+                finally:
+                    pass
+            os.rename(schema_info.header.name + ".tmp", schema_info.header.name)
+            os.rename(schema_info.source.name + ".tmp", schema_info.source.name)
+        finally:
+            try:
+                os.unlink(schema_info.header.name + ".tmp")
+            except:
                 pass
-
-        fcntl.flock(source_file, fcntl.LOCK_UN)
-        fcntl.flock(header_file, fcntl.LOCK_UN)
+            try:
+                os.unlink(schema_info.source.name + ".tmp")
+            except:
+                pass
 
     if gen_ref is True:
         if schema_info.refs:
