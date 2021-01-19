@@ -792,7 +792,7 @@ def main():
     parser = argparse.ArgumentParser(prog='generate.py',
                                      usage='%(prog)s [options] path [path ...]',
                                      description='Generate C header and source from json-schema')
-    parser.add_argument('path', nargs='+', help='File or directory to parse')
+    parser.add_argument('path', nargs='*', help='File or directory to parse')
     parser.add_argument(
         '--root',
         required=True,
@@ -835,6 +835,7 @@ def main():
 
     if args.gen_common:
         gen_common_files(srcpath.name)
+        sys.exit(0)
     handle_files(args, srcpath)
 
 
