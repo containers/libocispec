@@ -1,47 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# libocispec - a C library for parsing OCI spec files.
-#
-# Copyright (C) Huawei Technologies., Ltd. 2018-2020.
-# Copyright (C) 2017, 2019 Giuseppe Scrivano <giuseppe@scrivano.org>
-#
-# libocispec is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
-# (at your option) any later version.
-#
-# libocispec is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
-
-# As a special exception, you may create a larger work that contains
-# part or all of the libocispec parser skeleton and distribute that work
-# under terms of your choice, so long as that work isn't itself a
-# parser generator using the skeleton or a modified version thereof
-# as a parser skeleton.  Alternatively, if you modify or redistribute
-# the parser skeleton itself, you may (at your option) remove this
-# special exception, which will cause the skeleton and the resulting
-# libocispec output files to be licensed under the GNU General Public
-# License without this special exception.
-
-import os
-import fcntl
-
-"""
-Description: json common c code
-Interface: None
-History: 2019-06-18
-Purpose: defined the common tool function for parse json
-Defined the CODE global variable to hold the c code
-"""
-def generate_json_common_h(out):
-    with open(os.path.join(out, 'json_common.h'), "w") as header_file:
-        fcntl.flock(header_file, fcntl.LOCK_EX)
-        header_file.write("""// Auto generated file. Do not edit!
 # ifndef _JSON_COMMON_H
 # define _JSON_COMMON_H
 
@@ -70,11 +26,11 @@ extern "C" {
 // options not to validate utf8 data
 # define OPT_GEN_NO_VALIDATE_UTF8 0x10
 
-#define define_cleaner_function(type, cleaner)           \\
-        static inline void cleaner##_function(type *ptr) \\
-        {                                                \\
-                if (*ptr)                                \\
-                        cleaner(*ptr);                   \\
+#define define_cleaner_function(type, cleaner)           \
+        static inline void cleaner##_function(type *ptr) \
+        {                                                \
+                if (*ptr)                                \
+                        cleaner(*ptr);                   \
         }
 
 #define __auto_cleanup(cleaner) __attribute__((__cleanup__(cleaner##_function)))
@@ -85,20 +41,20 @@ static inline void ptr_free_function(void *p) {
 
 #define __auto_free __auto_cleanup(ptr_free)
 
-#define move_ptr(ptr)                                 \\
-        ({                                            \\
-                typeof(ptr) moved_ptr = (ptr);        \\
-                (ptr) = NULL;                         \\
-                moved_ptr;                            \\
+#define move_ptr(ptr)                                 \
+        ({                                            \
+                typeof(ptr) moved_ptr = (ptr);        \
+                (ptr) = NULL;                         \
+                moved_ptr;                            \
         })
 
-# define GEN_SET_ERROR_AND_RETURN(stat, err) { \\
-    if (*(err) == NULL) {\\
-        if (asprintf (err, "%s: %s: %d: error generating json, errcode: %u", __FILE__, __func__, __LINE__, stat) < 0) { \\
-            *(err) = strdup ("error allocating memory"); \\
-        } \\
-    }\\
-    return stat; \\
+# define GEN_SET_ERROR_AND_RETURN(stat, err) { \
+    if (*(err) == NULL) {\
+        if (asprintf (err, "%s: %s: %d: error generating json, errcode: %u", __FILE__, __func__, __LINE__, stat) < 0) { \
+            *(err) = strdup ("error allocating memory"); \
+        } \
+    }\
+    return stat; \
 }
 
 typedef char *parser_error;
@@ -300,5 +256,4 @@ char *json_marshal_string (const char *str, size_t length,
 # endif
 
 # endif
-        """)
-        fcntl.flock(header_file, fcntl.LOCK_UN)
+        

@@ -1,47 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# libocispec - a C library for parsing OCI spec files.
-#
-# Copyright (C) Huawei Technologies., Ltd. 2018-2020.
-# Copyright (C) 2017, 2019 Giuseppe Scrivano <giuseppe@scrivano.org>
-#
-# libocispec is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
-# (at your option) any later version.
-#
-# libocispec is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
-
-# As a special exception, you may create a larger work that contains
-# part or all of the libocispec parser skeleton and distribute that work
-# under terms of your choice, so long as that work isn't itself a
-# parser generator using the skeleton or a modified version thereof
-# as a parser skeleton.  Alternatively, if you modify or redistribute
-# the parser skeleton itself, you may (at your option) remove this
-# special exception, which will cause the skeleton and the resulting
-# libocispec output files to be licensed under the GNU General Public
-# License without this special exception.
-
-import os
-import fcntl
-
-"""
-Description: json common c code
-Interface: None
-History: 2019-06-18
-Purpose: defined the common tool function for parse json
-Defined the CODE global variable to hold the c code
-"""
-def generate_json_common_c(out):
-    with open(os.path.join(out, 'json_common.c'), "w") as source_file:
-        fcntl.flock(source_file, fcntl.LOCK_EX)
-        source_file.write("""// Auto generated file. Do not edit!
 # define _GNU_SOURCE
 # include <stdio.h>
 # include <string.h>
@@ -253,7 +209,7 @@ common_safe_double (const char *numstr, double *converted)
     return -errno;
 
 
-  if (err_str == NULL || err_str == numstr || *err_str != '\\0')
+  if (err_str == NULL || err_str == numstr || *err_str != '\0')
     return -EINVAL;
 
   *converted = d;
@@ -274,7 +230,7 @@ common_safe_uint8 (const char *numstr, uint8_t * converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   if (uli > UINT8_MAX)
@@ -298,7 +254,7 @@ common_safe_uint16 (const char *numstr, uint16_t * converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   if (uli > UINT16_MAX)
@@ -322,7 +278,7 @@ common_safe_uint32 (const char *numstr, uint32_t * converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   if (ull > UINT32_MAX)
@@ -346,7 +302,7 @@ common_safe_uint64 (const char *numstr, uint64_t * converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   *converted = (uint64_t) ull;
@@ -367,7 +323,7 @@ common_safe_uint (const char *numstr, unsigned int *converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   if (ull > UINT_MAX)
@@ -393,7 +349,7 @@ common_safe_int8 (const char *numstr, int8_t * converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   if (li > INT8_MAX || li < INT8_MIN)
@@ -417,7 +373,7 @@ common_safe_int16 (const char *numstr, int16_t * converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   if (li > INT16_MAX || li < INT16_MIN)
@@ -441,7 +397,7 @@ common_safe_int32 (const char *numstr, int32_t * converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   if (lli > INT32_MAX || lli < INT32_MIN)
@@ -466,7 +422,7 @@ common_safe_int64 (const char *numstr, int64_t * converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   *converted = (int64_t) lli;
@@ -487,7 +443,7 @@ common_safe_int (const char *numstr, int *converted)
   if (errno > 0)
     return -errno;
 
-  if (err == NULL || err == numstr || *err != '\\0')
+  if (err == NULL || err == numstr || *err != '\0')
     return -EINVAL;
 
   if (lli > INT_MAX || lli < INT_MIN)
@@ -1769,9 +1725,8 @@ json_marshal_string (const char *str, size_t length,
     }
 
   (void) memcpy (json_buf, gen_buf, gen_len);
-  json_buf[gen_len] = '\\0';
+  json_buf[gen_len] = '\0';
 
   return json_buf;
 }
-        """)
-        fcntl.flock(source_file, fcntl.LOCK_UN)
+        

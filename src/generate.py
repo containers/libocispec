@@ -37,8 +37,6 @@ from collections import OrderedDict
 import helpers
 import headers
 import sources
-import common_h
-import common_c
 
 # - json suffix
 JSON_SUFFIX = ".json"
@@ -725,15 +723,6 @@ def reflection(schema_info, gen_ref):
                 reflection(reffile, True)
 
 
-def gen_common_files(out):
-    """
-    Description: generate c language for parse json map string object
-    Interface: None
-    History: 2019-06-17
-    """
-    common_h.generate_json_common_h(out)
-    common_c.generate_json_common_c(out)
-
 def handle_single_file(args, srcpath, gen_ref, schemapath):
     """
     Description: generate c language for parse json map string object
@@ -800,9 +789,6 @@ def main():
         'All schema files must be placed in root directory or sub-directory of root," \
         " and naming of C variables is started from this path'
     )
-    parser.add_argument('--gen-common',
-                        action='store_true',
-                        help='Generate json_common.c and json_common.h')
     parser.add_argument('--gen-ref',
                         action='store_true',
                         help='Generate reference file defined in schema with key \"$ref\"')
@@ -833,9 +819,6 @@ def main():
     if not os.path.exists(srcpath.name):
         os.makedirs(srcpath.name)
 
-    if args.gen_common:
-        gen_common_files(srcpath.name)
-        sys.exit(0)
     handle_files(args, srcpath)
 
 

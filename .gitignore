@@ -93,5 +93,3 @@ src/runtime_spec_schema_defs_windows.c
 src/runtime_spec_schema_defs_windows.h
 src/runtime_spec_schema_state_schema.c
 src/runtime_spec_schema_state_schema.h
-src/json_common.c
-src/json_common.h

@@ -1,6 +1,6 @@
-CLEANFILES = $(man_MANS)
-
 AM_CFLAGS = $(WARN_CFLAGS) -I$(top_srcdir)/src -I$(top_builddir)/src
+
+CLEANFILES = $(man_MANS) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 
 GITIGNOREFILES = build-aux/ gtk-doc.make config.h.in aclocal.m4
 
@@ -32,28 +32,25 @@ SOURCE_FILES = \
 	src/basic_test_top_array_string.c \
 	src/basic_test_top_double_array_int.c \
 	src/basic_test_top_double_array_obj.c \
-	src/basic_test_top_double_array_string.c \
-	src/json_common.c
+	src/basic_test_top_double_array_string.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
 
-
 src/runtime_spec_stamp: src/json_common.h src/json_common.c
 	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/runtime-spec/schema
+	@touch $@
 
 src/image_spec_stamp: src/json_common.h src/json_common.c
 	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/image-spec/schema
+	@touch $@
 
 src/image_manifest_stamp: src/json_common.h src/json_common.c
 	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/imageManifestItems
+	@touch $@
 
-src/basic-test-stamp: src/json_common.h src/json_common.c
+src/basic-test_stamp: src/json_common.h src/json_common.c
 	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/basic
-
-src/json_common_stamp: src/common_h.py src/common_c.py
-	$(PYTHON) $(srcdir)/src/generate.py --gen-common --root=${srcdir} --out=${srcdir}/src
-
-src/json_common.h src/json_common.c: src/json_common_stamp
+	@touch $@
 
 src/image_spec_schema_config_schema.c \
 	src/image_spec_schema_content_descriptor.c \
@@ -107,22 +104,23 @@ src/basic_test_double_array_item.h \
 	src/basic_test_top_array_string.c \
 	src/basic_test_top_double_array_int.c \
 	src/basic_test_top_double_array_obj.c \
-	src/basic_test_top_double_array_string.c: src/basic-test-stamp
+	src/basic_test_top_double_array_string.c: src/basic-test_stamp
 
 $(HEADER_FILES): %.h: %.c src/generate.py
 
 BUILT_SOURCES = $(HEADER_FILES) $(SOURCE_FILES)
 
-libocispec_la_SOURCES = $(BUILT_SOURCES) \
-	src/read-file.c
-
 libocispec_a_SOURCES =
+
+libocispec_la_SOURCES = $(BUILT_SOURCES) \
+	src/read-file.c \
+	src/json_common.c
 
 CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES)
 
 TESTS_LDADD = libocispec.la $(SELINUX_LIBS) $(YAJL_LIBS)
 
-libocispec.a: libocispec.la $(BUILT_SOURCES)
+libocispec.a: libocispec.la $(BUILT_SOURCES) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 	$(LIBTOOL) --mode=link $(GCC) libocispec.la -o libocispec.a
 
 tests_test_1_SOURCES = tests/test-1.c
@@ -196,8 +194,6 @@ EXTRA_DIST = autogen.sh \
 	tests/data/top_double_array_string.json \
 	tests/test-spec \
 	src/generate.py \
-	src/common_c.py \
-	src/common_h.py \
 	src/headers.py \
 	src/helpers.py \
 	src/sources.py \
@@ -205,12 +201,12 @@ EXTRA_DIST = autogen.sh \
 	src/read-file.h \
 	src/json_common.h \
 	runtime-spec \
-	image-spec
+	image-spec \
+	src/json_common.h \
+	src/json_common.c
 
 sync:
 	(cd image-spec; git pull https://github.com/opencontainers/image-spec)
 	(cd runtime-spec; git pull https://github.com/opencontainers/runtime-spec)
-generate:
-	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/runtime-spec/schema ${srcdir}/image-spec/schema
-	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/imageManifestItems
-	$(PYTHON) $(srcdir)/src/generate.py --gen-common --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/basic
+
+generate: src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
