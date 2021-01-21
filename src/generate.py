@@ -30,15 +30,12 @@ import traceback
 import os
 import sys
 import json
-import fcntl
 import argparse
 
 from collections import OrderedDict
 import helpers
 import headers
 import sources
-import common_h
-import common_c
 
 # - json suffix
 JSON_SUFFIX = ".json"
@@ -694,45 +691,43 @@ def reflection(schema_info, gen_ref):
     Interface: None
     History: 2019-06-17
     """
-    with open(schema_info.header.name, "w") as \
-            header_file, open(schema_info.source.name, "w") as source_file:
-        fcntl.flock(header_file, fcntl.LOCK_EX)
-        fcntl.flock(source_file, fcntl.LOCK_EX)
+    with open(schema_info.header.name + ".tmp", "w") as \
+            header_file, open(schema_info.source.name + ".tmp", "w") as source_file:
 
-        with open(schema_info.name.name) as schema_file:
-            schema_json = json.loads(schema_file.read(), object_pairs_hook=OrderedDict)
-            try:
-                tree = parse_schema(schema_info, schema_json, schema_info.prefix)
-                if tree is None:
-                    print("Failed parse schema")
+        try:
+            with open(schema_info.name.name) as schema_file:
+                schema_json = json.loads(schema_file.read(), object_pairs_hook=OrderedDict)
+                try:
+                    tree = parse_schema(schema_info, schema_json, schema_info.prefix)
+                    if tree is None:
+                        print("Failed parse schema")
+                        sys.exit(1)
+                    structs = expand(tree, [], {})
+                    headers.header_reflect(structs, schema_info, header_file)
+                    sources.src_reflect(structs, schema_info, source_file, tree.typ)
+                except RuntimeError:
+                    traceback.print_exc()
+                    print("Failed to parse schema file: %s" % schema_info.name.name)
                     sys.exit(1)
-                structs = expand(tree, [], {})
-                headers.header_reflect(structs, schema_info, header_file)
-                sources.src_reflect(structs, schema_info, source_file, tree.typ)
-            except RuntimeError:
-                traceback.print_exc()
-                print("Failed to parse schema file: %s" % schema_info.name.name)
-                sys.exit(1)
-            finally:
+                finally:
+                    pass
+            os.rename(schema_info.header.name + ".tmp", schema_info.header.name)
+            os.rename(schema_info.source.name + ".tmp", schema_info.source.name)
+        finally:
+            try:
+                os.unlink(schema_info.header.name + ".tmp")
+            except:
                 pass
-
-        fcntl.flock(source_file, fcntl.LOCK_UN)
-        fcntl.flock(header_file, fcntl.LOCK_UN)
+            try:
+                os.unlink(schema_info.source.name + ".tmp")
+            except:
+                pass
 
     if gen_ref is True:
         if schema_info.refs:
             for reffile in schema_info.refs.values():
                 reflection(reffile, True)
 
-
-def gen_common_files(out):
-    """
-    Description: generate c language for parse json map string object
-    Interface: None
-    History: 2019-06-17
-    """
-    common_h.generate_json_common_h(out)
-    common_c.generate_json_common_c(out)
 
 def handle_single_file(args, srcpath, gen_ref, schemapath):
     """
@@ -792,7 +787,7 @@ def main():
     parser = argparse.ArgumentParser(prog='generate.py',
                                      usage='%(prog)s [options] path [path ...]',
                                      description='Generate C header and source from json-schema')
-    parser.add_argument('path', nargs='+', help='File or directory to parse')
+    parser.add_argument('path', nargs='*', help='File or directory to parse')
     parser.add_argument(
         '--root',
         required=True,
@@ -800,9 +795,6 @@ def main():
         'All schema files must be placed in root directory or sub-directory of root," \
         " and naming of C variables is started from this path'
     )
-    parser.add_argument('--gen-common',
-                        action='store_true',
-                        help='Generate json_common.c and json_common.h')
     parser.add_argument('--gen-ref',
                         action='store_true',
                         help='Generate reference file defined in schema with key \"$ref\"')
@@ -833,8 +825,6 @@ def main():
     if not os.path.exists(srcpath.name):
         os.makedirs(srcpath.name)
 
-    if args.gen_common:
-        gen_common_files(srcpath.name)
     handle_files(args, srcpath)
 
 
