@@ -178,7 +178,10 @@ def header_reflect_top_array(obj, prefix, header):
     c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
         helpers.get_map_c_types(obj.subtyp)
     if obj.subtypobj is not None:
-        c_typ = helpers.get_name_substr(obj.name, prefix) + " *"
+        if obj.doublearray and obj.subtypname is not None:
+            c_typ = obj.subtypname + " *"
+        else:
+            c_typ = helpers.get_name_substr(obj.name, prefix) + " *"
     if c_typ == "":
         return
 

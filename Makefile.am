@@ -32,6 +32,7 @@ SOURCE_FILES = \
 	src/basic_test_top_array_string.c \
 	src/basic_test_top_double_array_int.c \
 	src/basic_test_top_double_array_obj.c \
+	src/basic_test_top_double_array_refobj.c \
 	src/basic_test_top_double_array_string.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
@@ -97,6 +98,7 @@ src/basic_test_double_array_item.h \
 	src/basic_test_top_array_string.h \
 	src/basic_test_top_double_array_int.h \
 	src/basic_test_top_double_array_obj.h \
+	src/basic_test_top_double_array_refobj.h \
 	src/basic_test_top_double_array_string.h \
 	src/basic_test_double_array_item.c \
 	src/basic_test_double_array.c \
@@ -104,6 +106,7 @@ src/basic_test_double_array_item.h \
 	src/basic_test_top_array_string.c \
 	src/basic_test_top_double_array_int.c \
 	src/basic_test_top_double_array_obj.c \
+	src/basic_test_top_double_array_refobj.c \
 	src/basic_test_top_double_array_string.c: src/basic-test_stamp
 
 $(HEADER_FILES): %.h: %.c src/generate.py
@@ -194,6 +197,7 @@ EXTRA_DIST = autogen.sh \
 	tests/data/top_array_string.json \
 	tests/data/top_double_array_int.json \
 	tests/data/top_double_array_obj.json \
+	tests/data/top_double_array_refobj.json \
 	tests/data/top_double_array_string.json \
 	tests/test-spec \
 	src/generate.py \

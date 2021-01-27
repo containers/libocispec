@@ -26,6 +26,7 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include "basic_test_top_double_array_int.h"
 #include "basic_test_top_double_array_obj.h"
 #include "basic_test_top_double_array_string.h"
+#include "basic_test_top_double_array_refobj.h"
 
 int
 do_test_object_double_array()
@@ -613,6 +614,95 @@ out:
   return ret;
 }
 
+int do_test_top_double_array_of_refobj()
+{
+  parser_error err = NULL;
+  struct parser_context ctx = { 0 };
+  int ret = 0;
+
+  basic_test_top_double_array_refobj_container *test_data = basic_test_top_double_array_refobj_container_parse_file(
+          "tests/data/top_double_array_refobj.json", &ctx, &err);
+  char *json_buf = NULL;
+
+  if (test_data == NULL)
+  {
+    printf("top int double array parse error %s\n", err);
+    free(err);
+    return 1;
+  }
+  size_t i;
+  bool expect_bools[2][2] = {{true, false}, {false, true}};
+  int32_t expect_ints[2][2] = {{11, 12}, {21, 22}};
+  char *expect_strs[2][2] = {{"test11", "test12"}, {"test21", "test22"}};
+  size_t expect_lens[3] = {2, 2};
+  if (test_data->len != 2)
+  {
+    printf("top obj double array expect len: 2, get: %zu\n", test_data->len);
+    ret = 1;
+    goto out;
+  }
+
+  for (i = 0; i < 2; i++)
+  {
+      size_t j;
+      if (test_data->subitem_lens[i] != expect_lens[i])
+      {
+        printf("item %zu: top obj double array expect len: %zu, get: %zu\n", i, expect_lens[i], test_data->subitem_lens[i]);
+        ret = 1;
+        goto out;
+      }
+      for (j = 0; j < expect_lens[i]; j++)
+      {
+          if (test_data->items[i][j]->item3 != expect_bools[i][j])
+          {
+            printf("item %zu: top int array first expect: %d, get: %d\n", i, expect_bools[i][j], test_data->items[i][j]->item3);
+            ret = 1;
+            goto out;
+          }
+          if (test_data->items[i][j]->item2 != expect_ints[i][j])
+          {
+            printf("item %zu: top int array second expect: %d, get: %d\n", i, expect_ints[i][j], test_data->items[i][j]->item2);
+            ret = 1;
+            goto out;
+          }
+          if (test_data->items[i][j]->item1 == NULL || strcmp(test_data->items[i][j]->item1, expect_strs[i][j]) != 0)
+          {
+            printf("item %zu: top int array third expect: %s, get: %s\n", i, expect_strs[i][j], test_data->items[i][j]->item1);
+            ret = 1;
+            goto out;
+          }
+      }
+  }
+  test_data->items[0][0]->item2 = 999;
+  free(test_data->items[0][1]->item1);
+  test_data->items[0][1]->item1 = strdup("hello");
+  json_buf = basic_test_top_double_array_refobj_container_generate_json(test_data, &ctx, &err);
+  if (json_buf == NULL)
+  {
+    printf("gen error %s\n", err);
+    ret = 1;
+    goto out;
+  }
+  if (strstr(json_buf, "999") == NULL)
+  {
+    printf("change second not work %s\n", err);
+    ret = 1;
+    goto out;
+  }
+  if (strstr(json_buf, "hello") == NULL)
+  {
+    printf("change third not work %s\n", err);
+    ret = 1;
+    goto out;
+  }
+
+out:
+  free(err);
+  free_basic_test_top_double_array_refobj_container(test_data);
+  free(json_buf);
+  return ret;
+}
+
 int
 main ()
 {
@@ -648,6 +738,11 @@ main ()
     ret = do_test_top_double_array_of_obj();
     if (ret != 0) {
         printf("do_test_top_double_array_of_obj failed with: %d\n", ret);
+        exit(ret);
+    }
+    ret = do_test_top_double_array_of_refobj();
+    if (ret != 0) {
+        printf("do_test_top_double_array_of_refobj failed with: %d\n", ret);
         exit(ret);
     }
 
