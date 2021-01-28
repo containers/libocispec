@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "top double array of ref object",
+  "type": "array",
+  "items": {
+      "type": "array",
+      "items": {
+        "$ref": "test_double_array_item.json"
+      }
+  }
+}
