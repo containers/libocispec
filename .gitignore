@@ -36,6 +36,8 @@ src/basic_test_top_double_array_int.c
 src/basic_test_top_double_array_int.h
 src/basic_test_top_double_array_obj.c
 src/basic_test_top_double_array_obj.h
+src/basic_test_top_double_array_refobj.c
+src/basic_test_top_double_array_refobj.h
 src/basic_test_top_double_array_string.c
 src/basic_test_top_double_array_string.h
 src/.deps/
