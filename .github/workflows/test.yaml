@@ -40,3 +40,5 @@ jobs:
             ./autogen.sh
             ./configure CFLAGS='-Wall -Werror'
             make -j $(nproc) distcheck
+            # check that the working dir is clean
+            git describe --broken --dirty --all | grep -qv dirty
