@@ -807,13 +807,31 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%s  {\n' % ('    ' * (level)))
         if typ.startswith("uint") or \
                 (typ.startswith("int") and typ != "integer") or typ == "double":
-            c_file.write('%sint invalid = common_safe_%s (YAJL_GET_NUMBER (val), &%s);\n' \
+            c_file.write('%sint invalid;\n' % ('    ' * (level + 1)))
+            c_file.write('%sif (! YAJL_IS_NUMBER (val))\n' % ('    ' * (level + 1)))
+            c_file.write('%s  {\n' % ('    ' * (level + 1)))
+            c_file.write('%s    *err = strdup ("invalid type");\n' % ('    ' * (level + 1)))
+            c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
+            c_file.write('%s  }\n' % ('    ' * (level + 1)))
+            c_file.write('%sinvalid = common_safe_%s (YAJL_GET_NUMBER (val), &%s);\n' \
                          % ('    ' * (level + 1), typ, dest))
         elif typ == "integer":
-            c_file.write('%sint invalid = common_safe_int (YAJL_GET_NUMBER (val), (int *)&%s);\n' \
+            c_file.write('%sint invalid;\n' % ('    ' * (level + 1)))
+            c_file.write('%sif (! YAJL_IS_NUMBER (val))\n' % ('    ' * (level + 1)))
+            c_file.write('%s  {\n' % ('    ' * (level + 1)))
+            c_file.write('%s    *err = strdup ("invalid type");\n' % ('    ' * (level + 1)))
+            c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
+            c_file.write('%s  }\n' % ('    ' * (level + 1)))
+            c_file.write('%sinvalid = common_safe_int (YAJL_GET_NUMBER (val), (int *)&%s);\n' \
                          % ('    ' * (level + 1), dest))
         elif typ == "UID" or typ == "GID":
-            c_file.write('%sint invalid = common_safe_uint (YAJL_GET_NUMBER (val),' \
+            c_file.write('%sint invalid;\n' % ('    ' * (level + 1)))
+            c_file.write('%sif (! YAJL_IS_NUMBER (val))\n' % ('    ' * (level + 1)))
+            c_file.write('%s  {\n' % ('    ' * (level + 1)))
+            c_file.write('%s    *err = strdup ("invalid type");\n' % ('    ' * (level + 1)))
+            c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
+            c_file.write('%s  }\n' % ('    ' * (level + 1)))
+            c_file.write('%sinvalid = common_safe_uint (YAJL_GET_NUMBER (val),' \
                          ' (unsigned int *)&%s);\n' % ('    ' * (level + 1), dest))
         c_file.write('%sif (invalid)\n' % ('    ' * (level + 1)))
         c_file.write('%s  {\n' % ('    ' * (level + 1)))
@@ -838,7 +856,13 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
                      ('    ' * (level + 1), dest, helpers.get_map_c_types(num_type)))
         c_file.write('%sif (%s == NULL)\n' % ('    ' * (level + 1), dest))
         c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
-        c_file.write('%sint invalid = common_safe_%s (YAJL_GET_NUMBER (val), %s);\n' \
+        c_file.write('%sint invalid;\n' % ('    ' * (level + 1)))
+        c_file.write('%sif (! YAJL_IS_NUMBER (val))\n' % ('    ' * (level + 1)))
+        c_file.write('%s  {\n' % ('    ' * (level + 1)))
+        c_file.write('%s    *err = strdup ("invalid type");\n' % ('    ' * (level + 1)))
+        c_file.write('%s    return NULL;\n' % ('    ' * (level + 1)))
+        c_file.write('%s}\n' % ('    ' * (level + 1)))
+        c_file.write('%sinvalid = common_safe_%s (YAJL_GET_NUMBER (val), %s);\n' \
                      % ('    ' * (level + 1), num_type, dest))
         c_file.write('%sif (invalid)\n' % ('    ' * (level + 1)))
         c_file.write('%s  {\n' % ('    ' * (level + 1)))
