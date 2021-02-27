@@ -1,4 +1,11 @@
+DIST_SUBDIRS = yajl
+SUBDIRS = yajl
+
 AM_CFLAGS = $(WARN_CFLAGS) -I$(top_srcdir)/src -I$(top_builddir)/src
+
+if HAVE_EMBEDDED_YAJL
+AM_CFLAGS += -I$(top_srcdir)/yajl/src/headers
+endif HAVE_EMBEDDED_YAJL
 
 CLEANFILES = $(man_MANS) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 
@@ -113,18 +120,24 @@ $(HEADER_FILES): %.h: %.c src/generate.py
 
 BUILT_SOURCES = $(HEADER_FILES) $(SOURCE_FILES)
 
-libocispec_a_SOURCES =
-
 libocispec_la_SOURCES = $(BUILT_SOURCES) \
 	src/read-file.c \
 	src/json_common.c
 
-TMP_C_FILES = $(HEADER_FILES:.h=.h.tmp)
+TMP_H_FILES = $(HEADER_FILES:.h=.h.tmp)
 TMP_C_FILES = $(SOURCE_FILES:.c=.c.tmp)
 
 CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES) $(TMP_H_FILES) $(TMP_C_FILES)
 
-TESTS_LDADD = libocispec.la $(SELINUX_LIBS) $(YAJL_LIBS)
+TESTS_LDADD = libocispec.la $(SELINUX_LIBS)
+
+if HAVE_EMBEDDED_YAJL
+TESTS_LDADD += yajl/libyajl.la
+else
+TESTS_LDADD += $(YAJL_LIBS)
+endif
+
+libocispec_a_SOURCES =
 
 libocispec.a: libocispec.la $(BUILT_SOURCES) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 	$(LIBTOOL) --mode=link $(GCC) libocispec.la -o libocispec.a
@@ -215,5 +228,6 @@ EXTRA_DIST = autogen.sh \
 sync:
 	(cd image-spec; git pull https://github.com/opencontainers/image-spec)
 	(cd runtime-spec; git pull https://github.com/opencontainers/runtime-spec)
+	(cd yajl; git pull https://github.com/containers/yajl)
 
 generate: src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp

@@ -4,3 +4,6 @@
 [submodule "image-spec"]
 	path = image-spec
 	url = https://github.com/opencontainers/image-spec
+[submodule "yajl"]
+	path = yajl
+	url = https://github.com/containers/yajl.git

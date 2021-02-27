@@ -42,3 +42,9 @@ jobs:
             make -j $(nproc) distcheck
             # check that the working dir is clean
             git describe --broken --dirty --all | grep -qv dirty
+
+            make clean
+            ./configure --enable-embedded-yajl CFLAGS='-Wall -Werror'
+            make -j $(nproc) distcheck
+            # check that the working dir is clean
+            git describe --broken --dirty --all | grep -qv dirty
