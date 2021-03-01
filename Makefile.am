@@ -38,19 +38,19 @@ SOURCE_FILES = \
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
 
 src/runtime_spec_stamp: src/json_common.h src/json_common.c
-	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/runtime-spec/schema
+	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir} --out=${builddir}/src ${srcdir}/runtime-spec/schema
 	@touch $@
 
 src/image_spec_stamp: src/json_common.h src/json_common.c
-	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir} --out=${srcdir}/src ${srcdir}/image-spec/schema
+	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir} --out=${builddir}/src ${srcdir}/image-spec/schema
 	@touch $@
 
 src/image_manifest_stamp: src/json_common.h src/json_common.c
-	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/imageManifestItems
+	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${builddir}/src ${srcdir}/tests/test-spec/imageManifestItems
 	@touch $@
 
 src/basic-test_stamp: src/json_common.h src/json_common.c
-	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${srcdir}/src ${srcdir}/tests/test-spec/basic
+	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${builddir}/src ${srcdir}/tests/test-spec/basic
 	@touch $@
 
 src/image_spec_schema_config_schema.c \
