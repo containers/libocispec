@@ -1383,7 +1383,7 @@ append_json_map_string_bool (json_map_string_bool *map, const char *key, bool va
   size_t len;
   __auto_free char **keys = NULL;
   __auto_free bool *vals = NULL;
-  __auto_free char *new_value;
+  __auto_free char *new_value = NULL;
 
   if (map == NULL)
     return -1;
