@@ -1536,7 +1536,7 @@ def get_c_epilog(c_file, prefix, typ, obj):
 {
     %s *ptr = NULL;
     size_t filesize;
-    __auto_free char *content = NULL ;
+    __auto_free char *content = NULL;
 
     if (stream == NULL || err == NULL)
       return NULL;

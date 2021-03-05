@@ -1,5 +1,7 @@
 #!/bin/sh
 
+(cd yajl; ./autogen.sh)
+
 git submodule update --init --recursive
 
 test -n "$srcdir" || srcdir=`dirname "$0"`
