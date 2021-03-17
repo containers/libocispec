@@ -22,6 +22,9 @@ $ sudo make install
 Parsing an OCI configuration file is easy as:
 
 ```c
+    #include <config.h>
+    #include <runtime_spec_schema_config_schema.h>
+
     runtime_spec_schema_config_schema *container = runtime_spec_schema_config_schema_parse_file ("config.json", NULL, &err);
 
     if (container == NULL)
@@ -41,6 +44,9 @@ Parsing an OCI configuration file is easy as:
 Generating an OCI configuration json string is also easy as:
 
 ```c
+    #include <config.h>
+    #include <runtime_spec_schema_config_schema.h>
+
     runtime_spec_schema_config_schema container;
     char *json_buf = NULL;
 
