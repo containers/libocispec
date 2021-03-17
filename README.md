@@ -10,6 +10,15 @@ from C, and generate json string from corresponding struct.
 
 The parser is generated directly from the JSON schema in the source repository.
 
+## Installation
+Expects [yajl](https://github.com/containers/yajl) to be installed and linkable.
+```sh
+$ ./autogen.sh
+$ ./configure
+$ make
+$ sudo make install
+```
+
 Parsing an OCI configuration file is easy as:
 
 ```c
