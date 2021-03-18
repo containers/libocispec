@@ -18,56 +18,125 @@
 
 #include "read-file.h"
 
+#include <sys/stat.h>
+#include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
 
 char *
 fread_file (FILE *stream, size_t *length)
 {
-  char *buf = NULL, *tmpbuf = NULL;
-  size_t off = 0;
+  char *buf = NULL;
+  size_t alloc = BUFSIZ;
+  {
+    struct stat st;
 
-  while (1)
-    {
-      size_t ret;
-      tmpbuf = realloc (buf, off + BUFSIZ + 1);
-      if (tmpbuf == NULL)
+    if (fstat (fileno (stream), &st) >= 0 && S_ISREG (st.st_mode))
+      {
+        off_t pos = ftello (stream);
+
+        if (pos >= 0 && pos < st.st_size)
+          {
+            off_t alloc_off = st.st_size - pos;
+            if (SIZE_MAX - 1 < alloc_off)
+              {
+                errno = ENOMEM;
+                return NULL;
+              }
+
+            alloc = alloc_off + 1;
+          }
+      }
+  }
+
+  if (!(buf = malloc (alloc)))
+    return NULL;
+
+  {
+    size_t size = 0;
+    int save_errno;
+
+    for (;;)
+      {
+        size_t requested = alloc - size;
+        size_t count = fread (buf + size, 1, requested, stream);
+        size += count;
+
+        if (count != requested)
+          {
+            save_errno = errno;
+            if (ferror (stream))
+              break;
+
+            if (size < alloc - 1)
+              {
+                char *reduce_buf = realloc (buf, size + 1);
+                if (reduce_buf != NULL)
+                  buf = reduce_buf;
+              }
+
+            buf[size] = '\0';
+            *length = size;
+            return buf;
+          }
+
         {
-          free (buf);
-          return NULL;
+          char *temp_buf;
+
+          if (alloc == SIZE_MAX)
+            {
+              save_errno = ENOMEM;
+              break;
+            }
+
+          if (alloc < SIZE_MAX - alloc / 2)
+            alloc = alloc + alloc / 2;
+          else
+            alloc = SIZE_MAX;
+
+          if (!(temp_buf = realloc (buf, alloc)))
+            {
+              save_errno = errno;
+              break;
+            }
+
+          buf = temp_buf;
         }
-      buf = tmpbuf;
-      ret = fread (buf + off, 1, BUFSIZ, stream);
-      if (ret == 0 && ferror (stream))
-        {
-          free (buf);
-          return NULL;
-        }
-      if (ret < BUFSIZ || feof (stream))
-        {
-          *length = off + ret + 1;
-          buf[*length - 1] = '\0';
-          return buf;
-        }
-      off += BUFSIZ;
-    }
+      }
+
+    free (buf);
+    errno = save_errno;
+    return NULL;
+  }
 }
 
 char *
 read_file (const char *path, size_t *length)
 {
-  FILE *f;
-  char *buf = NULL;
+  FILE *f = fopen (path, "r");
+  char *buf;
+  int save_errno;
 
-  if (!path || !length)
-    return NULL;
-
-  f = fopen (path, "r");
-  if (f == NULL)
+  if (!f)
     return NULL;
 
   buf = fread_file (f, length);
-  fclose (f);
+
+  save_errno = errno;
+
+  if (fclose (f) != 0)
+    {
+      if (buf)
+        {
+          save_errno = errno;
+          free (buf);
+        }
+      errno = save_errno;
+      return NULL;
+    }
+
   return buf;
 }
