@@ -41,7 +41,7 @@ fread_file (FILE *stream, size_t *length)
         if (pos >= 0 && pos < st.st_size)
           {
             off_t alloc_off = st.st_size - pos;
-            if (SIZE_MAX - 1 < alloc_off)
+            if (SIZE_MAX - 1 < (uintmax_t)(alloc_off))
               {
                 errno = ENOMEM;
                 return NULL;
