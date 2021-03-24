@@ -38,13 +38,13 @@ jobs:
 
           run: |
             ./autogen.sh
-            ./configure CFLAGS='-Wall -Werror'
+            ./configure CFLAGS='-Wall -Wextra -Werror'
             make -j $(nproc) distcheck
             # check that the working dir is clean
             git describe --broken --dirty --all | grep -qv dirty
 
             make clean
-            ./configure --enable-embedded-yajl CFLAGS='-Wall -Werror'
+            ./configure --enable-embedded-yajl CFLAGS='-Wall -Wextra -Werror'
             make -j $(nproc) distcheck
             # check that the working dir is clean
             git describe --broken --dirty --all | grep -qv dirty
