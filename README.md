@@ -64,3 +64,26 @@ Generating an OCI configuration json string is also easy as:
     printf ("The generated json string is:\n%s\n", json_buf);
 
 ```
+## Rust Bindings
+libocispec supports rust bindings as well. You can use it directly by adding it as dependency to `Cargo.toml` or generate fresh types using `make generate-rust`
+```toml
+[dependencies]
+libocispec = { git = "https://github.com/containers/libocispec", branch = "master" }
+```
+Example usage
+```rs
+extern crate libocispec;
+use libocispec::runtime;
+use libocispec::image;
+
+fn main() {
+    let runtime_spec = match runtime::Spec::load("path/to/spec") {
+        Ok(spec) => spec,
+        Err(e) => panic!("{}", e),
+    }
+    let image_spec = match image::ImageConfig::load("path/to/spec") {
+        Ok(spec) => spec,
+        Err(e) => panic!("{}", e),
+    }
+}
+```
