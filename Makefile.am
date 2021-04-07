@@ -231,3 +231,11 @@ sync:
 	(cd yajl; git pull https://github.com/containers/yajl)
 
 generate: src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
+
+#Needed by phony: generate-rust
+install-node-deps:
+	(npm install @apidevtools/json-schema-ref-parser)
+	(npm install  quicktype-core)
+
+generate-rust:
+	(node rust-gen.js)
