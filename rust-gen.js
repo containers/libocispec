@@ -29,6 +29,7 @@ async function quicktypeJSONSchema(targetLanguage, typeName, jsonSchemaString) {
   inputData.addInput(schemaInput);
   return await quicktype({
     inputData,
+    rendererOptions: { visibility: "public" },
     lang: targetLanguage,
   });
 }

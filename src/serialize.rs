@@ -18,6 +18,7 @@ impl fmt::Display for SerializeError {
     }    
 }
 
+#[allow(deprecated)]
 impl Error for SerializeError {
     fn description(&self) -> &str {
         match *self {

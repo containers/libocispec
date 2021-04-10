@@ -18,82 +18,82 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize)]
 pub struct ImageSpec {
     #[serde(rename = "architecture")]
-    architecture: String,
+    pub architecture: String,
 
     #[serde(rename = "author")]
-    author: Option<String>,
+    pub author: Option<String>,
 
     #[serde(rename = "config")]
-    config: Option<Config>,
+    pub config: Option<Config>,
 
     #[serde(rename = "created")]
-    created: Option<String>,
+    pub created: Option<String>,
 
     #[serde(rename = "history")]
-    history: Option<Vec<History>>,
+    pub history: Option<Vec<History>>,
 
     #[serde(rename = "os")]
-    os: String,
+    pub os: String,
 
     #[serde(rename = "rootfs")]
-    rootfs: Rootfs,
+    pub rootfs: Rootfs,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     #[serde(rename = "Cmd")]
-    cmd: Option<Vec<String>>,
+    pub cmd: Option<Vec<String>>,
 
     #[serde(rename = "Entrypoint")]
-    entrypoint: Option<Vec<String>>,
+    pub entrypoint: Option<Vec<String>>,
 
     #[serde(rename = "Env")]
-    env: Option<Vec<String>>,
+    pub env: Option<Vec<String>>,
 
     #[serde(rename = "ExposedPorts")]
-    exposed_ports: Option<HashMap<String, Option<serde_json::Value>>>,
+    pub exposed_ports: Option<HashMap<String, Option<serde_json::Value>>>,
 
     #[serde(rename = "Labels")]
-    labels: Option<HashMap<String, Option<serde_json::Value>>>,
+    pub labels: Option<HashMap<String, Option<serde_json::Value>>>,
 
     #[serde(rename = "StopSignal")]
-    stop_signal: Option<String>,
+    pub stop_signal: Option<String>,
 
     #[serde(rename = "User")]
-    user: Option<String>,
+    pub user: Option<String>,
 
     #[serde(rename = "Volumes")]
-    volumes: Option<HashMap<String, Option<serde_json::Value>>>,
+    pub volumes: Option<HashMap<String, Option<serde_json::Value>>>,
 
     #[serde(rename = "WorkingDir")]
-    working_dir: Option<String>,
+    pub working_dir: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct History {
     #[serde(rename = "author")]
-    author: Option<String>,
+    pub author: Option<String>,
 
     #[serde(rename = "comment")]
-    comment: Option<String>,
+    pub comment: Option<String>,
 
     #[serde(rename = "created")]
-    created: Option<String>,
+    pub created: Option<String>,
 
     #[serde(rename = "created_by")]
-    created_by: Option<String>,
+    pub created_by: Option<String>,
 
     #[serde(rename = "empty_layer")]
-    empty_layer: Option<bool>,
+    pub empty_layer: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Rootfs {
     #[serde(rename = "diff_ids")]
-    diff_ids: Vec<String>,
+    pub diff_ids: Vec<String>,
 
     #[serde(rename = "type")]
-    rootfs_type: Type,
+    pub rootfs_type: Type,
 }
 
 #[derive(Serialize, Deserialize)]
