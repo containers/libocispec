@@ -24,3 +24,23 @@ impl image::ImageSpec {
         serialize::serialize(self, path)    
     }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::runtime;
+  #[test]
+  fn test_runtime_load(){
+    match runtime::Spec::load("src/runtime/test/config.test.json") {
+        Ok(_) => {},
+        Err(e) => panic!("{}", e),
+    }
+  }
+
+  #[test]
+  fn test_runtime_assert_spec(){
+    match runtime::Spec::load("src/runtime/test/config.test.json") {
+        Ok(spec) => {assert_eq!(spec.oci_version, "0.5.0-dev")},
+        Err(e) => panic!("{}", e),
+    }
+  }
+}
