@@ -48,3 +48,19 @@ jobs:
             make -j $(nproc) distcheck
             # check that the working dir is clean
             git describe --broken --dirty --all | grep -qv dirty
+  test_and_build_rust_bindings:
+    name: test and build rust bindings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --lib
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
