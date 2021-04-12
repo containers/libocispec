@@ -100,3 +100,6 @@ tests/test-9
 tests/test-*.log
 tests/test-*.trs
 test-suite.log
+build-aux/config.guess~
+build-aux/config.sub~
+configure~
