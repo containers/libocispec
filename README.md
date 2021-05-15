@@ -68,10 +68,15 @@ Generating an OCI configuration json string is also easy as:
 libocispec supports rust bindings as well. You can use it directly by adding it as dependency to `Cargo.toml` or generate fresh types using `make generate-rust`
 ```toml
 [dependencies]
-libocispec = { git = "https://github.com/containers/libocispec", branch = "master" }
+libocispec = { git = "https://github.com/containers/libocispec" }
+```
+for Cargo version older than `0.51.0` specify branch explicitly
+```toml
+[dependencies]
+libocispec = { git = "https://github.com/containers/libocispec", branch = "main" }
 ```
 Example usage
-```rs
+```rust
 extern crate libocispec;
 use libocispec::runtime;
 use libocispec::image;
