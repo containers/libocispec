@@ -48,7 +48,7 @@ impl From<serde_json::Error> for SerializeError {
 
 pub fn serialize<T: serde::Serialize>(obj: &T, path: &str) -> Result<(), SerializeError> {
     let mut file = File::create(path)?;
-    Ok(serde_json::to_writer(&mut file, &obj)?)
+    Ok(serde_json::to_writer_pretty(&mut file, &obj)?)
 }
 
 pub fn deserialize<T>(path: &str) -> Result<T, SerializeError> 
