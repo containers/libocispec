@@ -56,6 +56,10 @@ pub struct Spec {
     /// Windows platform-specific configurations
     #[serde(rename = "windows")]
     pub windows: Option<Windows>,
+
+    /// z/OS platform-specific configurations
+    #[serde(rename = "zos")]
+    pub zos: Option<Zos>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -926,6 +930,41 @@ pub struct Storage {
 
     #[serde(rename = "sandboxSize")]
     pub sandbox_size: Option<i64>,
+}
+
+/// z/OS platform-specific configurations
+#[derive(Serialize, Deserialize)]
+pub struct Zos {
+    #[serde(rename = "devices")]
+    pub devices: Option<Vec<ZosDevice>>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ZosDevice {
+    /// File permissions mode (typically an octal value)
+    #[serde(rename = "fileMode")]
+    pub file_mode: Option<i64>,
+
+    #[serde(rename = "gid")]
+    pub gid: Option<i64>,
+
+    /// major device number
+    #[serde(rename = "major")]
+    pub major: i64,
+
+    /// minor device number
+    #[serde(rename = "minor")]
+    pub minor: i64,
+
+    #[serde(rename = "path")]
+    pub path: String,
+
+    /// Type of a block or special character device
+    #[serde(rename = "type")]
+    pub device_type: String,
+
+    #[serde(rename = "uid")]
+    pub uid: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize)]

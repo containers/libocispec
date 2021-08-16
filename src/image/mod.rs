@@ -35,8 +35,17 @@ pub struct ImageSpec {
     #[serde(rename = "os")]
     pub os: String,
 
+    #[serde(rename = "os.features")]
+    pub os_features: Option<Vec<String>>,
+
+    #[serde(rename = "os.version")]
+    pub os_version: Option<String>,
+
     #[serde(rename = "rootfs")]
     pub rootfs: Rootfs,
+
+    #[serde(rename = "variant")]
+    pub variant: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]

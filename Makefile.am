@@ -23,12 +23,14 @@ SOURCE_FILES = \
 	src/image_spec_schema_image_layout_schema.c \
 	src/image_spec_schema_image_manifest_schema.c \
 	src/runtime_spec_schema_config_linux.c \
+	src/runtime_spec_schema_config_zos.c \
 	src/runtime_spec_schema_config_schema.c \
 	src/runtime_spec_schema_config_solaris.c \
 	src/runtime_spec_schema_config_vm.c \
 	src/runtime_spec_schema_config_windows.c \
 	src/runtime_spec_schema_defs.c \
 	src/runtime_spec_schema_defs_linux.c \
+	src/runtime_spec_schema_defs_zos.c \
 	src/runtime_spec_schema_defs_vm.c \
 	src/runtime_spec_schema_defs_windows.c \
 	src/runtime_spec_schema_state_schema.c \
@@ -82,10 +84,12 @@ src/runtime_spec_schema_config_linux.h \
 	src/runtime_spec_schema_config_windows.h \
 	src/runtime_spec_schema_defs.h \
 	src/runtime_spec_schema_defs_linux.h \
+	src/runtime_spec_schema_defs_zos.h \
 	src/runtime_spec_schema_defs_vm.h \
 	src/runtime_spec_schema_defs_windows.h \
 	src/runtime_spec_schema_state_schema.h \
 	src/runtime_spec_schema_config_linux.c \
+	src/runtime_spec_schema_config_zos.c \
 	src/runtime_spec_schema_config_schema.c \
 	src/runtime_spec_schema_config_solaris.c \
 	src/runtime_spec_schema_config_vm.c \
@@ -93,6 +97,7 @@ src/runtime_spec_schema_config_linux.h \
 	src/runtime_spec_schema_defs.c \
 	src/runtime_spec_schema_defs_linux.c \
 	src/runtime_spec_schema_defs_vm.c \
+	src/runtime_spec_schema_defs_zos.c \
 	src/runtime_spec_schema_defs_windows.c \
 	src/runtime_spec_schema_state_schema.c: src/runtime_spec_stamp
 
