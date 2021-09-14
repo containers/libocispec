@@ -264,6 +264,12 @@ pub struct IntelRdt {
     #[serde(rename = "closID")]
     pub clos_id: Option<String>,
 
+    #[serde(rename = "enableCMT")]
+    pub enable_cmt: Option<bool>,
+
+    #[serde(rename = "enableMBM")]
+    pub enable_mbm: Option<bool>,
+
     #[serde(rename = "l3CacheSchema")]
     pub l3_cache_schema: Option<String>,
 
