@@ -98,6 +98,7 @@ gen_yajl_val (yajl_val obj, yajl_gen g, parser_error *err)
     case yajl_t_false:
       return yajl_gen_bool (g, false);
     case yajl_t_null:
+      return yajl_gen_null(g);
     case yajl_t_any:
       return __stat;
     }

@@ -177,6 +177,9 @@ tests_test_9_LDADD = $(TESTS_LDADD)
 tests_test_10_SOURCES = tests/test-10.c
 tests_test_10_LDADD = $(TESTS_LDADD)
 
+tests_test_11_SOURCES = tests/test-11.c
+tests_test_11_LDADD = $(TESTS_LDADD)
+
 src_validate_SOURCES = src/validate.c
 src_validate_LDADD = $(TESTS_LDADD)
 
@@ -189,7 +192,8 @@ TESTS = tests/test-1 \
 	tests/test-7 \
 	tests/test-8 \
 	tests/test-9 \
-	tests/test-10
+	tests/test-10 \
+	tests/test-11
 
 noinst_PROGRAMS = src/validate $(TESTS)
 
@@ -210,6 +214,7 @@ EXTRA_DIST = autogen.sh \
 	tests/data/config.nocwd.json \
 	tests/data/image_manifest_item.json \
 	tests/data/residual_image_layout_config.json \
+	tests/data/null_value_config.json \
 	tests/data/doublearray.json \
 	tests/data/top_array_int.json \
 	tests/data/top_array_string.json \
