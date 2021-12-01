@@ -93,6 +93,7 @@ tests/.deps/
 tests/.dirstamp
 tests/test-1
 tests/test-10
+tests/test-11
 tests/test-2
 tests/test-3
 tests/test-4
