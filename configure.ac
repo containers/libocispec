@@ -24,7 +24,7 @@ case "${enableval}" in
   *) AC_MSG_ERROR(bad value ${enableval} for --enable-embedded-yajl) ;;
 esac],[embedded_yajl=false])
 
-AM_CONDITIONAL([HAVE_EMBEDDED_YAJL], [test x"$embedded_yajl" == xtrue])
+AM_CONDITIONAL([HAVE_EMBEDDED_YAJL], [test x"$embedded_yajl" = xtrue])
 AM_COND_IF([HAVE_EMBEDDED_YAJL], [], [PKG_CHECK_MODULES([YAJL], [yajl >= 2.1.0])])
 
 AC_ARG_VAR(OCI_RUNTIME_EXTENSIONS, [extensions for the OCI runtime parser])
