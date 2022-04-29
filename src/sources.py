@@ -69,27 +69,21 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     c_file.write('        ret->%s = calloc (len + 1, sizeof (*ret->%s));\n' % \
                  (child.fixname, child.fixname))
     c_file.write('        if (ret->%s == NULL)\n' % child.fixname)
-    c_file.write('          {\n')
-    c_file.write('            return NULL;\n')
-    c_file.write('          }\n')
+    c_file.write('          return NULL;\n')
     c_file.write('        for (i = 0; i < len; i++)\n')
     c_file.write('          {\n')
     c_file.write('            yajl_val val;\n')
     c_file.write('            const char *tmpkey = keys[i];\n')
     c_file.write('            ret->keys[i] = strdup (tmpkey ? tmpkey : "");\n')
     c_file.write('            if (ret->keys[i] == NULL)\n')
-    c_file.write('              {\n')
-    c_file.write("                return NULL;\n")
-    c_file.write('              }\n')
+    c_file.write("              return NULL;\n")
     c_file.write('            val = values[i];\n')
     c_file.write('            ret->%s[i] = make_%s (val, ctx, err);\n' \
                  % (child.fixname, childname))
     c_file.write('            if (ret->%s[i] == NULL)\n' % (child.fixname))
-    c_file.write('              {\n')
-    c_file.write("                return NULL;\n")
-    c_file.write('              }\n')
-    c_file.write('        }\n')
-    c_file.write('    }\n')
+    c_file.write("              return NULL;\n")
+    c_file.write('          }\n')
+    c_file.write('      }\n')
 
 
 def parse_obj_type_array(obj, c_file, prefix, obj_typename):
@@ -112,9 +106,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.write('            ret->%s = calloc (len + 1, sizeof (*ret->%s));\n' % \
                      (obj.fixname, obj.fixname))
         c_file.write('            if (ret->%s == NULL)\n' % obj.fixname)
-        c_file.write('              {\n')
-        c_file.write('                return NULL;\n')
-        c_file.write('              }\n')
+        c_file.write('              return NULL;\n')
         if obj.doublearray:
             c_file.write('              ret->%s_item_lens = calloc ( len + 1, sizeof (size_t));\n'
                     % (obj.fixname))
@@ -137,16 +129,14 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
             c_file.write('                    if (ret->%s[i][j] == NULL)\n' % (obj.fixname))
             c_file.write("                        return NULL;\n")
             c_file.write('                    ret->%s_item_lens[i] += 1;\n' % (obj.fixname))
-            c_file.write('                };\n')
+            c_file.write('                  };\n')
         else:
             c_file.write('                ret->%s[i] = make_%s (val, ctx, err);\n' \
                          % (obj.fixname, typename))
             c_file.write('                if (ret->%s[i] == NULL)\n' % (obj.fixname))
-            c_file.write('                  {\n')
-            c_file.write("                    return NULL;\n")
-            c_file.write('                }\n')
-        c_file.write('            }\n')
-        c_file.write('        }\n')
+            c_file.write("                  return NULL;\n")
+        c_file.write('              }\n')
+        c_file.write('          }\n')
         c_file.write('      }\n')
         c_file.write('    while (0);\n')
     elif obj.subtyp == 'byte':
@@ -170,7 +160,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
                     % obj.fixname)
             c_file.write('                    if (ret->%s[j] == NULL)\n' % (obj.fixname))
             c_file.write("                        return NULL;\n")
-            c_file.write('                };\n')
+            c_file.write('                  };\n')
         else:
             c_file.write('            char *str = YAJL_GET_STRING (tmp);\n')
             c_file.write('            ret->%s = (uint8_t *)strdup (str ? str : "");\n' \
@@ -197,9 +187,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.write('            ret->%s = calloc (len + 1, sizeof (*ret->%s));\n' \
                      % (obj.fixname, obj.fixname))
         c_file.write('            if (ret->%s == NULL)\n' % obj.fixname)
-        c_file.write('              {\n')
-        c_file.write('                return NULL;\n')
-        c_file.write('              }\n')
+        c_file.write('              return NULL;\n')
         if obj.doublearray:
             c_file.write('              ret->%s_item_lens = calloc ( len + 1, sizeof (size_t));\n'
                     % (obj.fixname))
@@ -278,9 +266,7 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
             '    ret->%s = make_%s (get_val (tree, "%s", yajl_t_object), ctx, err);\n' \
             % (obj.fixname, typename, obj.origname))
         c_file.write("    if (ret->%s == NULL && *err != 0)\n" % obj.fixname)
-        c_file.write("      {\n")
-        c_file.write("        return NULL;\n")
-        c_file.write("      }\n")
+        c_file.write("      return NULL;\n")
     elif obj.typ == 'array':
         parse_obj_type_array(obj, c_file, prefix, obj_typename)
     elif helpers.valid_basic_map_name(obj.typ):
@@ -302,8 +288,8 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
         c_file.write('                free (*err);\n')
         c_file.write('                *err = new_error;\n')
         c_file.write('                return NULL;\n')
-        c_file.write('            }\n')
-        c_file.write('        }\n')
+        c_file.write('              }\n')
+        c_file.write('          }\n')
         c_file.write('      }\n')
         c_file.write('    while (0);\n')
 
@@ -346,9 +332,8 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
           {
             resi = calloc (1, sizeof(*tree));
             if (resi == NULL)
-              {
-                return NULL;
-              }
+              return NULL;
+
             resi->type = yajl_t_object;
             resi->u.object.keys = calloc (cnt, sizeof (const char *));
             if (resi->u.object.keys == NULL)
@@ -464,8 +449,8 @@ def get_map_string_obj(obj, c_file, prefix):
                  % (childname, child.fixname))
     c_file.write("            if (stat != yajl_gen_status_ok)\n")
     c_file.write("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-    c_file.write('        }\n')
-    c_file.write('    }\n')
+    c_file.write('          }\n')
+    c_file.write('      }\n')
     c_file.write("    stat = yajl_gen_map_close ((yajl_gen) g);\n")
     c_file.write("    if (stat != yajl_gen_status_ok)\n")
     c_file.write("        GEN_SET_ERROR_AND_RETURN (stat, err);\n")
@@ -507,14 +492,14 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
                     % (typename, obj.fixname))
             c_file.write("                if (stat != yajl_gen_status_ok)\n")
             c_file.write("                    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-            c_file.write('            }\n')
+            c_file.write('              }\n')
             c_file.write('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
         else:
             c_file.write('            stat = gen_%s (g, ptr->%s[i], ctx, err);\n' \
                          % (typename, obj.fixname))
             c_file.write("            if (stat != yajl_gen_status_ok)\n")
             c_file.write("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-        c_file.write('        }\n')
+        c_file.write('          }\n')
         c_file.write('        stat = yajl_gen_array_close ((yajl_gen) g);\n')
         c_file.write("        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
         c_file.write('            yajl_gen_config (g, yajl_gen_beautify, 1);\n')
@@ -547,7 +532,7 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
             c_file.write("                    str = "";\n")
             c_file.write('                stat = yajl_gen_string ((yajl_gen) g, \
                     (const unsigned char *)str, strlen(str));\n')
-            c_file.write("            }\n")
+            c_file.write("              }\n")
             c_file.write("        }\n")
             c_file.write('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
         else:
@@ -590,7 +575,7 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
             c_file.write('            for (j = 0; j < ptr->%s_item_lens[i]; j++)\n' % obj.fixname)
             c_file.write('              {\n')
             json_value_generator(c_file, 4, "ptr->%s[i][j]" % obj.fixname, 'g', 'ctx', obj.subtyp)
-            c_file.write('            }\n')
+            c_file.write('              }\n')
             c_file.write('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
         else:
             json_value_generator(c_file, 3, "ptr->%s[i]" % obj.fixname, 'g', 'ctx', obj.subtyp)
@@ -750,11 +735,11 @@ def get_c_json(obj, c_file, prefix):
         if obj.typ == 'object':
             if obj.children is not None:
                 c_file.write("    if (ptr != NULL && ptr->_residual != NULL)\n")
-                c_file.write("    {\n")
+                c_file.write("      {\n")
                 c_file.write("        stat = gen_yajl_object_residual (ptr->_residual, g, err);\n")
                 c_file.write("        if (yajl_gen_status_ok != stat)\n")
                 c_file.write("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-                c_file.write("    }\n")
+                c_file.write("      }\n")
         c_file.write("    stat = yajl_gen_map_close ((yajl_gen) g);\n")
         c_file.write("    if (stat != yajl_gen_status_ok)\n")
         c_file.write("        GEN_SET_ERROR_AND_RETURN (stat, err);\n")
@@ -797,9 +782,7 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.write('%schar *str = YAJL_GET_STRING (val);\n' % ('    ' * (level + 1)))
         c_file.write('%s%s = strdup (str ? str : "");\n' % ('    ' * (level + 1), dest))
         c_file.write('%sif (%s == NULL)\n' % ('    ' * (level + 1), dest))
-        c_file.write('%s  {\n' % ('    ' * (level+1)))
-        c_file.write('%s    return NULL;\n' % ('    ' * (level+1)))
-        c_file.write('%s  }\n' % ('    ' * (level+1)))
+        c_file.write('%s  return NULL;\n' % ('    ' * (level+1)))
         c_file.write('%s  }\n' % ('    ' * level))
     elif helpers.judge_data_type(typ):
         c_file.write('%syajl_val val = %s;\n' % ('    ' * (level), src))
@@ -974,7 +957,7 @@ def make_c_array_free (i, c_file, prefix):
             c_file.write("              {\n")
             c_file.write("                free (ptr->%s[i]);\n" % (i.fixname))
             c_file.write("                ptr->%s[i] = NULL;\n" % (i.fixname))
-            c_file.write("            }\n")
+            c_file.write("              }\n")
             c_file.write("            free (ptr->%s_item_lens);\n" % (i.fixname))
             c_file.write("            ptr->%s_item_lens = NULL;\n" % (i.fixname))
         c_file.write("        free (ptr->%s);\n" % (i.fixname))
@@ -990,7 +973,6 @@ def make_c_array_free (i, c_file, prefix):
         c_file.write("        size_t i;\n")
         c_file.write("        for (i = 0; i < ptr->%s_len; i++)\n" % i.fixname)
         c_file.write("          {\n")
-
         if i.doublearray:
             c_file.write("          size_t j;\n");
             c_file.write("          for (j = 0; j < ptr->%s_item_lens[i]; j++)\n" % i.fixname);
@@ -1006,8 +988,7 @@ def make_c_array_free (i, c_file, prefix):
             c_file.write("              free_%s (ptr->%s[i]);\n" % (free_func, i.fixname))
             c_file.write("              ptr->%s[i] = NULL;\n" % (i.fixname))
             c_file.write("            }\n")
-        c_file.write("         }\n")
-
+        c_file.write("          }\n")
         if i.doublearray:
             c_file.write("        free (ptr->%s_item_lens);\n" % (i.fixname))
             c_file.write("        ptr->%s_item_lens = NULL;\n" % (i.fixname))
@@ -1153,7 +1134,7 @@ def src_reflect(structs, schema_info, c_file, root_typ):
     Interface: None
     History: 2019-06-17
     """
-    c_file.write("// Generated from %s. Do not edit!\n" \
+    c_file.write("/* Generated from %s. Do not edit!  */\n\n" \
                  % (schema_info.name.basename))
     c_file.write("#ifndef _GNU_SOURCE\n")
     c_file.write("#define _GNU_SOURCE\n")
@@ -1206,7 +1187,7 @@ define_cleaner_function (%s *, free_%s)\n
     if obj.doublearray:
         c_file.write('    ptr->subitem_lens = calloc ( alen + 1, sizeof (size_t));\n')
         c_file.write('    if (ptr->subitem_lens == NULL)\n')
-        c_file.write('        return NULL;')
+        c_file.write('      return NULL;')
 
     c_file.write("""\n
     for (i = 0; i < alen; i++)
@@ -1224,27 +1205,27 @@ define_cleaner_function (%s *, free_%s)\n
             c_file.write('        size_t j;\n')
             c_file.write('        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));\n')
             c_file.write('        if (ptr->items[i] == NULL)\n')
-            c_file.write('           return NULL;\n')
+            c_file.write('          return NULL;\n')
             c_file.write('        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;\n')
             c_file.write('        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)\n')
             c_file.write('          {\n')
             c_file.write('              ptr->items[i][j] = make_%s (tmps[j], ctx, err);\n' \
                     % (subtypename))
             c_file.write('              if (ptr->items[i][j] == NULL)\n')
-            c_file.write("                  return NULL;\n")
+            c_file.write("                return NULL;\n")
             c_file.write('              ptr->subitem_lens[i] += 1;\n')
             c_file.write('          }\n')
         else:
             c_file.write('        ptr->items[i] = make_%s (work, ctx, err);\n' \
                          % (subtypename))
             c_file.write('        if (ptr->items[i] == NULL)\n')
-            c_file.write("            return NULL;\n")
+            c_file.write("          return NULL;\n")
     elif obj.subtyp == 'byte':
         if obj.doublearray:
             c_file.write('        char *str = YAJL_GET_STRING (work);\n')
             c_file.write('        ptr->items[j] = (uint8_t *)strdup (str ? str : "");\n')
             c_file.write('        if (ptr->items[j] == NULL)\n')
-            c_file.write("            return NULL;\n")
+            c_file.write("          return NULL;\n")
         else:
             c_file.write('        char *str = YAJL_GET_STRING (tree);\n')
             c_file.write('        memcpy(ptr->items, str ? str : "", strlen(str ? str : ""));\n')
@@ -1253,7 +1234,7 @@ define_cleaner_function (%s *, free_%s)\n
         if obj.doublearray:
             c_file.write('        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));\n')
             c_file.write('        if (ptr->items[i] == NULL)\n')
-            c_file.write('            return NULL;\n')
+            c_file.write('          return NULL;\n')
             c_file.write('        size_t j;\n')
             c_file.write('        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;\n')
             c_file.write('        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)\n')
@@ -1429,14 +1410,14 @@ yajl_gen_status gen_%s (yajl_gen g, const %s *ptr, const struct parser_context *
             c_file.write("            {\n")
             c_file.write("                size_t i;\n")
             c_file.write("                for (i = 0; i < ptr->len; i++)\n")
-            c_file.write("                 {\n")
+            c_file.write("                  {\n")
             c_file.write("                    if (ptr->items[i] != NULL)\n")
             c_file.write("                        str = (const char *)ptr->items[i];\n")
             c_file.write("                    else ()\n")
             c_file.write("                        str = "";\n")
             c_file.write('                    stat = yajl_gen_string ((yajl_gen) g, \
                     (const unsigned char *)str, strlen(str));\n')
-            c_file.write("                 }\n")
+            c_file.write("                  }\n")
             c_file.write("            }\n")
             c_file.write('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
         else:
