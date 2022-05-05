@@ -108,10 +108,10 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.write('            if (ret->%s == NULL)\n' % obj.fixname)
         c_file.write('              return NULL;\n')
         if obj.doublearray:
-            c_file.write('              ret->%s_item_lens = calloc ( len + 1, sizeof (size_t));\n'
+            c_file.write('            ret->%s_item_lens = calloc ( len + 1, sizeof (size_t));\n'
                     % (obj.fixname))
-            c_file.write('              if (ret->%s_item_lens == NULL)\n' % (obj.fixname))
-            c_file.write('                  return NULL;\n')
+            c_file.write('            if (ret->%s_item_lens == NULL)\n' % (obj.fixname))
+            c_file.write('                return NULL;\n')
         c_file.write('            for (i = 0; i < len; i++)\n')
         c_file.write('              {\n')
         c_file.write('                yajl_val val = values[i];\n')
@@ -189,10 +189,10 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.write('            if (ret->%s == NULL)\n' % obj.fixname)
         c_file.write('              return NULL;\n')
         if obj.doublearray:
-            c_file.write('              ret->%s_item_lens = calloc ( len + 1, sizeof (size_t));\n'
+            c_file.write('            ret->%s_item_lens = calloc ( len + 1, sizeof (size_t));\n'
                     % (obj.fixname))
-            c_file.write('              if (ret->%s_item_lens == NULL)\n' % (obj.fixname))
-            c_file.write('                  return NULL;\n')
+            c_file.write('            if (ret->%s_item_lens == NULL)\n' % (obj.fixname))
+            c_file.write('                return NULL;\n')
         c_file.write('            for (i = 0; i < len; i++)\n')
         c_file.write('              {\n')
         if obj.doublearray:
