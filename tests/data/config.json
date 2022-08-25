@@ -154,6 +154,10 @@
         ]
     },
     "linux": {
+        "seccomp" : {
+            "defaultAction": "SCMP_ACT_ALLOW",
+            "flags" : []
+        },
         "sysctl": {
             "net.ipv4.ip_forward": "1",
             "net.core.somaxconn": "256"
