@@ -13,7 +13,6 @@ local-checks-to-skip = \
     sc_prohibit_intprops_without_use \
     sc_prohibit_strcmp \
 
-
 #SHELL=bash -x
 show-vc-list-except:
 	@$(VC_LIST_EXCEPT)

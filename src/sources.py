@@ -56,7 +56,7 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
             childname = child.subtypname
         else:
             childname = helpers.get_prefixed_name(child.name, prefix)
-    c_file.write('    if (YAJL_GET_OBJECT (tree) != NULL && YAJL_GET_OBJECT_NO_CHECK(tree)->len > 0)\n')
+    c_file.write('    if (YAJL_GET_OBJECT (tree) != NULL)\n')
     c_file.write('      {\n')
     c_file.write('        size_t i;\n')
     c_file.write('        size_t len = YAJL_GET_OBJECT_NO_CHECK (tree)->len;\n')
@@ -96,8 +96,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.write('      {\n')
         c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' \
                      % (obj.origname))
-        c_file.write('        if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL &&' \
-                     ' YAJL_GET_ARRAY_NO_CHECK (tmp)->len > 0)\n')
+        c_file.write('        if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)\n')
         c_file.write('          {\n')
         c_file.write('            size_t i;\n')
         c_file.write('            size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;\n')
@@ -177,8 +176,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.write('      {\n')
         c_file.write('        yajl_val tmp = get_val (tree, "%s", yajl_t_array);\n' \
                      % (obj.origname))
-        c_file.write('        if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL &&'  \
-                     ' YAJL_GET_ARRAY_NO_CHECK (tmp)->len > 0)\n')
+        c_file.write('        if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)\n')
         c_file.write('          {\n')
         c_file.write('            size_t i;\n')
         c_file.write('            size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;\n')

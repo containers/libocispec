@@ -83,6 +83,8 @@ main ()
     exit (5);
   if (strcmp(container->linux->namespaces[2]->type, "ipc") && strcmp(container->linux->namespaces[2]->type, container_gen->linux->namespaces[2]->type))
     exit (5);
+  if (container->linux->seccomp == NULL || container->linux->seccomp->flags == NULL || container->linux->seccomp->flags_len != 0)
+    exit (5);
 
   free(json_buf);
   free_runtime_spec_schema_config_schema (container);
