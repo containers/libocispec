@@ -20,6 +20,9 @@ pub struct Spec {
     #[serde(rename = "annotations")]
     pub annotations: Option<HashMap<String, Option<serde_json::Value>>>,
 
+    #[serde(rename = "domainname")]
+    pub domainname: Option<String>,
+
     #[serde(rename = "hooks")]
     pub hooks: Option<Hooks>,
 
