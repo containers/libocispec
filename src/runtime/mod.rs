@@ -186,7 +186,7 @@ pub struct Linux {
     pub devices: Option<Vec<LinuxDevice>>,
 
     #[serde(rename = "gidMappings")]
-    pub gid_mappings: Option<Vec<GidMapping>>,
+    pub gid_mappings: Option<Vec<LinuxGidMapping>>,
 
     #[serde(rename = "intelRdt")]
     pub intel_rdt: Option<IntelRdt>,
@@ -219,7 +219,7 @@ pub struct Linux {
     pub sysctl: Option<HashMap<String, Option<serde_json::Value>>>,
 
     #[serde(rename = "uidMappings")]
-    pub uid_mappings: Option<Vec<UidMapping>>,
+    pub uid_mappings: Option<Vec<LinuxUidMapping>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -251,7 +251,7 @@ pub struct LinuxDevice {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct GidMapping {
+pub struct LinuxGidMapping {
     #[serde(rename = "containerID")]
     pub container_id: i64,
 
@@ -430,6 +430,9 @@ pub struct PurpleCpu {
     #[serde(rename = "cpus")]
     pub cpus: Option<String>,
 
+    #[serde(rename = "idle")]
+    pub idle: Option<i64>,
+
     #[serde(rename = "mems")]
     pub mems: Option<String>,
 
@@ -593,7 +596,7 @@ pub struct Arg {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct UidMapping {
+pub struct LinuxUidMapping {
     #[serde(rename = "containerID")]
     pub container_id: i64,
 
@@ -609,6 +612,9 @@ pub struct Mount {
     #[serde(rename = "destination")]
     pub destination: String,
 
+    #[serde(rename = "gidMappings")]
+    pub gid_mappings: Option<Vec<MountGidMapping>>,
+
     #[serde(rename = "options")]
     pub options: Option<Vec<String>>,
 
@@ -617,6 +623,33 @@ pub struct Mount {
 
     #[serde(rename = "type")]
     pub mount_type: Option<String>,
+
+    #[serde(rename = "uidMappings")]
+    pub uid_mappings: Option<Vec<MountUidMapping>>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MountGidMapping {
+    #[serde(rename = "containerID")]
+    pub container_id: i64,
+
+    #[serde(rename = "hostID")]
+    pub host_id: i64,
+
+    #[serde(rename = "size")]
+    pub size: i64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MountUidMapping {
+    #[serde(rename = "containerID")]
+    pub container_id: i64,
+
+    #[serde(rename = "hostID")]
+    pub host_id: i64,
+
+    #[serde(rename = "size")]
+    pub size: i64,
 }
 
 #[derive(Serialize, Deserialize)]
