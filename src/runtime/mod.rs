@@ -183,7 +183,7 @@ pub struct Linux {
     pub devices: Option<Vec<LinuxDevice>>,
 
     #[serde(rename = "gidMappings")]
-    pub gid_mappings: Option<Vec<GidMapping>>,
+    pub gid_mappings: Option<Vec<LinuxGidMapping>>,
 
     #[serde(rename = "intelRdt")]
     pub intel_rdt: Option<IntelRdt>,
@@ -216,7 +216,7 @@ pub struct Linux {
     pub sysctl: Option<HashMap<String, Option<serde_json::Value>>>,
 
     #[serde(rename = "uidMappings")]
-    pub uid_mappings: Option<Vec<UidMapping>>,
+    pub uid_mappings: Option<Vec<LinuxUidMapping>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -248,7 +248,7 @@ pub struct LinuxDevice {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct GidMapping {
+pub struct LinuxGidMapping {
     #[serde(rename = "containerID")]
     pub container_id: i64,
 
@@ -590,7 +590,7 @@ pub struct Arg {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct UidMapping {
+pub struct LinuxUidMapping {
     #[serde(rename = "containerID")]
     pub container_id: i64,
 
