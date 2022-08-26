@@ -609,6 +609,9 @@ pub struct Mount {
     #[serde(rename = "destination")]
     pub destination: String,
 
+    #[serde(rename = "gidMappings")]
+    pub gid_mappings: Option<Vec<MountGidMapping>>,
+
     #[serde(rename = "options")]
     pub options: Option<Vec<String>>,
 
@@ -617,6 +620,33 @@ pub struct Mount {
 
     #[serde(rename = "type")]
     pub mount_type: Option<String>,
+
+    #[serde(rename = "uidMappings")]
+    pub uid_mappings: Option<Vec<MountUidMapping>>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MountGidMapping {
+    #[serde(rename = "containerID")]
+    pub container_id: i64,
+
+    #[serde(rename = "hostID")]
+    pub host_id: i64,
+
+    #[serde(rename = "size")]
+    pub size: i64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MountUidMapping {
+    #[serde(rename = "containerID")]
+    pub container_id: i64,
+
+    #[serde(rename = "hostID")]
+    pub host_id: i64,
+
+    #[serde(rename = "size")]
+    pub size: i64,
 }
 
 #[derive(Serialize, Deserialize)]
