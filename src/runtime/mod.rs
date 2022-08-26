@@ -427,6 +427,9 @@ pub struct PurpleCpu {
     #[serde(rename = "cpus")]
     pub cpus: Option<String>,
 
+    #[serde(rename = "idle")]
+    pub idle: Option<i64>,
+
     #[serde(rename = "mems")]
     pub mems: Option<String>,
 
