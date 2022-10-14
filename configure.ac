@@ -27,6 +27,18 @@ esac],[embedded_yajl=false])
 AM_CONDITIONAL([HAVE_EMBEDDED_YAJL], [test x"$embedded_yajl" = xtrue])
 AM_COND_IF([HAVE_EMBEDDED_YAJL], [], [PKG_CHECK_MODULES([YAJL], [yajl >= 2.1.0])])
 
+# Optionally install the library.
+AC_ARG_ENABLE(libocispec-install,
+AS_HELP_STRING([--enable-libocispec-install], [Enable libocispec installation]),
+[
+case "${enableval}" in
+  yes) libocispec_install=true ;;
+  no)  libocispec_install=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-libocispec-install) ;;
+esac],[libocispec_install=false])
+
+AM_CONDITIONAL([ENABLE_LIBOCISPEC_INSTALL], [test x"$libocispec_install" = xtrue])
+
 AC_ARG_VAR(OCI_RUNTIME_EXTENSIONS, [extensions for the OCI runtime parser])
 AC_ARG_VAR(OCI_IMAGE_EXTENSIONS, [extensions for the OCI image parser])
 AC_ARG_VAR(OCI_IMAGE_INDEX_EXTENSIONS, [extensions for the OCI image index parser])
@@ -42,5 +54,6 @@ AM_PATH_PYTHON([3])
 
 AC_CONFIG_FILES([
 Makefile
+ocispec.pc
 ])
 AC_OUTPUT

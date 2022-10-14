@@ -11,8 +11,14 @@ CLEANFILES = $(man_MANS) src/runtime_spec_stamp src/image_spec_stamp src/image_m
 
 GITIGNOREFILES = build-aux/ gtk-doc.make config.h.in aclocal.m4
 
+
+if ENABLE_LIBOCISPEC_INSTALL
+lib_LTLIBRARIES = libocispec.la
+lib_LIBRARIES = libocispec.a
+else
 noinst_LTLIBRARIES = libocispec.la
 noinst_LIBRARIES = libocispec.a
+endif
 
 SOURCE_FILES = \
 	src/image_spec_schema_config_schema.c \
@@ -45,6 +51,13 @@ SOURCE_FILES = \
 	src/basic_test_top_double_array_string.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
+
+if ENABLE_LIBOCISPEC_INSTALL
+ocispec_includedir = $(includedir)
+ocispec_include_HEADERS = $(HEADER_FILES) \
+                          src/json_common.h \
+                          src/read-file.h
+endif
 
 src/runtime_spec_stamp: src/json_common.h src/json_common.c
 	$(PYTHON) $(srcdir)/src/generate.py --gen-ref --root=${srcdir} --out=${builddir}/src ${srcdir}/runtime-spec/schema
@@ -146,6 +159,11 @@ libocispec_a_SOURCES =
 
 libocispec.a: libocispec.la $(BUILT_SOURCES) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 	$(LIBTOOL) --mode=link $(GCC) libocispec.la -o libocispec.a
+
+if ENABLE_LIBOCISPEC_INSTALL
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = ocispec.pc
+endif
 
 tests_test_1_SOURCES = tests/test-1.c
 tests_test_1_LDADD = $(TESTS_LDADD)
