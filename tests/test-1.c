@@ -20,7 +20,7 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "runtime_spec_schema_config_schema.h"
+#include "ocispec/runtime_spec_schema_config_schema.h"
 
 int
 main ()
