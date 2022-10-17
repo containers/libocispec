@@ -23,6 +23,7 @@ m4/*
 Makefile
 Makefile.in
 *.o
+ocispec.pc
 src/basic_test_double_array.c
 src/basic_test_double_array.h
 src/basic_test_double_array_item.c
