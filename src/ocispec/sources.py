@@ -1138,8 +1138,8 @@ def src_reflect(structs, schema_info, c_file, root_typ):
     c_file.write("#define _GNU_SOURCE\n")
     c_file.write("#endif\n")
     c_file.write('#include <string.h>\n')
-    c_file.write('#include <read-file.h>\n')
-    c_file.write('#include "%s"\n\n' % schema_info.header.basename)
+    c_file.write('#include <ocispec/read-file.h>\n')
+    c_file.write('#include "ocispec/%s"\n\n' % schema_info.header.basename)
     c_file.write('#define YAJL_GET_ARRAY_NO_CHECK(v) (&(v)->u.array)\n')
     c_file.write('#define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)\n')
     for i in structs:

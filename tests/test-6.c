@@ -20,7 +20,7 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "image_spec_schema_image_manifest_schema.h"
+#include "ocispec/image_spec_schema_image_manifest_schema.h"
 
 int
 main ()

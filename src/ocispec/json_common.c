@@ -3,7 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
-#include "json_common.h"
+#include "ocispec/json_common.h"
 
 #define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)
 #define YAJL_GET_STRING_NO_CHECK(v) ((v)->u.string)

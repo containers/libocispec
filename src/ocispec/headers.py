@@ -218,10 +218,10 @@ def header_reflect(structs, schema_info, header):
     header.write("#define %s_SCHEMA_H\n\n" % prefix.upper())
     header.write("#include <sys/types.h>\n")
     header.write("#include <stdint.h>\n")
-    header.write("#include \"json_common.h\"\n")
+    header.write("#include \"ocispec/json_common.h\"\n")
     if schema_info.refs:
         for ref in schema_info.refs.keys():
-            header.write("#include \"%s\"\n" % (ref))
+            header.write("#include \"ocispec/%s\"\n" % (ref))
     header.write("\n#ifdef __cplusplus\n")
     header.write("extern \"C\" {\n")
     header.write("#endif\n\n")

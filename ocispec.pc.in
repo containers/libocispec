@@ -8,4 +8,4 @@ Description: A library for easily parsing [OCI runtime](https://github.com/openc
 Requires: yajl
 Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -locispec
-Cflags: -I${includedir}
+Cflags: -I${includedir}/ocispec

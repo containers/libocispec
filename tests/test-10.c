@@ -20,13 +20,13 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "basic_test_double_array.h"
-#include "basic_test_top_array_int.h"
-#include "basic_test_top_array_string.h"
-#include "basic_test_top_double_array_int.h"
-#include "basic_test_top_double_array_obj.h"
-#include "basic_test_top_double_array_string.h"
-#include "basic_test_top_double_array_refobj.h"
+#include "ocispec/basic_test_double_array.h"
+#include "ocispec/basic_test_top_array_int.h"
+#include "ocispec/basic_test_top_array_string.h"
+#include "ocispec/basic_test_top_double_array_int.h"
+#include "ocispec/basic_test_top_double_array_obj.h"
+#include "ocispec/basic_test_top_double_array_string.h"
+#include "ocispec/basic_test_top_double_array_refobj.h"
 
 int
 do_test_object_double_array()
