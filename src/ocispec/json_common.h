@@ -15,6 +15,15 @@ extern "C" {
 
 #undef linux
 
+#ifdef __MUSL__
+#undef stdin
+#undef stdout
+#undef stderr
+#define stdin stdin
+#define stdout stdout
+#define stderr stderr
+#endif
+
 // options to report error if there is unknown key found in json
 #define OPT_PARSE_STRICT 0x01
 // options to generate all key and value
