@@ -40,6 +40,8 @@ SOURCE_FILES = \
 	src/ocispec/runtime_spec_schema_defs_vm.c \
 	src/ocispec/runtime_spec_schema_defs_windows.c \
 	src/ocispec/runtime_spec_schema_state_schema.c \
+	src/ocispec/runtime_spec_schema_features_linux.c \
+	src/ocispec/runtime_spec_schema_features_schema.c \
 	src/ocispec/image_manifest_items_image_manifest_items_schema.c \
 	src/ocispec/basic_test_double_array_item.c \
 	src/ocispec/basic_test_double_array.c \
@@ -98,6 +100,10 @@ src/ocispec/runtime_spec_schema_config_linux.h \
 	src/ocispec/runtime_spec_schema_defs.h \
 	src/ocispec/runtime_spec_schema_defs_linux.h \
 	src/ocispec/runtime_spec_schema_defs_zos.h \
+	src/ocispec/runtime_spec_schema_features_linux.h \
+	src/ocispec/runtime_spec_schema_features_schema.h \
+	src/ocispec/runtime_spec_schema_features_linux.c \
+	src/ocispec/runtime_spec_schema_features_schema.c \
 	src/ocispec/runtime_spec_schema_defs_vm.h \
 	src/ocispec/runtime_spec_schema_defs_windows.h \
 	src/ocispec/runtime_spec_schema_state_schema.h \
