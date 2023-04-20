@@ -4,14 +4,14 @@
 // extern crate serde_derive;
 // extern crate serde_json;
 //
-// use generated_module::[object Object];
+// use generated_module::Spec;
 //
 // fn main() {
 //     let json = r#"{"answer": 42}"#;
-//     let model: [object Object] = serde_json::from_str(&json).unwrap();
+//     let model: Spec = serde_json::from_str(&json).unwrap();
 // }
 
-extern crate serde_derive;
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 /// Open Container Initiative Runtime Specification Container Configuration Schema
@@ -217,6 +217,9 @@ pub struct Linux {
 
     #[serde(rename = "sysctl")]
     pub sysctl: Option<HashMap<String, Option<serde_json::Value>>>,
+
+    #[serde(rename = "timeOffsets")]
+    pub time_offsets: Option<TimeOffsets>,
 
     #[serde(rename = "uidMappings")]
     pub uid_mappings: Option<Vec<LinuxUidMapping>>,
@@ -427,6 +430,9 @@ pub struct WeightDevice {
 
 #[derive(Serialize, Deserialize)]
 pub struct PurpleCpu {
+    #[serde(rename = "burst")]
+    pub burst: Option<i64>,
+
     #[serde(rename = "cpus")]
     pub cpus: Option<String>,
 
@@ -483,6 +489,9 @@ pub struct HugepageLimit {
 
 #[derive(Serialize, Deserialize)]
 pub struct PurpleMemory {
+    #[serde(rename = "checkBeforeUpdate")]
+    pub check_before_update: Option<bool>,
+
     #[serde(rename = "disableOOMKiller")]
     pub disable_oom_killer: Option<bool>,
 
@@ -593,6 +602,33 @@ pub struct Arg {
 
     #[serde(rename = "valueTwo")]
     pub value_two: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TimeOffsets {
+    #[serde(rename = "boottime")]
+    pub boottime: Option<Boottime>,
+
+    #[serde(rename = "monotonic")]
+    pub monotonic: Option<Monotonic>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Boottime {
+    #[serde(rename = "nanosecs")]
+    pub nanosecs: Option<i64>,
+
+    #[serde(rename = "secs")]
+    pub secs: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Monotonic {
+    #[serde(rename = "nanosecs")]
+    pub nanosecs: Option<i64>,
+
+    #[serde(rename = "secs")]
+    pub secs: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -1026,6 +1062,9 @@ pub enum Type {
     #[serde(rename = "pid")]
     Pid,
 
+    #[serde(rename = "time")]
+    Time,
+
     #[serde(rename = "user")]
     User,
 
@@ -1157,6 +1196,9 @@ pub enum Flag {
 
     #[serde(rename = "SECCOMP_FILTER_FLAG_TSYNC")]
     SeccompFilterFlagTsync,
+
+    #[serde(rename = "SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV")]
+    SeccompFilterFlagWaitKillableRecv,
 }
 
 #[derive(Serialize, Deserialize)]
