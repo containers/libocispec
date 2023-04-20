@@ -4,14 +4,14 @@
 // extern crate serde_derive;
 // extern crate serde_json;
 //
-// use generated_module::[object Object];
+// use generated_module::ImageSpec;
 //
 // fn main() {
 //     let json = r#"{"answer": 42}"#;
-//     let model: [object Object] = serde_json::from_str(&json).unwrap();
+//     let model: ImageSpec = serde_json::from_str(&json).unwrap();
 // }
 
-extern crate serde_derive;
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 /// OpenContainer Config Specification
@@ -50,6 +50,9 @@ pub struct ImageSpec {
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
+    #[serde(rename = "ArgsEscaped")]
+    pub args_escaped: Option<bool>,
+
     #[serde(rename = "Cmd")]
     pub cmd: Option<Vec<String>>,
 
