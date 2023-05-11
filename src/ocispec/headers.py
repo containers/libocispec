@@ -157,15 +157,20 @@ def append_type_c_header(obj, header, prefix):
         header.write("typedef struct {\n")
         if obj.children is None:
             header.write("    char unuseful; // unuseful definition to avoid empty struct\n")
+        present_tags = []
         for i in obj.children or []:
+            if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
+                present_tags.append("    unsigned int %s_present : 1;\n" % (i.fixname))
             if i.typ == 'array':
                 append_header_child_arr(i, header, prefix)
             else:
                 append_header_child_others(i, header, prefix)
-            if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
-                header.write("    unsigned int %s_present : 1;\n" % (i.fixname))
         if obj.children is not None:
             header.write("    yajl_val _residual;\n")
+        if len(present_tags) > 0:
+            header.write("\n")
+            for tag in present_tags:
+                header.write(tag)
     typename = helpers.get_prefixed_name(obj.name, prefix)
     header.write("}\n%s;\n\n" % typename)
     header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
