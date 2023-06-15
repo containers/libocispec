@@ -46,23 +46,21 @@ def append_header_arr(obj, header, prefix):
                 c_typ = helpers.get_name_substr(i.name, prefix)
 
             if not helpers.judge_complex(i.subtyp):
-                header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", \
-                    i.fixname))
+                header.write(f"    {c_typ}{' ' if '*' not in c_typ else ''}*{i.fixname};\n")
             else:
-                header.write("    %s **%s;\n" % (c_typ, i.fixname))
-            header.write("    size_t %s;\n\n" % (i.fixname + "_len"))
+                header.write(f"    {c_typ} **{i.fixname};\n")
+            header.write(f"    size_t {i.fixname + '_len'};\n\n")
         else:
             c_typ = helpers.get_prefixed_pointer(i.name, i.typ, prefix) or \
                 helpers.get_map_c_types(i.typ)
-            header.write("    %s%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", i.fixname))
+            header.write(f"    {c_typ}{' ' if '*' not in c_typ else ''}{i.fixname};\n")
     for i in obj.subtypobj:
         if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
-            header.write("    unsigned int %s_present : 1;\n" % (i.fixname))
+            header.write(f"    unsigned int {i.fixname}_present : 1;\n")
     typename = helpers.get_name_substr(obj.name, prefix)
-    header.write("}\n%s;\n\n" % typename)
-    header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
-    header.write("%s *make_%s (yajl_val tree, const struct parser_context *ctx, parser_error *err);"\
-        "\n\n" % (typename, typename))
+    header.write(f"}}\n{typename};\n\n")
+    header.write(f"void free_{typename} ({typename} *ptr);\n\n")
+    header.write(f"{typename} *make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err);\n\n")
 
 
 def append_header_map_str_obj(obj, header, prefix):
@@ -80,7 +78,7 @@ def append_header_map_str_obj(obj, header, prefix):
         c_typ = child.subtypname
     else:
         c_typ = helpers.get_prefixed_pointer(child.name, child.typ, prefix)
-    header.write("    %s%s*%s;\n" % (c_typ, " " if '*' not in c_typ else "", child.fixname))
+    header.write(f"    {c_typ}{' ' if '*' not in c_typ else ''}*{child.fixname};\n")
     header.write("    size_t len;\n")
 
 
@@ -93,7 +91,7 @@ def append_header_child_arr(child, header, prefix):
     if helpers.get_map_c_types(child.subtyp) != "":
         c_typ = helpers.get_map_c_types(child.subtyp)
     elif helpers.valid_basic_map_name(child.subtyp):
-        c_typ = '%s *' % helpers.make_basic_map_name(child.subtyp)
+        c_typ = f'{helpers.make_basic_map_name(child.subtyp)} *'
     elif child.subtypname is not None:
         c_typ = child.subtypname
     elif child.subtypobj is not None:
@@ -106,16 +104,16 @@ def append_header_child_arr(child, header, prefix):
         dflag = "*"
 
     if helpers.valid_basic_map_name(child.subtyp):
-        header.write("    %s **%s;\n" % (helpers.make_basic_map_name(child.subtyp), child.fixname))
+        header.write(f"    {helpers.make_basic_map_name(child.subtyp)} **{child.fixname};\n")
     elif not helpers.judge_complex(child.subtyp):
-        header.write("    %s%s*%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", dflag, child.fixname))
+        header.write(f"    {c_typ}{' ' if '*' not in c_typ else ''}*{dflag}{child.fixname};\n")
     else:
-        header.write("    %s%s**%s%s;\n" % (c_typ, " " if '*' not in c_typ else "", dflag, child.fixname))
+        header.write(f"    {c_typ}{' ' if '*' not in c_typ else ''}**{dflag}{child.fixname};\n")
 
     if child.doublearray and not helpers.valid_basic_map_name(child.subtyp):
-        header.write("    size_t *%s;\n" % (child.fixname + "_item_lens"))
+        header.write(f"    size_t *{child.fixname + '_item_lens'};\n")
 
-    header.write("    size_t %s;\n\n" % (child.fixname + "_len"))
+    header.write(f"    size_t {child.fixname + '_len'};\n\n")
 
 def append_header_child_others(child, header, prefix):
     '''
@@ -126,12 +124,12 @@ def append_header_child_others(child, header, prefix):
     if helpers.get_map_c_types(child.typ) != "":
         c_typ = helpers.get_map_c_types(child.typ)
     elif helpers.valid_basic_map_name(child.typ):
-        c_typ = '%s *' % helpers.make_basic_map_name(child.typ)
+        c_typ = f'{helpers.make_basic_map_name(child.typ)} *'
     elif child.subtypname:
         c_typ = helpers.get_prefixed_pointer(child.subtypname, child.typ, "")
     else:
         c_typ = helpers.get_prefixed_pointer(child.name, child.typ, prefix)
-    header.write("    %s%s%s;\n\n" % (c_typ, " " if '*' not in c_typ else "", child.fixname))
+    header.write(f"    {c_typ}{' ' if '*' not in c_typ else ''}{child.fixname};\n\n")
 
 
 def append_type_c_header(obj, header, prefix):
@@ -160,7 +158,7 @@ def append_type_c_header(obj, header, prefix):
         present_tags = []
         for i in obj.children or []:
             if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
-                present_tags.append("    unsigned int %s_present : 1;\n" % (i.fixname))
+                present_tags.append(f"    unsigned int {i.fixname}_present : 1;\n")
             if i.typ == 'array':
                 append_header_child_arr(i, header, prefix)
             else:
@@ -172,12 +170,10 @@ def append_type_c_header(obj, header, prefix):
             for tag in present_tags:
                 header.write(tag)
     typename = helpers.get_prefixed_name(obj.name, prefix)
-    header.write("}\n%s;\n\n" % typename)
-    header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
-    header.write("%s *make_%s (yajl_val tree, const struct parser_context *ctx, parser_error *err)"\
-        ";\n\n" % (typename, typename))
-    header.write("yajl_gen_status gen_%s (yajl_gen g, const %s *ptr, const struct parser_context "\
-        "*ctx, parser_error *err);\n\n" % (typename, typename))
+    header.write(f"}}\n{typename};\n\n")
+    header.write(f"void free_{typename} ({typename} *ptr);\n\n")
+    header.write(f"{typename} *make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err);\n\n")
+    header.write(f"yajl_gen_status gen_{typename} (yajl_gen g, const {typename} *ptr, const struct parser_context *ctx, parser_error *err);\n\n")
 
 def header_reflect_top_array(obj, prefix, header):
     c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
@@ -193,23 +189,23 @@ def header_reflect_top_array(obj, prefix, header):
     typename = helpers.get_top_array_type_name(obj.name, prefix)
     header.write("typedef struct {\n")
     if obj.doublearray:
-        header.write("    %s%s**items;\n" % (c_typ, " " if '*' not in c_typ else ""))
+        header.write(f"    {c_typ}{' ' if '*' not in c_typ else ''}**items;\n")
         header.write("    size_t *subitem_lens;\n\n")
     else:
-        header.write("    %s%s*items;\n" % (c_typ, " " if '*' not in c_typ else ""))
+        header.write(f"    {c_typ}{' ' if '*' not in c_typ else ''}*items;\n")
     header.write("    size_t len;\n\n")
-    header.write("}\n%s;\n\n" % (typename))
+    header.write(f"}}\n{typename};\n\n")
 
 
-    header.write("void free_%s (%s *ptr);\n\n" % (typename, typename))
-    header.write("%s *%s_parse_file(const char *filename, const struct "\
-        "parser_context *ctx, parser_error *err);\n\n" % (typename, typename))
-    header.write("%s *%s_parse_file_stream(FILE *stream, const struct "\
-        "parser_context *ctx, parser_error *err);\n\n" % (typename, typename))
-    header.write("%s *%s_parse_data(const char *jsondata, const struct "\
-        "parser_context *ctx, parser_error *err);\n\n" % (typename, typename))
-    header.write("char *%s_generate_json(const %s *ptr, "\
-        "const struct parser_context *ctx, parser_error *err);\n\n" % (typename, typename))
+    header.write(f"void free_{typename} ({typename} *ptr);\n\n")
+    header.write(f"{typename} *{typename}_parse_file(const char *filename, const struct "\
+        "parser_context *ctx, parser_error *err);\n\n")
+    header.write(f"{typename} *{typename}_parse_file_stream(FILE *stream, const struct "\
+        "parser_context *ctx, parser_error *err);\n\n")
+    header.write(f"{typename} *{typename}_parse_data(const char *jsondata, const struct "\
+        "parser_context *ctx, parser_error *err);\n\n")
+    header.write(f"char *{typename}_generate_json(const {typename} *ptr, "\
+        "const struct parser_context *ctx, parser_error *err);\n\n")
 
 def header_reflect(structs, schema_info, header):
     '''
@@ -218,15 +214,15 @@ def header_reflect(structs, schema_info, header):
     History: 2019-06-17
     '''
     prefix = schema_info.prefix
-    header.write("// Generated from %s. Do not edit!\n" % (schema_info.name.basename))
-    header.write("#ifndef %s_SCHEMA_H\n" % prefix.upper())
-    header.write("#define %s_SCHEMA_H\n\n" % prefix.upper())
+    header.write(f"// Generated from {schema_info.name.basename}. Do not edit!\n")
+    header.write(f"#ifndef {prefix.upper()}_SCHEMA_H\n")
+    header.write(f"#define {prefix.upper()}_SCHEMA_H\n\n")
     header.write("#include <sys/types.h>\n")
     header.write("#include <stdint.h>\n")
     header.write("#include \"ocispec/json_common.h\"\n")
     if schema_info.refs:
         for ref in schema_info.refs.keys():
-            header.write("#include \"ocispec/%s\"\n" % (ref))
+            header.write(f"#include \"ocispec/{ref}\"\n")
     header.write("\n#ifdef __cplusplus\n")
     header.write("extern \"C\" {\n")
     header.write("#endif\n\n")
@@ -236,14 +232,14 @@ def header_reflect(structs, schema_info, header):
     length = len(structs)
     toptype = structs[length - 1].typ if length != 0 else ""
     if toptype == 'object':
-        header.write("%s *%s_parse_file(const char *filename, const struct parser_context *ctx, "\
-            "parser_error *err);\n\n" % (prefix, prefix))
-        header.write("%s *%s_parse_file_stream(FILE *stream, const struct parser_context *ctx, "\
-            "parser_error *err);\n\n" % (prefix, prefix))
-        header.write("%s *%s_parse_data(const char *jsondata, const struct parser_context *ctx, "\
-            "parser_error *err);\n\n" % (prefix, prefix))
-        header.write("char *%s_generate_json(const %s *ptr, const struct parser_context *ctx, "\
-            "parser_error *err);\n\n" % (prefix, prefix))
+        header.write(f"{prefix} *{prefix}_parse_file(const char *filename, const struct parser_context *ctx, "\
+            "parser_error *err);\n\n")
+        header.write(f"{prefix} *{prefix}_parse_file_stream(FILE *stream, const struct parser_context *ctx, "\
+            "parser_error *err);\n\n")
+        header.write(f"{prefix} *{prefix}_parse_data(const char *jsondata, const struct parser_context *ctx, "\
+            "parser_error *err);\n\n")
+        header.write(f"char *{prefix}_generate_json(const {prefix} *ptr, const struct parser_context *ctx, "\
+            "parser_error *err);\n\n")
     elif toptype == 'array':
         header_reflect_top_array(structs[length - 1], prefix, header)
 
