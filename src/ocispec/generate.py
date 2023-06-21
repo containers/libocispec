@@ -705,8 +705,10 @@ def reflection(schema_info, gen_ref):
                     structs = expand(tree, [], {})
                     headers_text = []
                     headers.header_reflect(structs, schema_info, headers_text)
+                    source_text = []
                     header_file.writelines(headers_text)
-                    sources.src_reflect(structs, schema_info, source_file, tree.typ)
+                    sources.src_reflect(structs, schema_info, source_text, tree.typ)
+                    source_file.writelines(source_text)
                 except RuntimeError:
                     traceback.print_exc()
                     print("Failed to parse schema file: %s" % schema_info.name.name)
