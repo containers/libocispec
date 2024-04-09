@@ -28,6 +28,9 @@
 import os
 import sys
 
+cxx_reserved_keywords = ["class", "delete", "explicit", "friend", "mutable", "new",
+                          "operator", "private", "protected", "public", "throw", "try", "virtual"]
+
 def append_separator(substr):
     '''
     Description: append only '_' at last position of subStr
@@ -45,6 +48,9 @@ def conv_to_c_style(name):
     '''
     if name is None or name == "":
         return ""
+    # replace C++ reserved keywords (the generated C headers can be included in C++ applications)
+    if name in cxx_reserved_keywords:
+        name = '_' + name
     name = name.replace('.', '_').replace('-', '_').replace('/', '_')
     substr = []
     preindex = 0
