@@ -740,7 +740,7 @@ def handle_single_file(args, srcpath, gen_ref, schemapath):
     History: 2019-06-17
     """
     if not os.path.exists(schemapath.name) or not os.path.exists(srcpath.name):
-        print('Path %s is not exist' % schemapath.name)
+        print('Path %s does not exist' % schemapath.name)
         sys.exit(1)
 
     if os.path.isdir(schemapath.name):
@@ -754,7 +754,7 @@ def handle_single_file(args, srcpath, gen_ref, schemapath):
                         reflection(schema_info, gen_ref)
                         print("\033[1;34mReflection:\033[0m\t%-60s \033[1;32mSuccess\033[0m" % (target_file))
         else:
-            # only parse files in current direcotory
+            # only parse files in current directory
             for target_file in os.listdir(schemapath.name):
                 fullpath = os.path.join(schemapath.name, target_file)
                 if fullpath.endswith(JSON_SUFFIX) and os.path.isfile(fullpath):
@@ -767,7 +767,7 @@ def handle_single_file(args, srcpath, gen_ref, schemapath):
             reflection(schema_info, gen_ref)
             print("\033[1;34mReflection:\033[0m\t%-60s \033[1;32mSuccess\033[0m" % (schemapath.name))
         else:
-            print('File %s is not ends with .json' % schemapath.name)
+            print('File %s does not end with .json' % schemapath.name)
 
 
 def handle_files(args, srcpath):
@@ -817,7 +817,7 @@ def main():
 
     root_path = os.path.realpath(args.root)
     if not os.path.exists(root_path):
-        print('Root %s is not exist' % args.root)
+        print('Root %s does not exist' % args.root)
         sys.exit(1)
 
     MyRoot.root_path = root_path
