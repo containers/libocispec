@@ -243,9 +243,6 @@ class CombinateName(object):
     def __repr__(self):
         return self.name
 
-    def __str__(self):
-        return self.name
-
     def append(self, leaf):
         '''
         Description: append name
@@ -283,9 +280,6 @@ class Unite(object):
                 % (self.name, self.typ, self.subtyp)
         return "name:(%s) type:(%s)" % (self.name, self.typ)
 
-    def __str__(self):
-        return self.__repr__(self)
-
 
 class FilePath(object):
     '''
@@ -301,9 +295,6 @@ class FilePath(object):
     def __repr__(self):
         return "{name:(%s) dirname:(%s) basename:(%s)}" \
             % (self.name, self.dirname, self.basename)
-
-    def __str__(self):
-        return self.__repr__(self)
 
 
 class SchemaInfo(object):
@@ -326,6 +317,3 @@ class SchemaInfo(object):
     def __repr__(self):
         return "{name:(%s) header:(%s) source:(%s) prefix:(%s)}" \
             % (self.name, self.header, self.source, self.prefix)
-
-    def __str__(self):
-        return self.__repr__(self)
