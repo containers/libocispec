@@ -28,6 +28,9 @@
 import os
 import sys
 
+cxx_reserved_keywords = ["class", "delete", "explicit", "friend", "mutable", "new",
+                          "operator", "private", "protected", "public", "throw", "try", "virtual"]
+
 def append_separator(substr):
     '''
     Description: append only '_' at last position of subStr
@@ -45,6 +48,9 @@ def conv_to_c_style(name):
     '''
     if name is None or name == "":
         return ""
+    # replace C++ reserved keywords (the generated C headers can be included in C++ applications)
+    if name in cxx_reserved_keywords:
+        name = '_' + name
     name = name.replace('.', '_').replace('-', '_').replace('/', '_')
     substr = []
     preindex = 0
@@ -243,9 +249,6 @@ class CombinateName(object):
     def __repr__(self):
         return self.name
 
-    def __str__(self):
-        return self.name
-
     def append(self, leaf):
         '''
         Description: append name
@@ -283,9 +286,6 @@ class Unite(object):
                 % (self.name, self.typ, self.subtyp)
         return "name:(%s) type:(%s)" % (self.name, self.typ)
 
-    def __str__(self):
-        return self.__repr__(self)
-
 
 class FilePath(object):
     '''
@@ -301,9 +301,6 @@ class FilePath(object):
     def __repr__(self):
         return "{name:(%s) dirname:(%s) basename:(%s)}" \
             % (self.name, self.dirname, self.basename)
-
-    def __str__(self):
-        return self.__repr__(self)
 
 
 class SchemaInfo(object):
@@ -326,6 +323,3 @@ class SchemaInfo(object):
     def __repr__(self):
         return "{name:(%s) header:(%s) source:(%s) prefix:(%s)}" \
             % (self.name, self.header, self.source, self.prefix)
-
-    def __str__(self):
-        return self.__repr__(self)
