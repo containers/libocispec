@@ -25,7 +25,10 @@ case "${enableval}" in
 esac],[embedded_yajl=false])
 
 AM_CONDITIONAL([HAVE_EMBEDDED_YAJL], [test x"$embedded_yajl" = xtrue])
-AM_COND_IF([HAVE_EMBEDDED_YAJL], [], [PKG_CHECK_MODULES([YAJL], [yajl >= 2.1.0])])
+AM_COND_IF([HAVE_EMBEDDED_YAJL], [], [
+AC_SEARCH_LIBS(yajl_tree_get, [yajl], [AC_DEFINE([HAVE_YAJL], 1, [Define if libyajl is available])], [AC_MSG_ERROR([*** libyajl headers not found])])
+PKG_CHECK_MODULES([YAJL], [yajl >= 2.0.0])
+])
 
 # Optionally install the library.
 AC_ARG_ENABLE(libocispec-install,
