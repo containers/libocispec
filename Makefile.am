@@ -256,7 +256,8 @@ EXTRA_DIST = autogen.sh \
 	runtime-spec \
 	image-spec \
 	src/ocispec/json_common.h \
-	src/ocispec/json_common.c
+	src/ocispec/json_common.c \
+	src/yajl
 
 sync:
 	(cd image-spec; git pull https://github.com/opencontainers/image-spec)
