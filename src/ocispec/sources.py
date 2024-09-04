@@ -37,9 +37,9 @@ def append_c_code(obj, c_file, prefix):
     History: 2019-06-17
     """
     parse_json_to_c(obj, c_file, prefix)
-    make_c_free (obj, c_file, prefix)
+    make_c_free(obj, c_file, prefix)
     get_c_json(obj, c_file, prefix)
-
+    make_clone(obj, c_file, prefix)
 
 def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     """
@@ -646,6 +646,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append("      }\n")
 
+
 def get_c_json(obj, c_file, prefix):
     """
     Description: c language generate json file
@@ -829,6 +830,149 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f"{'    ' * (level + 2)}*({dest}) = YAJL_IS_TRUE(val);\n")
         c_file.append(f'{"    " * (level + 1)}}}\n')
         c_file.append(f'{"    " * (level)}}}\n')
+
+
+def make_clone(obj, c_file, prefix):
+    """
+    Description: generate a clone operation for the specified object
+    Interface: None
+    History: 2024-09-03
+    """
+
+    if not helpers.judge_complex(obj.typ) or obj.subtypname:
+        return
+    typename = helpers.get_prefixed_name(obj.name, prefix)
+    case = obj.typ
+    result = {'mapStringObject': lambda x: [], 'object': lambda x: x.children,
+              'array': lambda x: x.subtypobj}[case](obj)
+    objs = result
+    if obj.typ == 'array':
+        if objs is None:
+            return
+        else:
+            typename = helpers.get_name_substr(obj.name, prefix)
+
+    c_file.append(f"{typename} *\nclone_{typename} ({typename} *src)\n")
+    c_file.append("{\n")
+    c_file.append(f"    __auto_cleanup(free_{typename}) {typename} *ret = NULL;\n")
+
+    c_file.append("    ret = calloc (1, sizeof (*ret));\n")
+    c_file.append("    if (ret == NULL)\n")
+    c_file.append("      return NULL;\n")
+
+    nodes = obj.children if obj.typ == 'object' else obj.subtypobj
+    for i in nodes or []:
+        if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
+            c_file.append(f"    ret->{i.fixname} = src->{i.fixname};\n")
+            c_file.append(f"    ret->{i.fixname}_present = src->{i.fixname}_present;\n")
+        elif i.typ == 'object':
+            node_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
+            c_file.append(f"    if (src->{i.fixname})\n")
+            c_file.append(f"      {{\n")
+            c_file.append(f"        ret->{i.fixname} = clone_{node_name} (src->{i.fixname});\n")
+            c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
+            c_file.append(f"          return NULL;\n")
+            c_file.append(f"      }}\n")
+        elif i.typ == 'string':
+            c_file.append(f"    if (src->{i.fixname})\n")
+            c_file.append(f"      {{\n")
+            c_file.append(f"        ret->{i.fixname} = strdup (src->{i.fixname});\n")
+            c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
+            c_file.append(f"          return NULL;\n")
+            c_file.append(f"      }}\n")
+        elif i.typ == 'array':
+            c_file.append(f"    if (src->{i.fixname})\n")
+            c_file.append(f"      {{\n")
+            c_file.append(f"        ret->{i.fixname}_len = src->{i.fixname}_len;\n")
+            c_file.append(f"        ret->{i.fixname} = calloc (src->{i.fixname}_len + 1, sizeof (*ret->{i.fixname}));\n")
+            c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
+            c_file.append(f"          return NULL;\n")
+            c_file.append(f"        for (size_t i = 0; i < src->{i.fixname}_len; i++)\n")
+            c_file.append(f"          {{\n")
+            if helpers.judge_data_type(i.subtyp) or i.subtyp == 'boolean':
+               c_file.append(f"            ret->{i.fixname}[i] = src->{i.fixname}[i];\n")
+            elif i.subtyp == 'object':
+                subnode_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
+                if False: # i.subtypname is not None:
+                    typename = i.subtypname
+                    c_file.append(f"            ret->{i.fixname}[i] = clone_{typename} (src->{i.fixname}[i]);\n")
+                    c_file.append(f"            if (ret->{i.fixname}[i] == NULL)\n")
+                    c_file.append(f"                return NULL;\n")
+                else:
+                    typename = helpers.get_prefixed_name(i.name, prefix)
+                    if i.subtypname is not None:
+                        typename = i.subtypname
+                    maybe_element = "_element" if i.subtypname is None else ""
+                    if i.doublearray:
+                        c_file.append(f"            ret->{i.fixname}_item_lens[i] = src->{i.fixname}_item_lens[i];\n")
+                        c_file.append(f"            ret->{i.fixname}[i] = calloc (ret->{i.fixname}_item_lens[i] + 1, sizeof (**ret->{i.fixname}[i]));\n")
+                        c_file.append(f"            if (ret->{i.fixname}[i] == NULL)\n")
+                        c_file.append(f"                return NULL;\n")
+                        c_file.append(f"            for (size_t j = 0; j < src->{i.fixname}_item_lens[i]; j++)\n")
+                        c_file.append(f"              {{\n")
+                        c_file.append(f"                ret->{i.fixname}[i][j] = clone_{typename}{maybe_element} (src->{i.fixname}[i][j]);\n")
+                        c_file.append(f"                if (ret->{i.fixname}[i][j] == NULL)\n")
+                        c_file.append(f"                    return NULL;\n")
+                        c_file.append(f"              }}\n")
+                    else:
+                        c_file.append(f"            ret->{i.fixname}[i] = clone_{typename}{maybe_element} (src->{i.fixname}[i]);\n")
+                        c_file.append(f"            if (ret->{i.fixname}[i] == NULL)\n")
+                        c_file.append(f"                return NULL;\n")
+
+            elif i.subtyp == 'string':
+                if i.doublearray:
+                    c_file.append(f"            ret->{i.fixname}[i] = calloc (ret->{i.fixname}_item_lens[i] + 1, sizeof (**ret->{i.fixname}[i]));\n")
+                    c_file.append(f"            if (ret->{i.fixname}[i] == NULL)\n")
+                    c_file.append(f"                return NULL;\n")
+                    c_file.append(f"            for (size_t j = 0; j < src->{i.fixname}_item_lens[i]; j++)\n")
+                    c_file.append(f"              {{\n")
+                    c_file.append(f"                ret->{i.fixname}[i][j] = strdup (src->{i.fixname}[i][j]);\n")
+                    c_file.append(f"                if (ret->{i.fixname}[i][j] == NULL)\n")
+                    c_file.append(f"                    return NULL;\n")
+                    c_file.append(f"              }}\n")
+                else:
+                    c_file.append(f"            if (src->{i.fixname}[i])\n")
+                    c_file.append(f"              {{\n")
+                    c_file.append(f"                ret->{i.fixname}[i] = strdup (src->{i.fixname}[i]);\n")
+                    c_file.append(f"                if (ret->{i.fixname}[i] == NULL)\n")
+                    c_file.append(f"                  return NULL;\n")
+                    c_file.append(f"              }}\n")
+            else:
+                raise Exception("Unimplemented type for array clone: %s (%s)" % (i.subtyp, i.subtypname))
+            c_file.append(f"          }}\n")
+            c_file.append(f"      }}\n")
+        elif i.typ == 'mapStringString':
+            c_file.append(f"    ret->{i.fixname} = clone_map_string_string (src->{i.fixname});\n")
+            c_file.append(f"    if (ret->{i.fixname} == NULL)\n")
+            c_file.append(f"        return NULL;\n")
+        elif i.typ == 'mapStringObject':
+            c_file.append(f"    if (src->{i.fixname})\n")
+            c_file.append(f"      {{\n")
+            c_file.append(f"        ret->{i.fixname} = calloc (1, sizeof ({i.subtypname}));\n")
+            c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
+            c_file.append(f"            return NULL;\n")
+            c_file.append(f"        ret->{i.fixname}->len = src->{i.fixname}->len;\n")
+            c_file.append(f"        ret->{i.fixname}->keys = calloc (src->{i.fixname}->len + 1, sizeof (char *));\n")
+            c_file.append(f"        if (ret->{i.fixname}->keys == NULL)\n")
+            c_file.append(f"            return NULL;\n")
+            c_file.append(f"        ret->{i.fixname}->values = calloc (src->{i.fixname}->len + 1, sizeof (*ret->{i.fixname}->values));\n")
+            c_file.append(f"        if (ret->{i.fixname}->values == NULL)\n")
+            c_file.append(f"            return NULL;\n")
+            c_file.append(f"        for (size_t i = 0; i < ret->{i.fixname}->len; i++)\n")
+            c_file.append(f"          {{\n")
+            c_file.append(f"            ret->{i.fixname}->keys[i] = strdup (src->{i.fixname}->keys[i]);\n")
+            c_file.append(f"            if (ret->{i.fixname}->keys[i] == NULL)\n")
+            c_file.append(f"              return NULL;\n")
+            c_file.append(f"            ret->{i.fixname}->values[i] = clone_{i.subtypname}_element (src->{i.fixname}->values[i]);\n")
+            c_file.append(f"            if (ret->{i.fixname}->values[i] == NULL)\n")
+            c_file.append(f"              return NULL;\n")
+            c_file.append(f"          }}\n")
+            c_file.append(f"      }}\n")
+        else:
+            raise Exception("Unimplemented type for clone: %s" % i.typ)
+
+    c_file.append(f"    return move_ptr (ret);\n")
+    c_file.append("}\n\n")
 
 
 def json_value_generator(c_file, level, src, dst, ptx, typ):

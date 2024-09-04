@@ -1505,7 +1505,7 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
 
-  ret = malloc (sizeof (*ret));
+  ret = calloc (sizeof (*ret), 1);
   if (ret == NULL)
     {
       *(err) = strdup ("error allocating memory");
@@ -1561,6 +1561,42 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
               return NULL;
             }
         }
+    }
+  return move_ptr (ret);
+}
+
+json_map_string_string *
+clone_map_string_string (json_map_string_string *src)
+{
+  __auto_cleanup (free_json_map_string_string) json_map_string_string *ret = NULL;
+  size_t i;
+
+  if (src == NULL)
+    return NULL;
+
+  ret = calloc (sizeof (*ret), 1);
+  if (ret == NULL)
+    return NULL;
+
+  ret->len = src->len;
+
+  ret->keys = calloc (src->len + 1, sizeof (char *));
+  if (ret->keys == NULL)
+    return NULL;
+
+  ret->values = calloc (src->len + 1, sizeof (char *));
+  if (ret->values == NULL)
+    return NULL;
+
+  for (i = 0; i < src->len; i++)
+    {
+      ret->keys[i] = strdup (src->keys[i]);
+      if (ret->keys[i] == NULL)
+          return NULL;
+
+      ret->values[i] = strdup (src->values[i]);
+      if (ret->values[i] == NULL)
+          return NULL;
     }
   return move_ptr (ret);
 }
