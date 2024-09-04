@@ -325,8 +325,8 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
           }
 
         for (i = 0; i < tree->u.object.len; i++)
-          {""" \
-            f"if ({condition})" \
+          {\n""" \
+            f"            if ({condition})" \
            """{
                 if (ctx->options & OPT_PARSE_FULLKEY)
                   {
@@ -339,13 +339,12 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
                 j++;
               }
           }
-        if (ctx->options & OPT_PARSE_STRICT)
-          {
-            if (j > 0 && ctx->errfile != NULL)
-                (void) fprintf (ctx->errfile, "WARNING: unknown key found\\n");
-          }
+
+        if ((ctx->options & OPT_PARSE_STRICT) && j > 0 && ctx->errfile != NULL)
+          (void) fprintf (ctx->errfile, "WARNING: unknown key found\\n");
+
         if (ctx->options & OPT_PARSE_FULLKEY)
-            ret->_residual = resi;
+          ret->_residual = resi;
       }
 """)
 
