@@ -220,6 +220,8 @@ typedef struct
 
 void free_json_map_string_string (json_map_string_string *map);
 
+json_map_string_string *clone_map_string_string (json_map_string_string *src);
+
 json_map_string_string *make_json_map_string_string (yajl_val src, const struct parser_context *ctx, parser_error *err);
 
 yajl_gen_status gen_json_map_string_string (void *ctx, const json_map_string_string *map,

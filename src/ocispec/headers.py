@@ -172,6 +172,7 @@ def append_type_c_header(obj, header, prefix):
     typename = helpers.get_prefixed_name(obj.name, prefix)
     header.append(f"}}\n{typename};\n\n")
     header.append(f"void free_{typename} ({typename} *ptr);\n\n")
+    header.append(f"{typename} *clone_{typename} ({typename} *src);\n")
     header.append(f"{typename} *make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err);\n\n")
     header.append(f"yajl_gen_status gen_{typename} (yajl_gen g, const {typename} *ptr, const struct parser_context *ctx, parser_error *err);\n\n")
 
@@ -232,13 +233,13 @@ def header_reflect(structs, schema_info, header):
     length = len(structs)
     toptype = structs[length - 1].typ if length != 0 else ""
     if toptype == 'object':
-        header.append(f"{prefix} *{prefix}_parse_file(const char *filename, const struct parser_context *ctx, "\
+        header.append(f"{prefix} *{prefix}_parse_file (const char *filename, const struct parser_context *ctx, "\
             "parser_error *err);\n\n")
-        header.append(f"{prefix} *{prefix}_parse_file_stream(FILE *stream, const struct parser_context *ctx, "\
+        header.append(f"{prefix} *{prefix}_parse_file_stream (FILE *stream, const struct parser_context *ctx, "\
             "parser_error *err);\n\n")
-        header.append(f"{prefix} *{prefix}_parse_data(const char *jsondata, const struct parser_context *ctx, "\
+        header.append(f"{prefix} *{prefix}_parse_data (const char *jsondata, const struct parser_context *ctx, "\
             "parser_error *err);\n\n")
-        header.append(f"char *{prefix}_generate_json(const {prefix} *ptr, const struct parser_context *ctx, "\
+        header.append(f"char *{prefix}_generate_json (const {prefix} *ptr, const struct parser_context *ctx, "\
             "parser_error *err);\n\n")
     elif toptype == 'array':
         header_reflect_top_array(structs[length - 1], prefix, header)

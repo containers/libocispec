@@ -22,12 +22,11 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "ocispec/image_manifest_items_image_manifest_items_schema.h"
 
-
 int
 main ()
 {
   parser_error err = NULL;
-  image_manifest_items_image_manifest_items_schema_container *image_items = 
+  image_manifest_items_image_manifest_items_schema_container *image_items =
       image_manifest_items_image_manifest_items_schema_container_parse_file ("tests/data/image_manifest_item.json", 0, &err);
   image_manifest_items_image_manifest_items_schema_container *image_items_gen = NULL;
   char *json_buf = NULL;

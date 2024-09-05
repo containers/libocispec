@@ -509,7 +509,8 @@ free_json_map_int_int (json_map_int_int *map)
 
 define_cleaner_function (json_map_int_int *, free_json_map_int_int)
 
-    json_map_int_int *make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_error *err)
+json_map_int_int *
+make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_int_int) json_map_int_int *ret = NULL;
   size_t i;
@@ -689,7 +690,8 @@ free_json_map_int_bool (json_map_int_bool *map)
 
 define_cleaner_function (json_map_int_bool *, free_json_map_int_bool)
 
-    json_map_int_bool *make_json_map_int_bool (yajl_val src, const struct parser_context *ctx, parser_error *err)
+json_map_int_bool *
+make_json_map_int_bool (yajl_val src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_int_bool) json_map_int_bool *ret = NULL;
   size_t i;
@@ -861,7 +863,8 @@ free_json_map_int_string (json_map_int_string *map)
 
 define_cleaner_function (json_map_int_string *, free_json_map_int_string)
 
-    json_map_int_string *make_json_map_int_string (yajl_val src, const struct parser_context *ctx, parser_error *err)
+json_map_int_string *
+make_json_map_int_string (yajl_val src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_int_string) json_map_int_string *ret = NULL;
   size_t i;
@@ -1020,7 +1023,8 @@ free_json_map_string_int (json_map_string_int *map)
 
 define_cleaner_function (json_map_string_int *, free_json_map_string_int)
 
-    json_map_string_int *make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser_error *err)
+json_map_string_int *
+make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_string_int) json_map_string_int *ret = NULL;
   size_t i;
@@ -1181,7 +1185,8 @@ free_json_map_string_int64 (json_map_string_int64 *map)
 
 define_cleaner_function (json_map_string_int64 *, free_json_map_string_int64)
 
-    json_map_string_int64 *make_json_map_string_int64 (yajl_val src, const struct parser_context *ctx,
+json_map_string_int64 *
+make_json_map_string_int64 (yajl_val src, const struct parser_context *ctx,
                                                        parser_error *err)
 {
   __auto_cleanup (free_json_map_string_int64) json_map_string_int64 *ret = NULL;
@@ -1316,7 +1321,8 @@ free_json_map_string_bool (json_map_string_bool *map)
 
 define_cleaner_function (json_map_string_bool *, free_json_map_string_bool)
 
-    json_map_string_bool *make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parser_error *err)
+json_map_string_bool *
+make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_string_bool) json_map_string_bool *ret = NULL;
   size_t i;
@@ -1485,7 +1491,8 @@ free_json_map_string_string (json_map_string_string *map)
 
 define_cleaner_function (json_map_string_string *, free_json_map_string_string)
 
-    json_map_string_string *make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
+json_map_string_string *
+make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
                                                          parser_error *err)
 {
   __auto_cleanup (free_json_map_string_string) json_map_string_string *ret = NULL;
@@ -1498,7 +1505,7 @@ define_cleaner_function (json_map_string_string *, free_json_map_string_string)
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
 
-  ret = malloc (sizeof (*ret));
+  ret = calloc (sizeof (*ret), 1);
   if (ret == NULL)
     {
       *(err) = strdup ("error allocating memory");
@@ -1554,6 +1561,42 @@ define_cleaner_function (json_map_string_string *, free_json_map_string_string)
               return NULL;
             }
         }
+    }
+  return move_ptr (ret);
+}
+
+json_map_string_string *
+clone_map_string_string (json_map_string_string *src)
+{
+  __auto_cleanup (free_json_map_string_string) json_map_string_string *ret = NULL;
+  size_t i;
+
+  if (src == NULL)
+    return NULL;
+
+  ret = calloc (sizeof (*ret), 1);
+  if (ret == NULL)
+    return NULL;
+
+  ret->len = src->len;
+
+  ret->keys = calloc (src->len + 1, sizeof (char *));
+  if (ret->keys == NULL)
+    return NULL;
+
+  ret->values = calloc (src->len + 1, sizeof (char *));
+  if (ret->values == NULL)
+    return NULL;
+
+  for (i = 0; i < src->len; i++)
+    {
+      ret->keys[i] = strdup (src->keys[i]);
+      if (ret->keys[i] == NULL)
+          return NULL;
+
+      ret->values[i] = strdup (src->values[i]);
+      if (ret->values[i] == NULL)
+          return NULL;
     }
   return move_ptr (ret);
 }
@@ -1628,7 +1671,8 @@ cleanup_yajl_gen (yajl_gen g)
 
 define_cleaner_function (yajl_gen, cleanup_yajl_gen)
 
-    char *json_marshal_string (const char *str, size_t length, const struct parser_context *ctx, parser_error *err)
+char *
+json_marshal_string (const char *str, size_t length, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (cleanup_yajl_gen) yajl_gen g = NULL;
   struct parser_context tmp_ctx = { 0 };
