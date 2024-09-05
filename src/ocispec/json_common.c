@@ -1505,7 +1505,7 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
 
   len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
 
-  ret = calloc (sizeof (*ret), 1);
+  ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
     {
       *(err) = strdup ("error allocating memory");
@@ -1574,7 +1574,7 @@ clone_map_string_string (json_map_string_string *src)
   if (src == NULL)
     return NULL;
 
-  ret = calloc (sizeof (*ret), 1);
+  ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
     return NULL;
 
