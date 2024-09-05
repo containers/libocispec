@@ -854,6 +854,7 @@ def make_clone(obj, c_file, prefix):
 
     c_file.append(f"{typename} *\nclone_{typename} ({typename} *src)\n")
     c_file.append("{\n")
+    c_file.append("    (void) src;  /* Silence compiler warning.  */\n")
     c_file.append(f"    __auto_cleanup(free_{typename}) {typename} *ret = NULL;\n")
 
     c_file.append("    ret = calloc (1, sizeof (*ret));\n")
