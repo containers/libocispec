@@ -1,11 +1,15 @@
-DIST_SUBDIRS = yajl
-SUBDIRS = yajl
+DIST_SUBDIRS = yajl jansson
+SUBDIRS = yajl jansson
 
 AM_CFLAGS = $(WARN_CFLAGS) -I$(top_srcdir)/src -I$(top_builddir)/src
 
 if HAVE_EMBEDDED_YAJL
 AM_CFLAGS += -I$(top_srcdir)/yajl/src/headers
 endif HAVE_EMBEDDED_YAJL
+
+if HAVE_EMBEDDED_JANSSON
+AM_CFLAGS += -I$(top_srcdir)/jansson/src
+endif HAVE_EMBEDDED_JANSSON
 
 CLEANFILES = $(man_MANS) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 
@@ -159,6 +163,12 @@ if HAVE_EMBEDDED_YAJL
 TESTS_LDADD += yajl/libyajl.la
 else
 TESTS_LDADD += $(YAJL_LIBS)
+endif
+
+if HAVE_EMBEDDED_JANSSON
+TESTS_LDADD += jansson/src/.libs/libjansson.la
+else
+TESTS_LDADD += $(JANSSON_LIBS)
 endif
 
 libocispec_a_SOURCES =
