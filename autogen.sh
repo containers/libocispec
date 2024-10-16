@@ -15,6 +15,8 @@ if ! (autoreconf --version >/dev/null 2>&1); then
         exit 1
 fi
 
+(cd ./jansson; autoreconf -i)
+
 mkdir -p m4
 
 autoreconf --force --install --verbose
