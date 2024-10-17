@@ -227,10 +227,6 @@ json_map_string_string *make_json_map_string_string (yajl_val src, const struct 
 yajl_gen_status gen_json_map_string_string (void *ctx, const json_map_string_string *map,
                                             const struct parser_context *ptx, parser_error *err);
 
-int append_json_map_string_string (json_map_string_string *map, const char *key, const char *val);
-
-char *json_marshal_string (const char *str, size_t length, const struct parser_context *ctx, parser_error *err);
-
 #ifdef __cplusplus
 }
 #endif
