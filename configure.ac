@@ -12,8 +12,8 @@ AM_INIT_AUTOMAKE([1.11 -Wno-portability foreign tar-ustar no-dist-gzip dist-xz s
 AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
 
-AM_EXTRA_RECURSIVE_TARGETS([yajl])
-AC_CONFIG_SUBDIRS([yajl])
+AM_EXTRA_RECURSIVE_TARGETS([yajl jansson])
+AC_CONFIG_SUBDIRS([yajl jansson])
 
 AC_ARG_ENABLE(embedded-yajl,
 AS_HELP_STRING([--enable-embedded-yajl], [Statically link a modified yajl version]),
@@ -28,6 +28,21 @@ AM_CONDITIONAL([HAVE_EMBEDDED_YAJL], [test x"$embedded_yajl" = xtrue])
 AM_COND_IF([HAVE_EMBEDDED_YAJL], [], [
 AC_SEARCH_LIBS(yajl_tree_get, [yajl], [AC_DEFINE([HAVE_YAJL], 1, [Define if libyajl is available])], [AC_MSG_ERROR([*** libyajl headers not found])])
 PKG_CHECK_MODULES([YAJL], [yajl >= 2.0.0])
+])
+
+AC_ARG_ENABLE(embedded-jansson,
+AS_HELP_STRING([--enable-embedded-jansson], [Statically link a jansson version]),
+[
+case "${enableval}" in
+  yes) embedded_jansson=true ;;
+  no)  embedded_jansson=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-embedded-jansson) ;;
+esac],[embedded_jansson=false])
+
+AM_CONDITIONAL([HAVE_EMBEDDED_JANSSON], [test x"$embedded_jansson" = xtrue])
+AM_COND_IF([HAVE_EMBEDDED_JANSSON], [], [
+AC_SEARCH_LIBS(json_object, [jansson], [AC_DEFINE([HAVE_JANSSON], 1, [Define if libjansson is available])], [AC_MSG_ERROR([*** libjansson headers not found])])
+PKG_CHECK_MODULES([JANSSON], [jansson >= 2.14])
 ])
 
 # Optionally install the library.
