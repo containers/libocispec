@@ -19,12 +19,12 @@ jobs:
           - arch: ppc64le
             distro: ubuntu_latest
     steps:
-      - uses: actions/checkout@v3.0.2
+      - uses: actions/checkout@v4.2.2
         with:
           submodules: true
           set-safe-directory: true
 
-      - uses: uraimo/run-on-arch-action@v2.2.0
+      - uses: uraimo/run-on-arch-action@v2.8.1
         name: Build
         id: build
         with:
@@ -41,10 +41,21 @@ jobs:
             apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils
 
           run: |
+            # Install jansson
+            cd jansson;
+            autoreconf -fi;
+            ./configure;
+            make;
+            make install;
+            cd ..
+
+            # Configure and Run libocispec
+            export JANSSON_CFLAGS=-I/usr/local/include;
+            export JANSSON_LIBS=/usr/local/lib/libjansson.so
             find $(pwd) -name '.git' -exec bash -c 'git config --global --add safe.directory ${0%/.git}' {} \;
-            ./autogen.sh --enable-embedded-yajl --enable-embedded-jansson
-            ./configure --enable-embedded-yajl --enable-embedded-jansson CFLAGS='-Wall -Wextra -Werror'
-            make -j $(nproc) distcheck DISTCHECK_CONFIGURE_FLAGS="--enable-embedded-yajl --enable-embedded-jansson" AM_DISTCHECK_DVI_TARGET="" TESTS=""
+            ./autogen.sh --enable-embedded-yajl
+            ./configure --enable-embedded-yajl CFLAGS='-Wall -Wextra -Werror'
+            make -j $(nproc) distcheck DISTCHECK_CONFIGURE_FLAGS="--enable-embedded-yajl" AM_DISTCHECK_DVI_TARGET="" TESTS=""
             # check that the working dir is clean
             git describe --broken --dirty --all | grep -qv dirty
             make clean
