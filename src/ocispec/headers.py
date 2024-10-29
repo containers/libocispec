@@ -60,7 +60,7 @@ def append_header_arr(obj, header, prefix):
     typename = helpers.get_name_substr(obj.name, prefix)
     header.append(f"}}\n{typename};\n\n")
     header.append(f"void free_{typename} ({typename} *ptr);\n\n")
-    header.append(f"{typename} *make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err);\n\n")
+    header.append(f"{typename} *make_{typename} (json_object *jtree, const struct parser_context *ctx, parser_error *err);\n\n")
 
 
 def append_header_map_str_obj(obj, header, prefix):
@@ -164,7 +164,7 @@ def append_type_c_header(obj, header, prefix):
             else:
                 append_header_child_others(i, header, prefix)
         if obj.children is not None:
-            header.append("    yajl_val _residual;\n")
+            header.append("    struct json_object *_residual;\n")
         if len(present_tags) > 0:
             header.append("\n")
             for tag in present_tags:
@@ -173,8 +173,8 @@ def append_type_c_header(obj, header, prefix):
     header.append(f"}}\n{typename};\n\n")
     header.append(f"void free_{typename} ({typename} *ptr);\n\n")
     header.append(f"{typename} *clone_{typename} ({typename} *src);\n")
-    header.append(f"{typename} *make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err);\n\n")
-    header.append(f"yajl_gen_status gen_{typename} (yajl_gen g, const {typename} *ptr, const struct parser_context *ctx, parser_error *err);\n\n")
+    header.append(f"{typename} *make_{typename} (json_object *jtree, const struct parser_context *ctx, parser_error *err);\n\n")
+    header.append(f"int gen_{typename} (json_object *root, const {typename} *ptr, parser_error *err);\n\n")
 
 def header_reflect_top_array(obj, prefix, header):
     c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
@@ -206,7 +206,7 @@ def header_reflect_top_array(obj, prefix, header):
     header.append(f"{typename} *{typename}_parse_data(const char *jsondata, const struct "\
         "parser_context *ctx, parser_error *err);\n\n")
     header.append(f"char *{typename}_generate_json(const {typename} *ptr, "\
-        "const struct parser_context *ctx, parser_error *err);\n\n")
+        "parser_error *err);\n\n")
 
 def header_reflect(structs, schema_info, header):
     '''
@@ -239,7 +239,7 @@ def header_reflect(structs, schema_info, header):
             "parser_error *err);\n\n")
         header.append(f"{prefix} *{prefix}_parse_data (const char *jsondata, const struct parser_context *ctx, "\
             "parser_error *err);\n\n")
-        header.append(f"char *{prefix}_generate_json (const {prefix} *ptr, const struct parser_context *ctx, "\
+        header.append(f"char *{prefix}_generate_json (const {prefix} *ptr,"\
             "parser_error *err);\n\n")
     elif toptype == 'array':
         header_reflect_top_array(structs[length - 1], prefix, header)

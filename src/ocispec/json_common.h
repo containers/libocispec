@@ -6,9 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <yajl/yajl_tree.h>
-#include <yajl/yajl_gen.h>
-#include <jansson.h>
+#include <json-c/json.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +33,12 @@ extern "C" {
 #define OPT_PARSE_FULLKEY 0x08
 // options not to validate utf8 data
 #define OPT_GEN_NO_VALIDATE_UTF8 0x10
+
+// Generating json succeded
+#define JSON_GEN_SUCCESS 0
+
+// Generating json failed
+#define JSON_GEN_FAILED -1
 
 #define define_cleaner_function(type, cleaner)      \
   static inline void cleaner##_function (type *ptr) \
@@ -80,41 +84,9 @@ struct parser_context
   FILE *errfile;
 };
 
-yajl_gen_status gen_yajl_object_residual (yajl_val obj, yajl_gen g, parser_error *err);
-
-yajl_gen_status map_uint (void *ctx, long long unsigned int num);
-
-yajl_gen_status map_int (void *ctx, long long int num);
-
-bool json_gen_init (yajl_gen *g, const struct parser_context *ctx);
-
-yajl_val get_val (yajl_val tree, const char *name, yajl_type type);
-
 char *safe_strdup (const char *src);
 
 void *safe_malloc (size_t size);
-
-int common_safe_double (const char *numstr, double *converted);
-
-int common_safe_uint8 (const char *numstr, uint8_t *converted);
-
-int common_safe_uint16 (const char *numstr, uint16_t *converted);
-
-int common_safe_uint32 (const char *numstr, uint32_t *converted);
-
-int common_safe_uint64 (const char *numstr, uint64_t *converted);
-
-int common_safe_uint (const char *numstr, unsigned int *converted);
-
-int common_safe_int8 (const char *numstr, int8_t *converted);
-
-int common_safe_int16 (const char *numstr, int16_t *converted);
-
-int common_safe_int32 (const char *numstr, int32_t *converted);
-
-int common_safe_int64 (const char *numstr, int64_t *converted);
-
-int common_safe_int (const char *numstr, int *converted);
 
 int json_double_to_int (double d, int *converted);
 
@@ -145,11 +117,7 @@ typedef struct
   size_t len;
 } json_map_int_int;
 
-void free_json_map_int_int (json_map_int_int *map);
-
-json_map_int_int *make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_int_int (void *ctx, const json_map_int_int *map, const struct parser_context *ptx,
+int gen_json_map_int_int (json_object *root, const json_map_int_int *map, 
                                       parser_error *err);
 
 int append_json_map_int_int (json_map_int_int *map, int key, int val);
@@ -161,11 +129,7 @@ typedef struct
   size_t len;
 } json_map_int_bool;
 
-void free_json_map_int_bool (json_map_int_bool *map);
-
-json_map_int_bool *make_json_map_int_bool (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_int_bool (void *ctx, const json_map_int_bool *map, const struct parser_context *ptx,
+int gen_json_map_int_bool (json_object *root, const json_map_int_bool *map, 
                                        parser_error *err);
 
 int append_json_map_int_bool (json_map_int_bool *map, int key, bool val);
@@ -177,11 +141,7 @@ typedef struct
   size_t len;
 } json_map_int_string;
 
-void free_json_map_int_string (json_map_int_string *map);
-
-json_map_int_string *make_json_map_int_string (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_int_string (void *ctx, const json_map_int_string *map, const struct parser_context *ptx,
+int gen_json_map_int_string (json_object *root, const json_map_int_string *map, 
                                          parser_error *err);
 
 int append_json_map_int_string (json_map_int_string *map, int key, const char *val);
@@ -193,11 +153,7 @@ typedef struct
   size_t len;
 } json_map_string_int;
 
-void free_json_map_string_int (json_map_string_int *map);
-
-json_map_string_int *make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_string_int (void *ctx, const json_map_string_int *map, const struct parser_context *ptx,
+int gen_json_map_string_int (json_object *root, const json_map_string_int *map, 
                                          parser_error *err);
 
 int append_json_map_string_int (json_map_string_int *map, const char *key, int val);
@@ -209,10 +165,6 @@ typedef struct
   size_t len;
 } json_map_string_bool;
 
-void free_json_map_string_bool (json_map_string_bool *map);
-
-json_map_string_bool *make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
 typedef struct
 {
   char **keys;
@@ -220,16 +172,13 @@ typedef struct
   size_t len;
 } json_map_string_int64;
 
-void free_json_map_string_int64 (json_map_string_int64 *map);
 
-json_map_string_int64 *make_json_map_string_int64 (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_string_int64 (void *ctx, const json_map_string_int64 *map,
-                                           const struct parser_context *ptx, parser_error *err);
+int gen_json_map_string_int64 (json_object *root, const json_map_string_int64 *map,
+                                            parser_error *err);
 
 int append_json_map_string_int64 (json_map_string_int64 *map, const char *key, int64_t val);
 
-yajl_gen_status gen_json_map_string_bool (void *ctx, const json_map_string_bool *map, const struct parser_context *ptx,
+int gen_json_map_string_bool (json_object *root, const json_map_string_bool *map, 
                                           parser_error *err);
 
 int append_json_map_string_bool (json_map_string_bool *map, const char *key, bool val);
@@ -245,16 +194,33 @@ void free_json_map_string_string (json_map_string_string *map);
 
 json_map_string_string *clone_map_string_string (json_map_string_string *src);
 
-json_map_string_string *make_json_map_string_string (yajl_val src, const struct parser_context *ctx, parser_error *err);
+json_map_string_string *make_json_map_string_string (json_object *src, const struct parser_context *ctx, parser_error *err);
 
-yajl_gen_status gen_json_map_string_string (void *ctx, const json_map_string_string *map,
-                                            const struct parser_context *ptx, parser_error *err);
+int gen_json_map_string_string (json_object *root, const json_map_string_string *map, parser_error *err);
 
 int append_json_map_string_string (json_map_string_string *map, const char *key, const char *val);
 
 char *json_marshal_string (const char *str, size_t length, const struct parser_context *ctx, parser_error *err);
 
-json_t *yajl_to_json(yajl_val val);
+typedef struct
+{
+  json_object * values;
+  size_t len;
+} jansson_array_values;
+
+typedef struct
+{
+  char **keys;
+  struct json_object *values;
+  size_t len;
+} json_c_object_keys_values;
+
+json_c_object_keys_values *json_object_to_keys_values(json_object *object);
+
+struct json_object *copy_unmatched_fields(json_object *src, const char **exclude_keys, int len);
+
+int json_object_update_missing_generic(struct json_object *obj1, struct json_object *obj2);
+
 #ifdef __cplusplus
 }
 #endif

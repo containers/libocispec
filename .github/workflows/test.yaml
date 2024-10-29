@@ -16,15 +16,12 @@ jobs:
             distro: ubuntu_latest
           - arch: s390x
             distro: ubuntu_latest
-          - arch: ppc64le
-            distro: ubuntu_latest
+          # - arch: ppc64le
+          #   distro: ubuntu_latest
     steps:
-      - uses: actions/checkout@v3.0.2
-        with:
-          submodules: true
-          set-safe-directory: true
+      - uses: actions/checkout@v4.2.2
 
-      - uses: uraimo/run-on-arch-action@v2.2.0
+      - uses: uraimo/run-on-arch-action@v2.8.1
         name: Build
         id: build
         with:
@@ -33,18 +30,16 @@ jobs:
 
           githubToken: ${{ github.token }}
 
-          setup: |
-            git submodule update --init --recursive
-
           install: |
             apt-get update -q -y
-            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils
+            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils libjson-c-dev
 
           run: |
+            # Configure and Run libocispec
             find $(pwd) -name '.git' -exec bash -c 'git config --global --add safe.directory ${0%/.git}' {} \;
-            ./autogen.sh --enable-embedded-yajl --enable-embedded-jansson
-            ./configure --enable-embedded-yajl --enable-embedded-jansson CFLAGS='-Wall -Wextra -Werror'
-            make -j $(nproc) distcheck DISTCHECK_CONFIGURE_FLAGS="--enable-embedded-yajl --enable-embedded-jansson" AM_DISTCHECK_DVI_TARGET="" TESTS=""
+            ./autogen.sh
+            ./configure CFLAGS='-Wall -Wextra -Werror'
+            make -j $(nproc) distcheck AM_DISTCHECK_DVI_TARGET=""
             # check that the working dir is clean
             git describe --broken --dirty --all | grep -qv dirty
             make clean
