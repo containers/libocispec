@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <yajl/yajl_tree.h>
 #include <yajl/yajl_gen.h>
+#include <jansson.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,6 +115,28 @@ int common_safe_int32 (const char *numstr, int32_t *converted);
 int common_safe_int64 (const char *numstr, int64_t *converted);
 
 int common_safe_int (const char *numstr, int *converted);
+
+int json_double_to_int (double d, int *converted);
+
+int json_double_to_int64 (double d, int64_t *converted);
+
+int json_double_to_int32 (double d, int32_t *converted);
+
+int json_double_to_int16 (double d, int16_t *converted);
+
+int json_double_to_int8 (double d, int8_t *converted);
+
+int json_double_to_uint (double d, unsigned int *converted);
+
+int json_double_to_uint64 (double d, uint64_t *converted);
+
+int json_double_to_uint32 (double d, uint32_t *converted);
+
+int json_double_to_uint16 (double d, uint16_t *converted);
+
+int json_double_to_uint8 (double d, uint8_t *converted);
+
+int json_double_to_double (double d, double *converted);
 
 typedef struct
 {
@@ -231,6 +254,7 @@ int append_json_map_string_string (json_map_string_string *map, const char *key,
 
 char *json_marshal_string (const char *str, size_t length, const struct parser_context *ctx, parser_error *err);
 
+json_t *yajl_to_json(yajl_val val);
 #ifdef __cplusplus
 }
 #endif

@@ -454,6 +454,187 @@ common_safe_int (const char *numstr, int *converted)
   return 0;
 }
 
+/*
+* This function converts double to int
+* Input: double d, int *converted
+* Ouput: int
+*/
+int
+json_double_to_int (double d, int *converted)
+{
+  long long int lli;
+  lli = (long long int) d;
+
+  if (lli > INT_MAX || lli < INT_MIN)
+    return -ERANGE;
+
+  *converted = (int) lli;
+  return 0;
+}
+
+/*
+* This function converts double to int64
+* Input: double d, int64 *converted
+* Ouput: int
+*/
+int
+json_double_to_int64 (double d, int64_t *converted)
+{
+  long long int lli;
+  lli = (long long int) d;
+  *converted = (int64_t) lli;
+  return 0;
+}
+
+/*
+* This function converts double to int32
+* Input: double d, int32 *converted
+* Ouput: int
+*/
+int
+json_double_to_int32 (double d, int32_t *converted)
+{
+  long long int lli;
+  lli = (long long int) d;
+
+  if (lli > INT32_MAX || lli < INT32_MIN)
+    return -ERANGE;
+
+  *converted = (int32_t) lli;
+  return 0;
+}
+
+/*
+* This function converts double to int16
+* Input: double d, int16 *converted
+* Ouput: int
+*/
+int
+json_double_to_int16 (double d, int16_t *converted)
+{
+  long int li;
+  li = (long int) d;
+  if (li > INT16_MAX || li < INT16_MIN)
+    return -ERANGE;
+
+  *converted = (int16_t) li;
+  return 0;
+}
+
+/*
+* This function converts double to int8
+* Input: double d, int8 *converted
+* Ouput: int
+*/
+int
+json_double_to_int8 (double d, int8_t *converted)
+{
+  long int li;
+  li = (long int) d;
+  if (li > INT8_MAX || li < INT8_MIN)
+    return -ERANGE;
+  *converted = (int8_t) li;
+  return 0;
+}
+
+/*
+* This function converts double to uint
+* Input: double d, unsigned int *converted
+* Ouput: int
+*/
+int
+json_double_to_uint (double d, unsigned int *converted)
+{
+  unsigned long long int ull;
+  ull = (unsigned long long int) d;
+
+  if (ull > UINT_MAX)
+    return -ERANGE;
+
+  *converted = (unsigned int) ull;
+  return 0;
+}
+
+/*
+* This function converts double to uint64
+* Input: double d, uint64_t *converted
+* Ouput: int
+*/
+int
+json_double_to_uint64 (double d, uint64_t *converted)
+{
+  unsigned long long int ull;
+  ull = (unsigned long long int) d;
+  *converted = (uint64_t) ull;
+  return 0;
+}
+
+/*
+* This function converts double to uint32
+* Input: double d, uint32_t *converted
+* Ouput: int
+*/
+int
+json_double_to_uint32 (double d, uint32_t *converted)
+{
+  unsigned long long int ull;
+  ull = (unsigned long long int) d;
+
+  if (ull > UINT32_MAX)
+    return -ERANGE;
+
+  *converted = (uint32_t) ull;
+  return 0;
+}
+
+/*
+* This function converts double to uint16
+* Input: double d, uint16_t *converted
+* Ouput: int
+*/
+int
+json_double_to_uint16 (double d, uint16_t *converted)
+{
+  unsigned long int uli;
+  uli = (unsigned long int) d;
+  if (uli > UINT16_MAX)
+    return -ERANGE;
+
+  *converted = (uint16_t) uli;
+  return 0;
+}
+
+/*
+* This function converts double to uint8
+* Input: double d, uint8_t *converted
+* Ouput: int
+*/
+int
+json_double_to_uint8 (double d, uint8_t *converted)
+{
+  unsigned long int uli;
+  uli = (unsigned long int) d;
+  
+  if (uli > UINT8_MAX)
+    return -ERANGE;
+
+  *converted = (uint8_t) uli;
+  return 0;
+}
+
+/*
+* This function converts double to double, kind of silly :)
+* Input: double d, double *converted
+* Ouput: int
+*/
+int
+json_double_to_double (double d, double *converted)
+{
+  *converted = d;
+  return 0;
+}
+
+
 yajl_gen_status
 gen_json_map_int_int (void *ctx, const json_map_int_int *map, const struct parser_context *ptx, parser_error *err)
 {
@@ -1718,4 +1899,41 @@ json_marshal_string (const char *str, size_t length, const struct parser_context
   json_buf[gen_len] = '\0';
 
   return json_buf;
+}
+
+/*
+This function is temporary function to convert yajl_val. This fuction will 
+not be required once we completely move to jansson 
+
+Input: yajl_val
+
+Output: json_t
+*/
+json_t *yajl_to_json(yajl_val val) {
+    if YAJL_IS_NULL(val) {
+      return json_null();
+    } else if (YAJL_IS_TRUE(val)) {
+      return json_true();
+    } else if (YAJL_IS_FALSE(val)) {
+      return json_false();
+    } else if (YAJL_IS_DOUBLE(val)) {
+      return json_real(YAJL_GET_DOUBLE(val));
+    } else if (YAJL_IS_INTEGER(val)) {
+      return json_integer(YAJL_GET_INTEGER(val));
+    } else if (YAJL_IS_STRING(val)) {
+      return json_string(YAJL_GET_STRING(val));
+    } else if (YAJL_IS_ARRAY(val)) {
+      json_t *jansson_array = json_array();
+      for (size_t i = 0; i < val->u.array.len; i++) {
+        json_array_append(jansson_array, yajl_to_json(val->u.array.values[i]));
+      }
+      return jansson_array;
+    } else {
+      json_t *jansson_object = json_object();
+      for (size_t i = 0; i < val->u.object.len; i++) {
+          json_object_set_new(jansson_object, val->u.object.keys[i], yajl_to_json(val->u.object.values[i]));
+      }
+      return jansson_object;
+    }
+  return NULL;
 }

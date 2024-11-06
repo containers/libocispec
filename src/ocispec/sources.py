@@ -369,10 +369,11 @@ def parse_json_to_c(obj, c_file, prefix):
     c_file.append(f"define_cleaner_function ({typename} *, free_{typename})\n")
     c_file.append(f"{typename} *\nmake_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)\n")
     c_file.append("{\n")
+    c_file.append("    const json_t *jtree = yajl_to_json(tree);\n")
     c_file.append(f"    __auto_cleanup(free_{typename}) {typename} *ret = NULL;\n")
     c_file.append("    *err = NULL;\n")
     c_file.append("    (void) ctx;  /* Silence compiler warning.  */\n")
-    c_file.append("    if (tree == NULL)\n")
+    c_file.append("    if (jtree == NULL)\n")
     c_file.append("      return NULL;\n")
     c_file.append("    ret = calloc (1, sizeof (*ret));\n")
     c_file.append("    if (ret == NULL)\n")
@@ -708,7 +709,8 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
     """
     if helpers.valid_basic_map_name(typ):
         c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
+        c_file.append(f"{'    ' * level}const json_t *jval = yajl_to_json(val);\n")
+        c_file.append(f"{'    ' * level}if (jval != NULL)\n")
         c_file.append(f'{"    " * level}  {{\n')
         c_file.append(f'{"    " * (level + 1)}{dest} = make_{helpers.make_basic_map_name(typ)} (val, ctx, err);\n')
         c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
@@ -723,45 +725,46 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f'{"    " * (level)}}}\n')
     elif typ == 'string':
         c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
+        c_file.append(f"{'    ' * level}if (jtree != NULL)\n")
         c_file.append(f"{'    ' * (level)}  {{\n")
-        c_file.append(f"{'    ' * (level + 1)}char *str = YAJL_GET_STRING (val);\n")
+        c_file.append(f"{'    ' * (level + 1)}char *str = json_string_value (jtree);\n")
         c_file.append(f"{'    ' * (level + 1)}{dest} = strdup (str ? str : \"\");\n")
         c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
         c_file.append(f"{'    ' * (level + 1)}  return NULL;\n")
         c_file.append(f'{"    " * level}  }}\n')
     elif helpers.judge_data_type(typ):
         c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
+        c_file.append(f"{'    ' * level}const json_t *jval = yajl_to_json(val);\n")
+        c_file.append(f"{'    ' * level}if (jval != NULL)\n")
         c_file.append(f'{"    " * (level)}  {{\n')
         if typ.startswith("uint") or \
                 (typ.startswith("int") and typ != "integer") or typ == "double":
             c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-            c_file.append(f"{'    ' * (level + 1)}if (! YAJL_IS_NUMBER (val))\n")
+            c_file.append(f"{'    ' * (level + 1)}if (!json_is_number (jval))\n")
             c_file.append(f'{"    " * (level + 1)}  {{\n')
             c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
-            c_file.append(f'{"    " * (level + 1)}invalid = common_safe_{typ} (YAJL_GET_NUMBER (val), &{dest});\n')
+            c_file.append(f'{"    " * (level + 1)}invalid = json_double_to_{typ} (json_number_value(jval), &{dest});\n')
         elif typ == "integer":
             c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-            c_file.append(f"{'    ' * (level + 1)}if (! YAJL_IS_NUMBER (val))\n")
+            c_file.append(f"{'    ' * (level + 1)}if (!json_is_number (jval))\n")
             c_file.append(f'{"    " * (level + 1)}  {{\n')
             c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
-            c_file.append(f'{"    " * (level + 1)}invalid = common_safe_int (YAJL_GET_NUMBER (val), (int *)&{dest});\n')
+            c_file.append(f'{"    " * (level + 1)}invalid = json_double_to_int (json_number_value(jval), (int *)&{dest});\n')
         elif typ == "UID" or typ == "GID":
             c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-            c_file.append(f"{'    ' * (level + 1)}if (! YAJL_IS_NUMBER (val))\n")
+            c_file.append(f"{'    ' * (level + 1)}if (!json_is_number (jval))\n")
             c_file.append(f'{"    " * (level + 1)}  {{\n')
             c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
-            c_file.append(f'{"    " * (level + 1)}invalid = common_safe_uint (YAJL_GET_NUMBER (val), (unsigned int *)&{dest});\n')
+            c_file.append(f'{"    " * (level + 1)}invalid = json_double_to_uint (json_number_value(jval), (unsigned int *)&{dest});\n')
         c_file.append(f"{'    ' * (level + 1)}if (invalid)\n")
         c_file.append(f'{"    " * (level + 1)}  {{\n')
-        c_file.append(f'{"    " * (level + 1)}    if (asprintf (err, "Invalid value \'%s\' with type \'{typ}\' for key \'{keyname}\': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)\n')
+        c_file.append(f'{"    " * (level + 1)}    if (asprintf (err, "Invalid value \'%f\' with type \'{typ}\' for key \'{keyname}\': %s", json_number_value (jval), strerror (-invalid)) < 0)\n')
         c_file.append(f'{"    " * (level + 1)}        *err = strdup ("error allocating memory");\n')
         c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
         c_file.append(f'{"    " * (level + 1)}}}\n')
@@ -773,18 +776,19 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         if num_type == "":
             return
         c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
+        c_file.append(f"{'    ' * level}const json_t *jval = yajl_to_json(val);\n")
+        c_file.append(f"{'    ' * level}if (jval != NULL)\n")
         c_file.append(f'{"    " * (level)}  {{\n')
         c_file.append(f'{"    " * (level + 1)}{dest} = calloc (1, sizeof ({helpers.get_map_c_types(num_type)}));\n')
         c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
         c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
         c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-        c_file.append(f"{'    ' * (level + 1)}if (! YAJL_IS_NUMBER (val))\n")
+        c_file.append(f"{'    ' * (level + 1)}if (! json_is_number (jval))\n")
         c_file.append(f'{"    " * (level + 1)}  {{\n')
         c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
         c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
         c_file.append(f'{"    " * (level + 1)}}}\n')
-        c_file.append(f'{"    " * (level + 1)}sinvalid = common_safe_{num_type} (YAJL_GET_NUMBER (val), {dest});\n')
+        c_file.append(f'{"    " * (level + 1)}sinvalid = json_double_to_{num_type} (json_number_value(jval), {dest});\n')
         c_file.append(f"{'    ' * (level + 1)}if (invalid)\n")
         c_file.append(f'{"    " * (level + 1)}  {{\n')
         c_file.append(f'{"    " * (level + 1)}    if (asprintf (err, "Invalid value \'%s\' with type \'{typ}\' ' \
@@ -795,9 +799,10 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f'{"    " * (level)}}}\n')
     elif typ == 'boolean':
         c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
+        c_file.append(f"{'    ' * level}const json_t *jval = yajl_to_json(val);\n")
+        c_file.append(f"{'    ' * level}if (jval != NULL)\n")
         c_file.append(f'{"    " * (level)}  {{\n')
-        c_file.append(f"{'    ' * (level + 1)}{dest} = YAJL_IS_TRUE(val);\n")
+        c_file.append(f"{'    ' * (level + 1)}{dest} = json_is_true(jval);\n")
         if '[' not in dest:
             c_file.append(f"{'    ' * (level + 1)}{dest}_present = 1;\n")
             c_file.append(f'{"    " * (level)}  }}\n')
@@ -813,21 +818,23 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
     elif typ == 'booleanPointer':
         c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
         c_file.append(f"{'    ' * level}if (val != NULL)\n")
+        c_file.append(f"{'    ' * level}const json_t *jval = yajl_to_json(val);\n")
         c_file.append(f'{"    " * (level)}  {{\n')
         c_file.append(f"{'    ' * (level + 1)}{dest} = calloc (1, sizeof (bool));\n")
         c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
         c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-        c_file.append(f"{'    ' * (level + 1)}*({dest}) = YAJL_IS_TRUE(val);\n")
+        c_file.append(f"{'    ' * (level + 1)}*({dest}) = json_is_true(jval);\n")
         c_file.append(f'{"    " * (level)}  }}\n')
         c_file.append(f"{'    ' * level}else\n")
         c_file.append(f'{"    " * (level)} {{\n')
         c_file.append(f'{"    " * (level + 1)}val = get_val (tree, "{keyname}", yajl_t_false);\n')
-        c_file.append(f"{'    ' * (level + 1)}if (val != NULL)\n")
+        c_file.append(f"{'    ' * (level + 1)}const json_t *jval = yajl_to_json(val);\n")
+        c_file.append(f"{'    ' * (level + 1)}if (jval != NULL)\n")
         c_file.append(f'{"    " * (level + 1)}  {{\n')
         c_file.append(f"{'    ' * (level + 2)}{dest} = calloc (1, sizeof (bool));\n")
         c_file.append(f"{'    ' * (level + 2)}if ({dest} == NULL)\n")
         c_file.append(f"{'    ' * (level + 2)}  return NULL;\n")
-        c_file.append(f"{'    ' * (level + 2)}*({dest}) = YAJL_IS_TRUE(val);\n")
+        c_file.append(f"{'    ' * (level + 2)}*({dest}) = json_is_true(jval);\n")
         c_file.append(f'{"    " * (level + 1)}}}\n')
         c_file.append(f'{"    " * (level)}}}\n')
 
@@ -1236,6 +1243,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
                     f"{typename}\n" +
                     f"*make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)\n" +
                     "{\n" +
+                    f"    const json_t *jtree = yajl_to_json(tree);\n"
                     f"    __auto_cleanup(free_{typename}) {typename} *ptr = NULL;\n" +
                     f"    size_t i, alen;\n" +
                     f" "+
@@ -1297,7 +1305,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
             c_file.append('        if (ptr->items[j] == NULL)\n')
             c_file.append("          return NULL;\n")
         else:
-            c_file.append('        char *str = YAJL_GET_STRING (tree);\n')
+            c_file.append('        char *str = json_string_value (jtree);\n')
             c_file.append('        memcpy(ptr->items, str ? str : "", strlen(str ? str : ""));\n')
             c_file.append('        break;\n')
     else:

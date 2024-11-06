@@ -273,6 +273,8 @@ sync:
 	(cd image-spec; git pull https://github.com/opencontainers/image-spec)
 	(cd runtime-spec; git pull https://github.com/opencontainers/runtime-spec)
 	(cd yajl; git pull https://github.com/containers/yajl main)
+	(cd jansson; git pull https://github.com/akheron/jansson master)
+	
 
 generate: src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 
