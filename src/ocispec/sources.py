@@ -55,10 +55,10 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
             childname = child.subtypname
         else:
             childname = helpers.get_prefixed_name(child.name, prefix)
-    c_file.append('    if (YAJL_GET_OBJECT (tree) != NULL)\n')
+    c_file.append('    if (json_is_object(jtree))\n')
     c_file.append('      {\n')
     c_file.append('        size_t i;\n')
-    c_file.append('        size_t len = YAJL_GET_OBJECT_NO_CHECK (tree)->len;\n')
+    c_file.append('        size_t len = json_object_size(jtree);\n')
     c_file.append('        const char **keys = YAJL_GET_OBJECT_NO_CHECK (tree)->keys;\n')
     c_file.append('        yajl_val *values = YAJL_GET_OBJECT_NO_CHECK (tree)->values;\n')
     c_file.append('        ret->len = len;\n')
@@ -71,12 +71,14 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     c_file.append('        for (i = 0; i < len; i++)\n')
     c_file.append('          {\n')
     c_file.append('            yajl_val val;\n')
+    c_file.append('            json_t *jval;\n')
     c_file.append('            const char *tmpkey = keys[i];\n')
     c_file.append('            ret->keys[i] = strdup (tmpkey ? tmpkey : "");\n')
     c_file.append('            if (ret->keys[i] == NULL)\n')
     c_file.append("              return NULL;\n")
     c_file.append('            val = values[i];\n')
-    c_file.append(f'            ret->{child.fixname}[i] = make_{childname} (val, ctx, err);\n')
+    c_file.append('            jval = yajl_to_json(values[i]);\n')
+    c_file.append(f'            ret->{child.fixname}[i] = make_{childname} (jval, ctx, err);\n')
     c_file.append(f'            if (ret->{child.fixname}[i] == NULL)\n')
     c_file.append("              return NULL;\n")
     c_file.append('          }\n')
@@ -92,11 +94,12 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.append('    do\n')
         c_file.append('      {\n')
         c_file.append(f'        yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);\n')
-        c_file.append('        if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)\n')
+        c_file.append(f'        json_t *jtmp = yajl_to_json(tmp);\n')
+        c_file.append('        if (jtmp != NULL && json_array_to_struct (jtmp) != NULL)\n')
         c_file.append('          {\n')
         c_file.append('            size_t i;\n')
-        c_file.append('            size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;\n')
-        c_file.append('            yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;\n')
+        c_file.append('            size_t len = json_array_size (jtmp);\n')
+        c_file.append('            json_t *values = json_array_to_struct (jtmp)->values;\n')
         c_file.append(f'            ret->{obj.fixname}_len = len;\n')
         c_file.append(f'            ret->{obj.fixname} = calloc (len + 1, sizeof (*ret->{obj.fixname}));\n')
         c_file.append(f'            if (ret->{obj.fixname} == NULL)\n')
@@ -107,14 +110,14 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
             c_file.append('                return NULL;\n')
         c_file.append('            for (i = 0; i < len; i++)\n')
         c_file.append('              {\n')
-        c_file.append('                yajl_val val = values[i];\n')
+        c_file.append('                json_t *val = &values[i];\n')
         if obj.doublearray:
             c_file.append('                size_t j;\n')
-            c_file.append(f'                ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(val)->len + 1, sizeof (**ret->{obj.fixname}));\n')
+            c_file.append(f'                ret->{obj.fixname}[i] = calloc ( json_array_to_struct(val)->len + 1, sizeof (**ret->{obj.fixname}));\n')
             c_file.append(f'                if (ret->{obj.fixname}[i] == NULL)\n')
             c_file.append('                    return NULL;\n')
-            c_file.append('                yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(val)->values;\n')
-            c_file.append('                for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(val)->len; j++)\n')
+            c_file.append('                json_t *items = json_array_to_struct(val)->values;\n')
+            c_file.append('                for (j = 0; j < json_array_to_struct(val)->len; j++)\n')
             c_file.append('                  {\n')
             c_file.append(f'                    ret->{obj.fixname}[i][j] = make_{typename} (items[j], ctx, err);\n')
             c_file.append(f'                    if (ret->{obj.fixname}[i][j] == NULL)\n')
@@ -367,9 +370,8 @@ def parse_json_to_c(obj, c_file, prefix):
         if objs is None or obj.subtypname:
             return
     c_file.append(f"define_cleaner_function ({typename} *, free_{typename})\n")
-    c_file.append(f"{typename} *\nmake_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)\n")
+    c_file.append(f"{typename} *\nmake_{typename} (json_t *jtree, const struct parser_context *ctx, parser_error *err)\n")
     c_file.append("{\n")
-    c_file.append("    const json_t *jtree = yajl_to_json(tree);\n")
     c_file.append(f"    __auto_cleanup(free_{typename}) {typename} *ret = NULL;\n")
     c_file.append("    *err = NULL;\n")
     c_file.append("    (void) ctx;  /* Silence compiler warning.  */\n")
@@ -712,7 +714,7 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f"{'    ' * level}const json_t *jval = yajl_to_json(val);\n")
         c_file.append(f"{'    ' * level}if (jval != NULL)\n")
         c_file.append(f'{"    " * level}  {{\n')
-        c_file.append(f'{"    " * (level + 1)}{dest} = make_{helpers.make_basic_map_name(typ)} (val, ctx, err);\n')
+        c_file.append(f'{"    " * (level + 1)}{dest} = make_{helpers.make_basic_map_name(typ)} (jval, ctx, err);\n')
         c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
         c_file.append(f'{"    " * (level + 1)}  {{\n')
         c_file.append(f"{'    ' * (level + 1)}    char *new_error = NULL;\n")
@@ -1241,18 +1243,17 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
 
     c_file.append(f"\ndefine_cleaner_function ({typename} *, free_{typename})\n" +
                     f"{typename}\n" +
-                    f"*make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)\n" +
+                    f"*make_{typename} (json_t *jtree, const struct parser_context *ctx, parser_error *err)\n" +
                     "{\n" +
-                    f"    const json_t *jtree = yajl_to_json(tree);\n"
                     f"    __auto_cleanup(free_{typename}) {typename} *ptr = NULL;\n" +
                     f"    size_t i, alen;\n" +
                     f" "+
                     f"    (void) ctx;\n" +
                     f" "+
-                    f"    if (tree == NULL || err == NULL || YAJL_GET_ARRAY (tree) == NULL)\n" +
+                    f"    if (jtree == NULL || err == NULL || !json_is_array (jtree))\n" +
                     f"      return NULL;\n" +
                     f"    *err = NULL;\n" +
-                    f"    alen = YAJL_GET_ARRAY_NO_CHECK (tree)->len;\n" +
+                    f"    alen = json_array_size (jtree);\n" +
                     f"    if (alen == 0)\n" +
                     f"      return NULL;\n" +
                     f"    ptr = calloc (1, sizeof ({typename}));\n" +
@@ -1272,7 +1273,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
     c_file.append("""\n
     for (i = 0; i < alen; i++)
       {
-        yajl_val work = YAJL_GET_ARRAY_NO_CHECK (tree)->values[i];
+        json_t work = json_array_to_struct (jtree)->values[i];
 """);
 
     if obj.subtypobj or obj.subtyp == 'object':
@@ -1283,11 +1284,11 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
 
         if obj.doublearray:
             c_file.append('        size_t j;\n')
-            c_file.append('        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));\n')
+            c_file.append('        ptr->items[i] = calloc ( json_array_to_struct(work)->len + 1, sizeof (**ptr->items));\n')
             c_file.append('        if (ptr->items[i] == NULL)\n')
             c_file.append('          return NULL;\n')
-            c_file.append('        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;\n')
-            c_file.append('        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)\n')
+            c_file.append('        yajl_val *tmps = json_array_to_struct(work)->values;\n')
+            c_file.append('        for (j = 0; j < json_array_to_struct(work)->len; j++)\n')
             c_file.append('          {\n')
             c_file.append(f'              ptr->items[i][j] = make_{subtypename} (tmps[j], ctx, err);\n')
             c_file.append('              if (ptr->items[i][j] == NULL)\n')
@@ -1310,12 +1311,12 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
             c_file.append('        break;\n')
     else:
         if obj.doublearray:
-            c_file.append('        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));\n')
+            c_file.append('        ptr->items[i] = calloc ( json_array_to_struct(work)->len + 1, sizeof (**ptr->items));\n')
             c_file.append('        if (ptr->items[i] == NULL)\n')
             c_file.append('          return NULL;\n')
             c_file.append('        size_t j;\n')
-            c_file.append('        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;\n')
-            c_file.append('        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)\n')
+            c_file.append('        json_t *tmps = json_array_to_struct(work)->values;\n')
+            c_file.append('        for (j = 0; j < json_array_to_struct(work)->len; j++)\n')
             c_file.append('          {\n')
             read_val_generator(c_file, 3, 'tmps[j]', \
                                 "ptr->items[i][j]", obj.subtyp, obj.origname, c_typ)
@@ -1623,13 +1624,14 @@ f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx,
      ctx = (const struct parser_context *)(&tmp_ctx);
 
     tree = yajl_tree_parse (jsondata, errbuf, sizeof (errbuf));
-    if (tree == NULL)
+    json_t *jtree = yajl_to_json(tree);
+    if (jtree == NULL)
       {
         if (asprintf (err, "cannot parse the data: %s", errbuf) < 0)
             *err = strdup ("error allocating memory");
         return NULL;
       }\n""" +
-    f"ptr = make_{typename} (tree, ctx, err);" +
+    f"ptr = make_{typename} (jtree, ctx, err);" +
     "return ptr; \n}\n"
 )
 

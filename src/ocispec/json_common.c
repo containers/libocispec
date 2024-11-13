@@ -1937,3 +1937,20 @@ json_t *yajl_to_json(yajl_val val) {
     }
   return NULL;
 }
+
+jansson_array_values *json_array_to_struct(json_t *array) {
+    if (!json_is_array(array)) {
+        // Handle error: Input is not an array
+        return (jansson_array_values){NULL, 0};
+    }
+
+    size_t len = json_array_size(array);
+    jansson_array_values r*esult = {json_array(), len};
+
+    for (size_t i = 0; i < len; i++) {
+        json_t *value = json_array_get(array, i);
+        json_array_append_new(result.values, json_incref(value));
+    }
+
+    return result;
+}
