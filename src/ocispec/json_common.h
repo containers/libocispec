@@ -255,6 +255,15 @@ int append_json_map_string_string (json_map_string_string *map, const char *key,
 char *json_marshal_string (const char *str, size_t length, const struct parser_context *ctx, parser_error *err);
 
 json_t *yajl_to_json(yajl_val val);
+
+typedef struct
+{
+  json_t * values;
+  size_t len;
+} jansson_array_values;
+
+jansson_array_values *json_array_to_struct(json_t *array);
+
 #ifdef __cplusplus
 }
 #endif
