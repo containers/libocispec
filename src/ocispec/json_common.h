@@ -80,7 +80,7 @@ struct parser_context
   FILE *errfile;
 };
 
-yajl_gen_status gen_yajl_object_residual (yajl_val obj, yajl_gen g, parser_error *err);
+yajl_gen_status gen_yajl_object_residual (json_t *j, yajl_gen g, parser_error *err);
 
 yajl_gen_status map_uint (void *ctx, long long unsigned int num);
 
@@ -245,7 +245,7 @@ void free_json_map_string_string (json_map_string_string *map);
 
 json_map_string_string *clone_map_string_string (json_map_string_string *src);
 
-json_map_string_string *make_json_map_string_string (yajl_val src, const struct parser_context *ctx, parser_error *err);
+json_map_string_string *make_json_map_string_string (json_t *src, const struct parser_context *ctx, parser_error *err);
 
 yajl_gen_status gen_json_map_string_string (void *ctx, const json_map_string_string *map,
                                             const struct parser_context *ptx, parser_error *err);
@@ -263,6 +263,19 @@ typedef struct
 } jansson_array_values;
 
 jansson_array_values *json_array_to_struct(json_t *array);
+
+typedef struct
+{
+  const char **keys; 
+  json_t * values;
+  size_t len;
+} jansson_object_keys_values;
+
+jansson_object_keys_values *json_object_to_keys_values(json_t *object);
+
+json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys, size_t num_keys);
+
+yajl_val json_to_yajl(json_t *json);
 
 #ifdef __cplusplus
 }
