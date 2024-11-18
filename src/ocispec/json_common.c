@@ -106,9 +106,10 @@ gen_yajl_val (yajl_val obj, yajl_gen g, parser_error *err)
 }
 
 yajl_gen_status
-gen_yajl_object_residual (yajl_val obj, yajl_gen g, parser_error *err)
+gen_yajl_object_residual (json_t *j, yajl_gen g, parser_error *err)
 {
   size_t i;
+  yajl_val obj = json_to_yajl(j);
   yajl_gen_status stat = yajl_gen_status_ok;
 
   for (i = 0; i < obj->u.object.len; i++)
@@ -1673,7 +1674,7 @@ free_json_map_string_string (json_map_string_string *map)
 define_cleaner_function (json_map_string_string *, free_json_map_string_string)
 
 json_map_string_string *
-make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
+make_json_map_string_string (json_t *src, const struct parser_context *ctx,
                                                          parser_error *err)
 {
   __auto_cleanup (free_json_map_string_string) json_map_string_string *ret = NULL;
@@ -1681,10 +1682,11 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
   size_t len;
 
   (void) ctx; /* Silence compiler warning.  */
-  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+  if (src == NULL)
     return NULL;
 
-  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  
+  len = json_object_to_keys_values (src)->len;
 
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
@@ -1710,8 +1712,8 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
     }
   for (i = 0; i < len; i++)
     {
-      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
-      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
+      const char *srckey = json_object_to_keys_values (src)->keys[i];
+      json_t *srcval = &json_object_to_keys_values (src)->values[i];
 
       ret->keys[i] = NULL;
       ret->values[i] = NULL;
@@ -1734,7 +1736,7 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
               return NULL;
             }
 
-          str = YAJL_GET_STRING_NO_CHECK (srcval);
+          str = json_string_value(srcval);
 
           ret->values[i] = strdup (str ? str : "");
           if (ret->values[i] == NULL)
@@ -1936,4 +1938,124 @@ json_t *yajl_to_json(yajl_val val) {
       return jansson_object;
     }
   return NULL;
+}
+
+/**
+ * json_array_to_struct This function extracts keys and values and stores it in struct
+ * Input: json_t
+ * Output: jansson_array_values *
+ */
+jansson_array_values *json_array_to_struct(json_t *array) {
+    if (!json_is_array(array)) {
+        // Handle error: Input is not an array
+        return NULL;
+    }
+
+    size_t len = json_array_size(array);
+    jansson_array_values *result = malloc(sizeof(jansson_array_values));
+    if (!result) {
+        return NULL; // Handle allocation failure
+    }
+
+    result->values = json_array();
+    result->len = len;
+
+    if (!result->values) {
+        free(result);
+        return NULL; // Handle allocation failure
+    }
+
+    for (size_t i = 0; i < len; i++) {
+        json_t *value = json_array_get(array, i);
+        json_array_append_new(result->values, json_incref(value));
+    }
+
+    return result;
+}
+
+
+/**
+ * json_object_to_keys_values This function extracts keys and values and stores it in array of keys and values
+ * Input: json_t
+ * Output: jansson_object_keys_values *
+ */
+jansson_object_keys_values *json_object_to_keys_values(json_t *object) {
+    if (!json_is_object(object)) {
+        // Handle error: Input is not an object
+        return NULL;
+    }
+
+    size_t len = json_object_size(object);
+    jansson_object_keys_values *result = malloc(sizeof(jansson_object_keys_values));
+    if (!result) {
+        return NULL; // Handle allocation failure
+    }
+
+    result->keys = calloc(len, sizeof(char*));
+    result->values = json_array();
+    result->len = len;
+
+    if (!result->keys || !result->values) {
+        free(result->keys);
+        json_decref(result->values);
+        free(result);
+        return NULL; // Handle allocation failure
+    }
+
+    json_t *key_iter = json_object_iter(object);
+    for (size_t i = 0; key_iter; key_iter = json_object_iter_next(object, key_iter)) {
+        const char *key = json_object_iter_key(key_iter);
+        json_t *value = json_object_iter_value(key_iter);
+
+        result->keys[i] = strdup(key);
+        json_array_append_new(result->values, json_incref(value));
+        i++;
+    }
+
+    return result;
+}
+
+
+/**
+ * copy_unmatched_fields We extract all the fields and we match them with the supplied keys if they don't match
+ * we add it to new json_t
+ * Input: json_t, const char **, size_t
+ * Ouput: jsont_t
+ */
+json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys, size_t num_keys) {
+    json_t *dst = json_object();
+    json_t *value;
+
+    json_t *key_iter = json_object_iter(src);
+    while (key_iter) {
+        const char *key = json_object_iter_key(key_iter);
+        value = json_object_iter_value(key_iter);
+
+        bool found = false;
+        for (size_t i = 0; i < num_keys; i++) {
+            if (strcmp(key, exclude_keys[i]) == 0) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            json_object_set_new(dst, key, json_incref(value));
+        }
+
+        key_iter = json_object_iter_next(src, key_iter);
+    }
+
+    return dst;
+}
+
+/** Temporary function we will not need it once transformation is done */
+yajl_val json_to_yajl(json_t *json) {
+  char errbuf[1024];
+
+  char *json_string = json_dumps(json, JSON_INDENT(2));
+  if (!json_string) {
+      return NULL;
+  }
+  return yajl_tree_parse((const char *)json_string, errbuf, sizeof(errbuf));
 }
