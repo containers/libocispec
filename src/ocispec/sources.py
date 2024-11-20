@@ -1572,13 +1572,13 @@ f"{typename}_parse_file_stream (FILE *stream, const struct parser_context *ctx, 
 """)
 
     c_file.append("""
-define_cleaner_function (yajl_val, yajl_tree_free)
+define_cleaner_function (json_t *, json_decref)
 """ +
 f"\n {typename} * " +
 f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err)\n {{ \n" +
-    f"  {typename} *ptr = NULL;" +
-    """__auto_cleanup(yajl_tree_free) yajl_val tree = NULL;
-    char errbuf[1024];
+    f"  {typename} *ptr = NULL;\n" +
+    """\t__auto_cleanup(json_decref) json_t *tree = NULL;
+    json_error_t error;
     struct parser_context tmp_ctx = { 0 };
 
     if (jsondata == NULL || err == NULL)
@@ -1588,16 +1588,14 @@ f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx,
     if (ctx == NULL)
      ctx = (const struct parser_context *)(&tmp_ctx);
 
-    tree = yajl_tree_parse (jsondata, errbuf, sizeof (errbuf));
-    // we will rename the jtree to tree once we use jansson to parse
-    json_t *jtree = yajl_to_json(tree);
-    if (jtree == NULL)
+    tree = json_loads (jsondata, 0, &error);
+    if (tree == NULL)
       {
-        if (asprintf (err, "cannot parse the data: %s", errbuf) < 0)
+        if (asprintf (err, "cannot parse the data: %s", error.text) < 0)
             *err = strdup ("error allocating memory");
         return NULL;
       }\n""" +
-    f"\tptr = make_{typename} (jtree, ctx, err);\n" +
+    f"\tptr = make_{typename} (tree, ctx, err);\n" +
     "\treturn ptr; \n}\n"
 )
 
