@@ -1903,43 +1903,6 @@ json_marshal_string (const char *str, size_t length, const struct parser_context
   return json_buf;
 }
 
-/*
-This function is temporary function to convert yajl_val. This fuction will 
-not be required once we completely move to jansson 
-
-Input: yajl_val
-
-Output: json_t
-*/
-json_t *yajl_to_json(yajl_val val) {
-    if YAJL_IS_NULL(val) {
-      return json_null();
-    } else if (YAJL_IS_TRUE(val)) {
-      return json_true();
-    } else if (YAJL_IS_FALSE(val)) {
-      return json_false();
-    } else if (YAJL_IS_DOUBLE(val)) {
-      return json_real(YAJL_GET_DOUBLE(val));
-    } else if (YAJL_IS_INTEGER(val)) {
-      return json_integer(YAJL_GET_INTEGER(val));
-    } else if (YAJL_IS_STRING(val)) {
-      return json_string(YAJL_GET_STRING(val));
-    } else if (YAJL_IS_ARRAY(val)) {
-      json_t *jansson_array = json_array();
-      for (size_t i = 0; i < val->u.array.len; i++) {
-        json_array_append(jansson_array, yajl_to_json(val->u.array.values[i]));
-      }
-      return jansson_array;
-    } else {
-      json_t *jansson_object = json_object();
-      for (size_t i = 0; i < val->u.object.len; i++) {
-          json_object_set_new(jansson_object, val->u.object.keys[i], yajl_to_json(val->u.object.values[i]));
-      }
-      return jansson_object;
-    }
-  return NULL;
-}
-
 /**
  * json_array_to_struct This function extracts keys and values and stores it in struct
  * Input: json_t
