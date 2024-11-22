@@ -55,11 +55,11 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
             childname = child.subtypname
         else:
             childname = helpers.get_prefixed_name(child.name, prefix)
-    c_file.append('    if (json_is_object(jtree))\n')
+    c_file.append('    if (json_is_object(tree))\n')
     c_file.append('      {\n')
     c_file.append('        size_t i;\n')
-    c_file.append('        size_t len = json_object_size(jtree);\n')
-    c_file.append('        jansson_object_keys_values *kvobj = json_object_to_keys_values(jtree);\n')
+    c_file.append('        size_t len = json_object_size(tree);\n')
+    c_file.append('        jansson_object_keys_values *kvobj = json_object_to_keys_values(tree);\n')
     c_file.append('        const char **keys = kvobj->keys;\n')
     c_file.append('        json_t *values = kvobj->values;\n')
     c_file.append('        ret->len = len;\n')
@@ -92,7 +92,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
             typename = helpers.get_name_substr(obj.name, prefix)
         c_file.append('    do\n')
         c_file.append('      {\n')
-        c_file.append(f'        json_t *tmp = json_object_get (jtree, "{obj.origname}");\n')
+        c_file.append(f'        json_t *tmp = json_object_get (tree, "{obj.origname}");\n')
         c_file.append(f'        jansson_array_values *jarray = json_array_to_struct(tmp);')                        
         c_file.append('        if (tmp != NULL && jarray != NULL)\n')
         c_file.append('          {\n')
@@ -162,7 +162,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
     else:
         c_file.append('    do\n')
         c_file.append('      {\n')
-        c_file.append(f'       json_t *tmp = json_object_get (jtree, "{obj.origname}");\n')
+        c_file.append(f'       json_t *tmp = json_object_get (tree, "{obj.origname}");\n')
         c_file.append('        if (tmp != NULL &&  (tmp) != NULL)\n')
         c_file.append('          {\n')
         c_file.append('            size_t i;\n')
@@ -207,35 +207,35 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
     if obj.typ == 'string':
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (jtree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
     elif helpers.judge_data_type(obj.typ):
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (jtree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
     elif helpers.judge_data_pointer_type(obj.typ):
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (jtree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
     if obj.typ == 'boolean':
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (jtree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
     if obj.typ == 'booleanPointer':
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (jtree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
@@ -245,7 +245,7 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
         else:
             typename = helpers.get_prefixed_name(obj.name, prefix)
         c_file.append(
-            f'    ret->{obj.fixname} = make_{typename} (json_object_get (jtree, "{obj.origname}"), ctx, err);\n')
+            f'    ret->{obj.fixname} = make_{typename} (json_object_get (tree, "{obj.origname}"), ctx, err);\n')
         c_file.append(f"    if (ret->{obj.fixname} == NULL && *err != 0)\n")
         c_file.append("      return NULL;\n")
     elif obj.typ == 'array':
@@ -253,7 +253,7 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
     elif helpers.valid_basic_map_name(obj.typ):
         c_file.append('    do\n')
         c_file.append('      {\n')
-        c_file.append(f'        json_t *tmp = json_object_get (jtree, "{obj.origname}");\n')
+        c_file.append(f'        json_t *tmp = json_object_get (tree, "{obj.origname}");\n')
         c_file.append('        if (tmp != NULL)\n')
         c_file.append('          {\n')
         c_file.append(f'            ret->{obj.fixname} = make_{helpers.make_basic_map_name(obj.typ)} (tmp, ctx, err);\n')
@@ -298,18 +298,18 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
         
         condition = ", ".join([f'"{i.origname}"' for i in obj.children])
         c_file.append("""
-    if (json_is_object(jtree))
+    if (json_is_object(tree))
       {
         if (ctx->options & OPT_PARSE_FULLKEY)
           {
-            if (jtree == NULL)
+            if (tree == NULL)
                 return NULL;
           }
         """
         f"const char *excluded[] = {'{'}{condition}{'}'};"
         """    
-        size_t len = json_object_size(jtree);
-        json_t *resi = copy_unmatched_fields(jtree, excluded, len);
+        size_t len = json_object_size(tree);
+        json_t *resi = copy_unmatched_fields(tree, excluded, len);
 
         size_t resilen = json_object_size(resi);
 
@@ -337,12 +337,12 @@ def parse_json_to_c(obj, c_file, prefix):
         if objs is None or obj.subtypname:
             return
     c_file.append(f"define_cleaner_function ({typename} *, free_{typename})\n")
-    c_file.append(f"{typename} *\nmake_{typename} (json_t *jtree, const struct parser_context *ctx, parser_error *err)\n")
+    c_file.append(f"{typename} *\nmake_{typename} (json_t *tree, const struct parser_context *ctx, parser_error *err)\n")
     c_file.append("{\n")
     c_file.append(f"    __auto_cleanup(free_{typename}) {typename} *ret = NULL;\n")
     c_file.append("    *err = NULL;\n")
     c_file.append("    (void) ctx;  /* Silence compiler warning.  */\n")
-    c_file.append("    if (jtree == NULL)\n")
+    c_file.append("    if (tree == NULL)\n")
     c_file.append("      return NULL;\n")
     c_file.append("    ret = calloc (1, sizeof (*ret));\n")
     c_file.append("    if (ret == NULL)\n")
@@ -797,7 +797,7 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f'{"    " * (level)}  }}\n')
         c_file.append(f"{'    ' * level}else\n")
         c_file.append(f'{"    " * (level)} {{\n')
-        c_file.append(f'{"    " * (level + 1)}val = json_object_get (jtree, "{keyname}");\n')
+        c_file.append(f'{"    " * (level + 1)}val = json_object_get (tree, "{keyname}");\n')
         c_file.append(f"{'    ' * (level + 1)}if (val != NULL)\n")
         c_file.append(f'{"    " * (level + 1)}  {{\n')
         c_file.append(f"{'    ' * (level + 2)}{dest} = calloc (1, sizeof (bool));\n")
@@ -1208,17 +1208,17 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
 
     c_file.append(f"\ndefine_cleaner_function ({typename} *, free_{typename})\n" +
                     f"{typename}\n" +
-                    f"*make_{typename} (json_t *jtree, const struct parser_context *ctx, parser_error *err)\n" +
+                    f"*make_{typename} (json_t *tree, const struct parser_context *ctx, parser_error *err)\n" +
                     "{\n" +
                     f"    __auto_cleanup(free_{typename}) {typename} *ptr = NULL;\n" +
                     f"    size_t i, alen;\n" +
                     f" "+
                     f"    (void) ctx;\n" +
                     f" "+
-                    f"    if (jtree == NULL || err == NULL || !json_is_array (jtree))\n" +
+                    f"    if (tree == NULL || err == NULL || !json_is_array (tree))\n" +
                     f"      return NULL;\n" +
                     f"    *err = NULL;\n" +
-                    f"    alen = json_array_size (jtree);\n" +
+                    f"    alen = json_array_size (tree);\n" +
                     f"    if (alen == 0)\n" +
                     f"      return NULL;\n" +
                     f"    ptr = calloc (1, sizeof ({typename}));\n" +
@@ -1238,7 +1238,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
     c_file.append("""\n
     for (i = 0; i < alen; i++)
       {
-        json_t *work = &json_array_to_struct (jtree)->values[i];
+        json_t *work = &json_array_to_struct (tree)->values[i];
 """)
 
     if obj.subtypobj or obj.subtyp == 'object':
@@ -1266,12 +1266,12 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
             c_file.append("          return NULL;\n")
     elif obj.subtyp == 'byte':
         if obj.doublearray:
-            c_file.append('        char *str = YAJL_GET_STRING (work);\n')
+            c_file.append('        char *str = json_string_value (work);\n')
             c_file.append('        ptr->items[j] = (uint8_t *)strdup (str ? str : "");\n')
             c_file.append('        if (ptr->items[j] == NULL)\n')
             c_file.append("          return NULL;\n")
         else:
-            c_file.append('        char *str = json_string_value (jtree);\n')
+            c_file.append('        char *str = json_string_value (tree);\n')
             c_file.append('        memcpy(ptr->items, str ? str : "", strlen(str ? str : ""));\n')
             c_file.append('        break;\n')
     else:
