@@ -34,7 +34,7 @@ main ()
     printf ("error %s\n", err);
     exit (1);
   }
-  json_buf = image_spec_schema_image_manifest_schema_generate_json(manifest, 0, &err);
+  json_buf = image_spec_schema_image_manifest_schema_generate_json(manifest, &err);
   if (json_buf == NULL) {
     printf("gen error %s\n", err);
     exit (1);
