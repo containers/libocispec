@@ -34,7 +34,7 @@ main ()
     printf ("error %s\n", err);
     exit (1);
   }
-  json_buf = runtime_spec_schema_config_schema_generate_json(container, 0, &err);
+  json_buf = runtime_spec_schema_config_schema_generate_json(container, &err);
   if (json_buf == NULL) {
     printf("gen error %s\n", err);
     exit (1);
