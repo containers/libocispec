@@ -17,7 +17,7 @@ RUN cd libocispec/jansson && autoreconf -fi && ./configure && make && make insta
 RUN cd libocispec && \
     export JANSSON_CFLAGS=-I/usr/local/include && \
     export JANSSON_LIBS=/usr/local/lib/libjansson.so && \
-    ./autogen.sh --enable-embedded-yajl && \
-    ./configure --enable-embedded-yajl CFLAGS='-Wall -Wextra -Werror' && \
+    ./autogen.sh && \
+    ./configure CFLAGS='-Wall -Wextra -Werror' && \
     make -j $(nproc) distcheck DISTCHECK_CONFIGURE_FLAGS="--enable-embedded-yajl" AM_DISTCHECK_DVI_TARGET="" TESTS="" && \
     make clean
