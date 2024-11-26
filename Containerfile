@@ -12,7 +12,9 @@ RUN apt-get update && \
 
 COPY . libocispec
 
-RUN cd libocispec/jansson && autoreconf -fi && ./configure && make && make install
+RUN git clone https://github.com/akheron/jansson
+
+RUN cd jansson && autoreconf -fi && ./configure && make && make install
 
 RUN cd libocispec && \
     export JANSSON_CFLAGS=-I/usr/local/include && \
