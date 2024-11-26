@@ -36,6 +36,12 @@ jobs:
           setup: |
             git submodule update --init --recursive
             git clone https://github.com/akheron/jansson
+
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils
+
+          run: |
             # Install jansson
             cd jansson;
             autoreconf -fi;
@@ -43,12 +49,6 @@ jobs:
             make;
             make install;
             cd ..
-
-          install: |
-            apt-get update -q -y
-            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils
-
-          run: |
             # Configure and Run libocispec
             export JANSSON_CFLAGS=-I/usr/local/include;
             export JANSSON_LIBS=/usr/local/lib/libjansson.so
