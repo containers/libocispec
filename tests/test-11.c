@@ -41,7 +41,7 @@ main ()
     printf ("error %s\n", err);
     exit (1);
   }
-  json_buf = image_spec_schema_image_layout_schema_generate_json(image_layout, &ctx, &err);
+  json_buf = image_spec_schema_image_layout_schema_generate_json(image_layout, &err);
   if (json_buf == NULL) {
     printf("gen error %s\n", err);
     free(err);

@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <yajl/yajl_tree.h>
-#include <yajl/yajl_gen.h>
 #include <jansson.h>
 
 #ifdef __cplusplus
@@ -35,6 +33,12 @@ extern "C" {
 #define OPT_PARSE_FULLKEY 0x08
 // options not to validate utf8 data
 #define OPT_GEN_NO_VALIDATE_UTF8 0x10
+
+// Generating json succeded
+#define JSON_GEN_SUCCESS 0
+
+// Generating json failed
+#define JSON_GEN_FAILED -1
 
 #define define_cleaner_function(type, cleaner)      \
   static inline void cleaner##_function (type *ptr) \
@@ -80,41 +84,9 @@ struct parser_context
   FILE *errfile;
 };
 
-yajl_gen_status gen_yajl_object_residual (json_t *j, yajl_gen g, parser_error *err);
-
-yajl_gen_status map_uint (void *ctx, long long unsigned int num);
-
-yajl_gen_status map_int (void *ctx, long long int num);
-
-bool json_gen_init (yajl_gen *g, const struct parser_context *ctx);
-
-yajl_val get_val (yajl_val tree, const char *name, yajl_type type);
-
 char *safe_strdup (const char *src);
 
 void *safe_malloc (size_t size);
-
-int common_safe_double (const char *numstr, double *converted);
-
-int common_safe_uint8 (const char *numstr, uint8_t *converted);
-
-int common_safe_uint16 (const char *numstr, uint16_t *converted);
-
-int common_safe_uint32 (const char *numstr, uint32_t *converted);
-
-int common_safe_uint64 (const char *numstr, uint64_t *converted);
-
-int common_safe_uint (const char *numstr, unsigned int *converted);
-
-int common_safe_int8 (const char *numstr, int8_t *converted);
-
-int common_safe_int16 (const char *numstr, int16_t *converted);
-
-int common_safe_int32 (const char *numstr, int32_t *converted);
-
-int common_safe_int64 (const char *numstr, int64_t *converted);
-
-int common_safe_int (const char *numstr, int *converted);
 
 int json_double_to_int (double d, int *converted);
 
@@ -147,9 +119,7 @@ typedef struct
 
 void free_json_map_int_int (json_map_int_int *map);
 
-json_map_int_int *make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_int_int (void *ctx, const json_map_int_int *map, const struct parser_context *ptx,
+int gen_json_map_int_int (json_t *root, const json_map_int_int *map, 
                                       parser_error *err);
 
 int append_json_map_int_int (json_map_int_int *map, int key, int val);
@@ -163,9 +133,7 @@ typedef struct
 
 void free_json_map_int_bool (json_map_int_bool *map);
 
-json_map_int_bool *make_json_map_int_bool (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_int_bool (void *ctx, const json_map_int_bool *map, const struct parser_context *ptx,
+int gen_json_map_int_bool (json_t *root, const json_map_int_bool *map, 
                                        parser_error *err);
 
 int append_json_map_int_bool (json_map_int_bool *map, int key, bool val);
@@ -179,9 +147,7 @@ typedef struct
 
 void free_json_map_int_string (json_map_int_string *map);
 
-json_map_int_string *make_json_map_int_string (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_int_string (void *ctx, const json_map_int_string *map, const struct parser_context *ptx,
+int gen_json_map_int_string (json_t *root, const json_map_int_string *map, 
                                          parser_error *err);
 
 int append_json_map_int_string (json_map_int_string *map, int key, const char *val);
@@ -195,9 +161,7 @@ typedef struct
 
 void free_json_map_string_int (json_map_string_int *map);
 
-json_map_string_int *make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_string_int (void *ctx, const json_map_string_int *map, const struct parser_context *ptx,
+int gen_json_map_string_int (json_t *root, const json_map_string_int *map, 
                                          parser_error *err);
 
 int append_json_map_string_int (json_map_string_int *map, const char *key, int val);
@@ -211,8 +175,6 @@ typedef struct
 
 void free_json_map_string_bool (json_map_string_bool *map);
 
-json_map_string_bool *make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
 typedef struct
 {
   char **keys;
@@ -222,14 +184,12 @@ typedef struct
 
 void free_json_map_string_int64 (json_map_string_int64 *map);
 
-json_map_string_int64 *make_json_map_string_int64 (yajl_val src, const struct parser_context *ctx, parser_error *err);
-
-yajl_gen_status gen_json_map_string_int64 (void *ctx, const json_map_string_int64 *map,
-                                           const struct parser_context *ptx, parser_error *err);
+int gen_json_map_string_int64 (json_t *root, const json_map_string_int64 *map,
+                                            parser_error *err);
 
 int append_json_map_string_int64 (json_map_string_int64 *map, const char *key, int64_t val);
 
-yajl_gen_status gen_json_map_string_bool (void *ctx, const json_map_string_bool *map, const struct parser_context *ptx,
+int gen_json_map_string_bool (json_t *root, const json_map_string_bool *map, 
                                           parser_error *err);
 
 int append_json_map_string_bool (json_map_string_bool *map, const char *key, bool val);
@@ -247,8 +207,7 @@ json_map_string_string *clone_map_string_string (json_map_string_string *src);
 
 json_map_string_string *make_json_map_string_string (json_t *src, const struct parser_context *ctx, parser_error *err);
 
-yajl_gen_status gen_json_map_string_string (void *ctx, const json_map_string_string *map,
-                                            const struct parser_context *ptx, parser_error *err);
+int gen_json_map_string_string (json_t *root, const json_map_string_string *map, parser_error *err);
 
 int append_json_map_string_string (json_map_string_string *map, const char *key, const char *val);
 
@@ -272,8 +231,6 @@ typedef struct
 jansson_object_keys_values *json_object_to_keys_values(json_t *object);
 
 json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys, size_t num_keys);
-
-yajl_val json_to_yajl(json_t *json);
 
 #ifdef __cplusplus
 }

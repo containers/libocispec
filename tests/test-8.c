@@ -36,7 +36,7 @@ main ()
     exit (1);
   }
   json_buf = image_manifest_items_image_manifest_items_schema_container_generate_json (
-          (const image_manifest_items_image_manifest_items_schema_container*)image_items, 0, &err);
+          (const image_manifest_items_image_manifest_items_schema_container*)image_items, &err);
   if (json_buf == NULL) {
     printf ("gen error %s\n", err);
     exit (1);

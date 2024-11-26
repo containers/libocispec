@@ -239,7 +239,7 @@ do_test_object_double_array()
   free(test_data->refobjarrays[0][0]->item1);
   test_data->refobjarrays[0][0]->item1 = strdup("objectrefstr");
   
-  json_buf = basic_test_double_array_generate_json(test_data, &ctx, &err);
+  json_buf = basic_test_double_array_generate_json(test_data, &err);
   if (json_buf == NULL) {
     printf("gen error %s\n", err);
     ret = 1;
@@ -312,7 +312,7 @@ int do_test_top_array_of_int()
       }
   }
   test_data->items[0] = 111;
-  json_buf = basic_test_top_array_int_container_generate_json(test_data, &ctx, &err);
+  json_buf = basic_test_top_array_int_container_generate_json(test_data, &err);
   if (json_buf == NULL)
   {
     printf("gen error %s\n", err);
@@ -369,7 +369,7 @@ int do_test_top_array_of_string()
   }
   free(test_data->items[0]);
   test_data->items[0] = strdup("hello");
-  json_buf = basic_test_top_array_string_container_generate_json(test_data, &ctx, &err);
+  json_buf = basic_test_top_array_string_container_generate_json(test_data, &err);
   if (json_buf == NULL)
   {
     printf("gen error %s\n", err);
@@ -437,7 +437,7 @@ int do_test_top_double_array_of_string()
   }
   free(test_data->items[0][0]);
   test_data->items[0][0] = strdup("hello");
-  json_buf = basic_test_top_double_array_string_container_generate_json(test_data, &ctx, &err);
+  json_buf = basic_test_top_double_array_string_container_generate_json(test_data, &err);
   if (json_buf == NULL)
   {
     printf("gen error %s\n", err);
@@ -504,7 +504,7 @@ int do_test_top_double_array_of_int()
       }
   }
   test_data->items[0][0] = 888;
-  json_buf = basic_test_top_double_array_int_container_generate_json(test_data, &ctx, &err);
+  json_buf = basic_test_top_double_array_int_container_generate_json(test_data, &err);
   if (json_buf == NULL)
   {
     printf("gen error %s\n", err);
@@ -587,7 +587,7 @@ int do_test_top_double_array_of_obj()
   test_data->items[0][0]->second = 999;
   free(test_data->items[0][1]->third);
   test_data->items[0][1]->third = strdup("hello");
-  json_buf = basic_test_top_double_array_obj_container_generate_json(test_data, &ctx, &err);
+  json_buf = basic_test_top_double_array_obj_container_generate_json(test_data, &err);
   if (json_buf == NULL)
   {
     printf("gen error %s\n", err);
@@ -676,7 +676,7 @@ int do_test_top_double_array_of_refobj()
   test_data->items[0][0]->item2 = 999;
   free(test_data->items[0][1]->item1);
   test_data->items[0][1]->item1 = strdup("hello");
-  json_buf = basic_test_top_double_array_refobj_container_generate_json(test_data, &ctx, &err);
+  json_buf = basic_test_top_double_array_refobj_container_generate_json(test_data, &err);
   if (json_buf == NULL)
   {
     printf("gen error %s\n", err);
