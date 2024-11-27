@@ -8,7 +8,6 @@ RUN apt-get update && \
         libtool \
         pkg-config \
         python3 \
-        libjansson4 \
         libjansson-dev
 
 

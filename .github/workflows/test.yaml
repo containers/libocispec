@@ -38,7 +38,7 @@ jobs:
 
           install: |
             apt-get update -q -y
-            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils libjansson4 libjansson-dev
+            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils libjansson-dev
 
           run: |
             # Configure and Run libocispec
