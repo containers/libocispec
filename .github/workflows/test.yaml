@@ -35,23 +35,13 @@ jobs:
 
           setup: |
             git submodule update --init --recursive
-            git clone https://github.com/akheron/jansson
 
           install: |
             apt-get update -q -y
-            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils
+            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils libjansson4 libjansson-dev
 
           run: |
-            # Install jansson
-            cd jansson;
-            autoreconf -fi;
-            ./configure;
-            make;
-            make install;
-            cd ..
             # Configure and Run libocispec
-            export JANSSON_CFLAGS=-I/usr/local/include;
-            export JANSSON_LIBS=/usr/local/lib/libjansson.so
             find $(pwd) -name '.git' -exec bash -c 'git config --global --add safe.directory ${0%/.git}' {} \;
             ./autogen.sh
             ./configure CFLAGS='-Wall -Wextra -Werror'
