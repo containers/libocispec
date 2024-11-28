@@ -16,5 +16,5 @@ COPY . libocispec
 RUN cd libocispec && \
     ./autogen.sh && \
     ./configure CFLAGS='-Wall -Wextra -Werror' && \
-    make -j $(nproc) distcheck DISTCHECK_CONFIGURE_FLAGS="--enable-embedded-yajl" AM_DISTCHECK_DVI_TARGET="" TESTS="" && \
+    make -j $(nproc) distcheck AM_DISTCHECK_DVI_TARGET="" TESTS="" && \
     make clean
