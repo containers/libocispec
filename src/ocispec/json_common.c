@@ -5,9 +5,6 @@
 #include <limits.h>
 #include "ocispec/json_common.h"
 
-#define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)
-#define YAJL_GET_STRING_NO_CHECK(v) ((v)->u.string)
-
 #define MAX_NUM_STR_LEN 21
 
 char *

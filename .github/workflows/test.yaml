@@ -20,9 +20,6 @@ jobs:
             distro: ubuntu_latest
     steps:
       - uses: actions/checkout@v4.2.2
-        with:
-          submodules: true
-          set-safe-directory: true
 
       - uses: uraimo/run-on-arch-action@v2.8.1
         name: Build
@@ -32,9 +29,6 @@ jobs:
           distro: ${{ matrix.distro }}
 
           githubToken: ${{ github.token }}
-
-          setup: |
-            git submodule update --init --recursive
 
           install: |
             apt-get update -q -y
