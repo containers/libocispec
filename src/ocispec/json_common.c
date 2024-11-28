@@ -625,7 +625,7 @@ make_json_map_string_string (json_t *src, const struct parser_context *ctx,
     return NULL;
 
   
-  len = json_object_to_keys_values (src)->len;
+  len = json_object_size (src);
 
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
@@ -634,7 +634,7 @@ make_json_map_string_string (json_t *src, const struct parser_context *ctx,
       return NULL;
     }
 
-  ret->len = 0;
+  ret->len = len;
 
   ret->keys = calloc (len + 1, sizeof (char *));
   if (ret->keys == NULL)
@@ -649,41 +649,46 @@ make_json_map_string_string (json_t *src, const struct parser_context *ctx,
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
-  for (i = 0; i < len; i++)
+  
+  const char *key;
+  json_t *value;
+
+  i = 0;
+  json_object_foreach(src, key, value)
+  {
+    ret->keys[i] = strdup (key ? key : "");
+    if (ret->keys[i] == NULL)
     {
-      const char *srckey = json_object_to_keys_values (src)->keys[i];
-      const json_t *srcval = &json_object_to_keys_values (src)->values[i];
-
-      ret->keys[i] = NULL;
-      ret->values[i] = NULL;
-      ret->len = i + 1;
-
-      ret->keys[i] = strdup (srckey ? srckey : "");
-      if (ret->keys[i] == NULL)
-        {
-          return NULL;
-        }
-      if (srcval != NULL)
-        {
-          char *str;
-          if (! json_is_string (srcval))
-            {
-              if (*err == NULL && asprintf (err, "Invalid value with type 'string' for key '%s'", srckey) < 0)
-                {
-                  *err = strdup ("error allocating memory");
-                }
-              return NULL;
-            }
-
-          str = json_string_value(srcval);
-
-          ret->values[i] = strdup (str ? str : "");
-          if (ret->values[i] == NULL)
-            {
-              return NULL;
-            }
-        }
+      return NULL;
     }
+
+    if (value != NULL)
+    {
+      char *str;
+      if (! json_is_string (value))
+      {
+        if (*err == NULL && asprintf (err, "Invalid value with type 'string' for key '%s'", key) < 0)
+        {
+          *err = strdup ("error allocating memory");
+        }
+        return NULL;
+      }
+
+      str = json_string_value(value);
+
+      ret->values[i] = strdup (str ? str : "");
+      if (ret->values[i] == NULL)
+      {
+        return NULL;
+      }
+    }
+
+    i++;
+  }
+  if (i == 0) {
+    return NULL;
+  }
+
   return move_ptr (ret);
 }
 
@@ -788,33 +793,33 @@ append_json_map_string_string (json_map_string_string *map, const char *key, con
  * Input: json_t
  * Output: jansson_array_values *
  */
-jansson_array_values *json_array_to_struct(json_t *array) {
-    if (!json_is_array(array)) {
-        // Handle error: Input is not an array
-        return NULL;
-    }
+// jansson_array_values *json_array_to_struct(json_t *array) {
+//     if (!json_is_array(array)) {
+//         // Handle error: Input is not an array
+//         return NULL;
+//     }
 
-    size_t len = json_array_size(array);
-    jansson_array_values *result = malloc(sizeof(jansson_array_values));
-    if (!result) {
-        return NULL; // Handle allocation failure
-    }
+//     size_t len = json_array_size(array);
+//     jansson_array_values *result = malloc(sizeof(jansson_array_values));
+//     if (!result) {
+//         return NULL; // Handle allocation failure
+//     }
 
-    result->values = json_array();
-    result->len = len;
+//     result->values = json_array();
+//     result->len = len;
 
-    if (!result->values) {
-        free(result);
-        return NULL; // Handle allocation failure
-    }
+//     if (!result->values) {
+//         free(result);
+//         return NULL; // Handle allocation failure
+//     }
 
-    for (size_t i = 0; i < len; i++) {
-        json_t *value = json_array_get(array, i);
-        json_array_append_new(result->values, json_incref(value));
-    }
+//     for (size_t i = 0; i < len; i++) {
+//         json_t *value = json_array_get(array, i);
+//         json_array_append_new(result->values, json_incref(value));
+//     }
 
-    return result;
-}
+//     return result;
+// }
 
 
 /**
@@ -862,31 +867,28 @@ jansson_object_keys_values *json_object_to_keys_values(json_t *object) {
 /**
  * copy_unmatched_fields We extract all the fields and we match them with the supplied keys if they don't match
  * we add it to new json_t
- * Input: json_t, const char **, size_t
+ * Input: json_t, const char **
  * Ouput: jsont_t
  */
-json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys, size_t num_keys) {
+json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys) {
     json_t *dst = json_object();
+    
+    int len = sizeof(exclude_keys) / sizeof(exclude_keys[0]);
+    
+    const char *key;
     json_t *value;
 
-    json_t *key_iter = json_object_iter(src);
-    while (key_iter) {
-        const char *key = json_object_iter_key(key_iter);
-        value = json_object_iter_value(key_iter);
-
-        bool found = false;
-        for (size_t i = 0; i < num_keys; i++) {
-            if (strcmp(key, exclude_keys[i]) == 0) {
-                found = true;
-                break;
-            }
+    json_object_foreach(src, key, value) {
+        int match = 0;
+        for (int i = 0; i < len; i++) {
+          if (strcmp(key, exclude_keys[i]) == 0) {
+            match = 1;
+            break;
+          }
         }
-
-        if (!found) {
-            json_object_set_new(dst, key, json_incref(value));
+        if (match == 0) {
+          json_object_set(dst, key, value);
         }
-
-        key_iter = json_object_iter_next(src, key_iter);
     }
 
     return dst;

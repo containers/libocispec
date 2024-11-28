@@ -219,7 +219,7 @@ typedef struct
   size_t len;
 } jansson_array_values;
 
-jansson_array_values *json_array_to_struct(json_t *array);
+// jansson_array_values *json_array_to_struct(json_t *array);
 
 typedef struct
 {
@@ -230,7 +230,7 @@ typedef struct
 
 jansson_object_keys_values *json_object_to_keys_values(json_t *object);
 
-json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys, size_t num_keys);
+json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys);
 
 #ifdef __cplusplus
 }
