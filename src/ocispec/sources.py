@@ -372,11 +372,11 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
         c_file.append('        size_t len = 0, i;\n')
         c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
         c_file.append(f"            len = ptr->{obj.fixname}_len;//{obj.subtypobj}\n")
-        c_file.append(f'        json_t *subroot = json_array();//lalala\n')
+        c_file.append(f'        json_t *subroot = json_array();\n')
         c_file.append('        for (i = 0; i < len; i++)\n')
         c_file.append('          {\n')
         if obj.doublearray:
-            c_file.append('            json_t *subsubroot = json_array();//lalala2\n')
+            c_file.append('            json_t *subsubroot = json_array();\n')
             c_file.append("            size_t j;\n")
             c_file.append(f'            for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)\n')
             c_file.append('              {\n')
@@ -1307,7 +1307,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
             subtypename = helpers.get_name_substr(obj.name, prefix)
         c_file.append('      {\n')
         if obj.doublearray:
-            c_file.append("            json_t *subroot = json_array();//papapa\n")
+            c_file.append("            json_t *subroot = json_array();\n")
             c_file.append("            size_t j;\n")
             c_file.append('            for (j = 0; j < ptr->subitem_lens[i]; j++)\n')
             c_file.append('              {\n')
@@ -1324,7 +1324,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
             c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         else:
             c_file.append("            json_t *obj = json_object();\n")
-            c_file.append(f'           stat = gen_{subtypename} (obj, ptr->items[i], err);//nextjs\n')
+            c_file.append(f'           stat = gen_{subtypename} (obj, ptr->items[i], err);\n')
             c_file.append("            if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
             c_file.append("            stat = json_array_append(root, obj);\n\n")
