@@ -39,7 +39,7 @@ jobs:
             find $(pwd) -name '.git' -exec bash -c 'git config --global --add safe.directory ${0%/.git}' {} \;
             ./autogen.sh
             ./configure CFLAGS='-Wall -Wextra -Werror'
-            make -j $(nproc) distcheck AM_DISTCHECK_DVI_TARGET="" TESTS=""
+            make -j $(nproc) distcheck AM_DISTCHECK_DVI_TARGET=""
             # check that the working dir is clean
             git describe --broken --dirty --all | grep -qv dirty
             make clean
