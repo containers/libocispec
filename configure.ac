@@ -15,7 +15,6 @@ AM_SILENT_RULES([yes])
 AM_CONDITIONAL([HAVE_EMBEDDED_JANSSON], [test x"$embedded_jansson" = xtrue])
 AM_COND_IF([HAVE_EMBEDDED_JANSSON], [], [
 AC_SEARCH_LIBS(json_object, [jansson], [AC_DEFINE([HAVE_JANSSON], 1, [Define if libjansson is available])], [AC_MSG_ERROR([*** libjansson headers not found])])
-PKG_CHECK_MODULES([JANSSON], [jansson >= 2.14])
 ])
 
 # Optionally install the library.
