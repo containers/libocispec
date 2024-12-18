@@ -551,6 +551,9 @@ def get_c_json(obj, c_file, prefix):
         "parser_error *err)\n")
     c_file.append("{\n")
     c_file.append("    int stat = JSON_GEN_SUCCESS;\n")
+    c_file.append("    /* Handle cases where root is not used within body of function */\n")
+    c_file.append("    if (json_is_null(root))\n")
+    c_file.append("         return stat;\n")
     c_file.append("    *err = NULL;\n")
     c_file.append("    (void) ptr;  /* Silence compiler warning.  */\n")
     if obj.typ == 'mapStringObject':
