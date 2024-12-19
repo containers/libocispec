@@ -277,9 +277,10 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
                 return NULL;
           }
         """
+        f"int len = {len(obj.children)};\n"
         f"const char *excluded[] = {'{'}{condition}{'}'};"
         """
-        json_t *resi = copy_unmatched_fields(tree, excluded);
+        json_t *resi = copy_unmatched_fields(tree, excluded, len);
 
         size_t resilen = json_object_size(resi);
 

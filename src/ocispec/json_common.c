@@ -664,7 +664,6 @@ make_json_map_string_string (json_t *src, const struct parser_context *ctx,
 
     if (value != NULL)
     {
-      char *str;
       if (! json_is_string (value))
       {
         if (*err == NULL && asprintf (err, "Invalid value with type 'string' for key '%s'", key) < 0)
@@ -674,7 +673,7 @@ make_json_map_string_string (json_t *src, const struct parser_context *ctx,
         return NULL;
       }
 
-      str = json_string_value(value);
+      const char *str = json_string_value(value);
 
       ret->values[i] = strdup (str ? str : "");
       if (ret->values[i] == NULL)
@@ -870,10 +869,8 @@ jansson_object_keys_values *json_object_to_keys_values(json_t *object) {
  * Input: json_t, const char **
  * Ouput: jsont_t
  */
-json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys) {
+json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys, int len) {
     json_t *dst = json_object();
-    
-    int len = sizeof(exclude_keys) / sizeof(exclude_keys[0]);
     
     const char *key;
     json_t *value;
