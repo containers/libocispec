@@ -230,7 +230,7 @@ typedef struct
 
 jansson_object_keys_values *json_object_to_keys_values(json_t *object);
 
-json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys);
+json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys, int len);
 
 #ifdef __cplusplus
 }
