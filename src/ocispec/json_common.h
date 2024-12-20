@@ -117,8 +117,6 @@ typedef struct
   size_t len;
 } json_map_int_int;
 
-void free_json_map_int_int (json_map_int_int *map);
-
 int gen_json_map_int_int (json_t *root, const json_map_int_int *map, 
                                       parser_error *err);
 
@@ -130,8 +128,6 @@ typedef struct
   bool *values;
   size_t len;
 } json_map_int_bool;
-
-void free_json_map_int_bool (json_map_int_bool *map);
 
 int gen_json_map_int_bool (json_t *root, const json_map_int_bool *map, 
                                        parser_error *err);
@@ -145,8 +141,6 @@ typedef struct
   size_t len;
 } json_map_int_string;
 
-void free_json_map_int_string (json_map_int_string *map);
-
 int gen_json_map_int_string (json_t *root, const json_map_int_string *map, 
                                          parser_error *err);
 
@@ -158,8 +152,6 @@ typedef struct
   int *values;
   size_t len;
 } json_map_string_int;
-
-void free_json_map_string_int (json_map_string_int *map);
 
 int gen_json_map_string_int (json_t *root, const json_map_string_int *map, 
                                          parser_error *err);
@@ -173,8 +165,6 @@ typedef struct
   size_t len;
 } json_map_string_bool;
 
-void free_json_map_string_bool (json_map_string_bool *map);
-
 typedef struct
 {
   char **keys;
@@ -182,7 +172,6 @@ typedef struct
   size_t len;
 } json_map_string_int64;
 
-void free_json_map_string_int64 (json_map_string_int64 *map);
 
 int gen_json_map_string_int64 (json_t *root, const json_map_string_int64 *map,
                                             parser_error *err);
@@ -218,8 +207,6 @@ typedef struct
   json_t * values;
   size_t len;
 } jansson_array_values;
-
-// jansson_array_values *json_array_to_struct(json_t *array);
 
 typedef struct
 {
