@@ -212,20 +212,6 @@ json_double_to_double (double d, double *converted)
   return 0;
 }
 
-void
-free_json_map_int_int (json_map_int_int *map)
-{
-  if (map != NULL)
-    {
-      free (map->keys);
-      map->keys = NULL;
-      free (map->values);
-      map->values = NULL;
-      free (map);
-    }
-}
-
-define_cleaner_function (json_map_int_int *, free_json_map_int_int)
 
 int
 append_json_map_int_int (json_map_int_int *map, int key, int val)
@@ -267,27 +253,6 @@ append_json_map_int_int (json_map_int_int *map, int key, int val)
   map->len++;
   return 0;
 }
-
-void
-free_json_map_int_bool (json_map_int_bool *map)
-{
-  if (map != NULL)
-    {
-      size_t i;
-      for (i = 0; i < map->len; i++)
-        {
-          // No need to free key for type int
-          // No need to free value for type bool
-        }
-      free (map->keys);
-      map->keys = NULL;
-      free (map->values);
-      map->values = NULL;
-      free (map);
-    }
-}
-
-define_cleaner_function (json_map_int_bool *, free_json_map_int_bool)
 
 
 int
@@ -331,28 +296,6 @@ append_json_map_int_bool (json_map_int_bool *map, int key, bool val)
   return 0;
 }
 
-void
-free_json_map_int_string (json_map_int_string *map)
-{
-  if (map != NULL)
-    {
-      size_t i;
-      for (i = 0; i < map->len; i++)
-        {
-          // No need to free key for type int
-          free (map->values[i]);
-          map->values[i] = NULL;
-        }
-      free (map->keys);
-      map->keys = NULL;
-      free (map->values);
-      map->values = NULL;
-      free (map);
-    }
-}
-
-define_cleaner_function (json_map_int_string *, free_json_map_int_string)
-
 int
 append_json_map_int_string (json_map_int_string *map, int key, const char *val)
 {
@@ -390,28 +333,6 @@ append_json_map_int_string (json_map_int_string *map, int key, const char *val)
 }
 
 
-void
-free_json_map_string_int (json_map_string_int *map)
-{
-  if (map != NULL)
-    {
-      size_t i;
-      for (i = 0; i < map->len; i++)
-        {
-          free (map->keys[i]);
-          map->keys[i] = NULL;
-        }
-      free (map->keys);
-      map->keys = NULL;
-      free (map->values);
-      map->values = NULL;
-      free (map);
-    }
-}
-
-define_cleaner_function (json_map_string_int *, free_json_map_string_int)
-
-
 int
 append_json_map_string_int (json_map_string_int *map, const char *key, int val)
 {
@@ -447,27 +368,6 @@ append_json_map_string_int (json_map_string_int *map, const char *key, int val)
 }
 
 
-void
-free_json_map_string_int64 (json_map_string_int64 *map)
-{
-  if (map != NULL)
-    {
-      size_t i;
-      for (i = 0; i < map->len; i++)
-        {
-          free (map->keys[i]);
-          map->keys[i] = NULL;
-        }
-      free (map->keys);
-      map->keys = NULL;
-      free (map->values);
-      map->values = NULL;
-      free (map);
-    }
-}
-
-define_cleaner_function (json_map_string_int64 *, free_json_map_string_int64)
-
 int
 append_json_map_string_int64 (json_map_string_int64 *map, const char *key, int64_t val)
 {
@@ -500,28 +400,6 @@ append_json_map_string_int64 (json_map_string_int64 *map, const char *key, int64
   map->len++;
   return 0;
 }
-
-void
-free_json_map_string_bool (json_map_string_bool *map)
-{
-  if (map != NULL)
-    {
-      size_t i;
-      for (i = 0; i < map->len; i++)
-        {
-          free (map->keys[i]);
-          map->keys[i] = NULL;
-          // No need to free value for type bool
-        }
-      free (map->keys);
-      map->keys = NULL;
-      free (map->values);
-      map->values = NULL;
-      free (map);
-    }
-}
-
-define_cleaner_function (json_map_string_bool *, free_json_map_string_bool)
 
 int
 append_json_map_string_bool (json_map_string_bool *map, const char *key, bool val)
@@ -785,40 +663,6 @@ append_json_map_string_string (json_map_string_string *map, const char *key, con
   map->len++;
   return 0;
 }
-
-
-/**
- * json_array_to_struct This function extracts keys and values and stores it in struct
- * Input: json_t
- * Output: jansson_array_values *
- */
-// jansson_array_values *json_array_to_struct(json_t *array) {
-//     if (!json_is_array(array)) {
-//         // Handle error: Input is not an array
-//         return NULL;
-//     }
-
-//     size_t len = json_array_size(array);
-//     jansson_array_values *result = malloc(sizeof(jansson_array_values));
-//     if (!result) {
-//         return NULL; // Handle allocation failure
-//     }
-
-//     result->values = json_array();
-//     result->len = len;
-
-//     if (!result->values) {
-//         free(result);
-//         return NULL; // Handle allocation failure
-//     }
-
-//     for (size_t i = 0; i < len; i++) {
-//         json_t *value = json_array_get(array, i);
-//         json_array_append_new(result->values, json_incref(value));
-//     }
-
-//     return result;
-// }
 
 
 /**
