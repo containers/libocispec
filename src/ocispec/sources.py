@@ -1483,7 +1483,7 @@ f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx,
     if (ctx == NULL)
      ctx = (const struct parser_context *)(&tmp_ctx);
 
-    tree = json_loads (jsondata, 0, &error);
+    tree = json_loads (jsondata, JSON_DECODE_INT_AS_REAL, &error);
     if (tree == NULL)
       {
         if (asprintf (err, "cannot parse the data: %s", error.text) < 0)
