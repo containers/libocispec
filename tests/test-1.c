@@ -45,6 +45,8 @@ main ()
     exit (1);
   }
 
+  uint64_t hard_limit = 18446744073709551615UL;
+
   if (strcmp (container->hostname, "runc") && strcmp(container->hostname, container_gen->hostname))
     exit (5);
   if (strcmp (container->process->cwd, "/cwd") && strcmp (container->process->cwd, container_gen->process->cwd))
@@ -57,6 +59,8 @@ main ()
     exit (6);
   if (strcmp (container->process->args[0], "ARGS1") && strcmp (container->process->args[0], container_gen->process->args[0]))
     exit (61);
+  if (container->process->rlimits[0]->hard == hard_limit && container_gen->process->rlimits[0]->hard == container->process->rlimits[0]->hard)
+    exit (63);
   if (strcmp (container->mounts[0]->destination, "/proc") && strcmp (container->mounts[0]->destination, container_gen->mounts[0]->destination))
     exit (62);
   if (container->linux->resources->block_io->weight_device[0]->major != 8 || container_gen->linux->resources->block_io->weight_device[0]->major != 8)
