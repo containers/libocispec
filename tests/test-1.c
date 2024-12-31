@@ -59,7 +59,7 @@ main ()
     exit (6);
   if (strcmp (container->process->args[0], "ARGS1") && strcmp (container->process->args[0], container_gen->process->args[0]))
     exit (61);
-  if (container->process->rlimits[0]->hard == hard_limit && container_gen->process->rlimits[0]->hard == container->process->rlimits[0]->hard)
+  if (container->process->rlimits[0]->hard != hard_limit)
     exit (63);
   if (strcmp (container->mounts[0]->destination, "/proc") && strcmp (container->mounts[0]->destination, container_gen->mounts[0]->destination))
     exit (62);

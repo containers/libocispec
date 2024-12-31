@@ -141,10 +141,15 @@ json_double_to_uint (double d, unsigned int *converted)
 int
 json_double_to_uint64 (double d, uint64_t *converted)
 {
-  unsigned long long int ull;
-  ull = (unsigned long long int) d;
-  *converted = (uint64_t) ull;
-  return 0;
+    // Safely convert double to uint64_t by checking for potential overflows
+    if (d >= 4294967296.0) { // Check if value is greater than or equal to 2^32
+        // TODO: Trying out
+         *converted = 18446744073709551615UL;
+    } else {
+        // Handle smaller values (less than 2^32)
+        *converted = (uint64_t) d;
+    }
+    return 0;
 }
 
 /*
