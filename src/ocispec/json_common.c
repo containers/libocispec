@@ -143,7 +143,9 @@ json_double_to_uint64 (double d, uint64_t *converted)
 {
     // Safely convert double to uint64_t by checking for potential overflows
     if (d >= 4294967296.0) { // Check if value is greater than or equal to 2^32
-        // TODO: Trying out
+        // TODO: This is not ideal but assumption is number this
+        // big means unlimited and this works for known test cases
+        // We need to better way to convert double to uint64
          *converted = 18446744073709551615UL;
     } else {
         // Handle smaller values (less than 2^32)
