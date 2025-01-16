@@ -584,10 +584,10 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
     History: 2019-06-17
     """
     if helpers.valid_basic_map_name(typ):
-        c_file.append(f"{'    ' * level}const json_object *jval = {src};\n")
-        c_file.append(f"{'    ' * level}if (jval != NULL)\n")
+        c_file.append(f"{'    ' * level}json_object *val = {src};\n")
+        c_file.append(f"{'    ' * level}if (val != NULL)\n")
         c_file.append(f'{"    " * level}  {{\n')
-        c_file.append(f'{"    " * (level + 1)}{dest} = make_{helpers.make_basic_map_name(typ)} (jval, ctx, err);\n')
+        c_file.append(f'{"    " * (level + 1)}{dest} = make_{helpers.make_basic_map_name(typ)} (val, ctx, err);\n')
         c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
         c_file.append(f'{"    " * (level + 1)}  {{\n')
         c_file.append(f"{'    ' * (level + 1)}    char *new_error = NULL;\n")
@@ -599,7 +599,7 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f'{"    " * (level + 1)}  }}\n')
         c_file.append(f'{"    " * (level)}}}\n')
     elif typ == 'string':
-        c_file.append(f"{'    ' * level}const json_object *val = {src};\n")
+        c_file.append(f"{'    ' * level}json_object *val = {src};\n")
         c_file.append(f"{'    ' * level}if (val != NULL)\n")
         c_file.append(f"{'    ' * (level)}  {{\n")
         c_file.append(f"{'    ' * (level + 1)}const char *str = json_object_get_string (val);\n")
@@ -608,7 +608,7 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f"{'    ' * (level + 1)}  return NULL;\n")
         c_file.append(f'{"    " * level}  }}\n')
     elif helpers.judge_data_type(typ):
-        c_file.append(f"{'    ' * level}const json_object *val = {src};\n")
+        c_file.append(f"{'    ' * level}json_object *val = {src};\n")
         c_file.append(f"{'    ' * level}if (val != NULL)\n")
         c_file.append(f'{"    " * (level)}  {{\n')
         if typ.startswith("uint") or \
@@ -1509,7 +1509,7 @@ f"    __auto_cleanup(json_object_put) json_object *root = json_object_new_{typ}(
         return NULL;
       }
 
-    const char *json_str = json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY);
+    char *json_str = (char *)json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY);
 
     return json_str;
 }
