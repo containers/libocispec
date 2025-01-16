@@ -611,25 +611,24 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f"{'    ' * level}json_object *val = {src};\n")
         c_file.append(f"{'    ' * level}if (val != NULL)\n")
         c_file.append(f'{"    " * (level)}  {{\n')
-        if typ.startswith("uint") or \
-                (typ.startswith("int") and typ != "integer") or typ == "double":
+        if typ == "double":
             c_file.append(f"{'    ' * (level + 1)}if (!json_object_is_type (val, json_type_double))\n")
             c_file.append(f'{"    " * (level + 1)}  {{\n')
-            c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
+            c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");//{typ}\n")
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
             c_file.append(f'{"    " * (level + 1)}{dest} = json_object_get_double(val);\n')
-        elif typ == "integer":
+        elif typ.startswith("int") or typ == "integer":
             c_file.append(f"{'    ' * (level + 1)}if (!json_object_is_type (val, json_type_int))\n")
             c_file.append(f'{"    " * (level + 1)}  {{\n')
-            c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
+            c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");//{typ}\n")
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
             c_file.append(f'{"    " * (level + 1)}{dest} = json_object_get_int64(val);\n')
-        elif typ == "UID" or typ == "GID":
+        elif typ == "UID" or typ == "GID" or typ.startswith("uint"):
             c_file.append(f"{'    ' * (level + 1)}if (!json_object_is_type (val, json_type_int))\n")
             c_file.append(f'{"    " * (level + 1)}  {{\n')
-            c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
+            c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");//{typ}\n")
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
             c_file.append(f'{"    " * (level + 1)}{dest} = json_object_get_uint64(val);\n')
@@ -1479,7 +1478,7 @@ f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx,
     if (ctx == NULL)
      ctx = (const struct parser_context *)(&tmp_ctx);
 
-    tree = json_tokener_parse_verbose (jsondata, error);
+    tree = json_tokener_parse (jsondata);
     if (tree == NULL)
       {
         if (asprintf (err, "cannot parse the data: %s", "TODO") < 0)
