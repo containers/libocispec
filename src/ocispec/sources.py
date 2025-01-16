@@ -36,7 +36,7 @@ def append_c_code(obj, c_file, prefix):
     Interface: None
     History: 2019-06-17
     """
-    parse_json_to_c(obj, c_file, prefix)
+    parse_json_objecto_c(obj, c_file, prefix)
     make_c_free(obj, c_file, prefix)
     get_c_json(obj, c_file, prefix)
     make_clone(obj, c_file, prefix)
@@ -55,13 +55,13 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
             childname = child.subtypname
         else:
             childname = helpers.get_prefixed_name(child.name, prefix)
-    c_file.append('    if (json_is_object(tree))\n')
+    c_file.append('    if (json_object_is_type(tree, json_type_object))\n')
     c_file.append('      {\n')
     c_file.append('        size_t i;\n')
-    c_file.append('        size_t len = json_object_size(tree);\n')
-    c_file.append('        jansson_object_keys_values *kvobj = json_object_to_keys_values(tree);\n')
-    c_file.append('        const char **keys = kvobj->keys;\n')
-    c_file.append('        json_t *values = kvobj->values;\n')
+    c_file.append('        int len = json_object_object_length(tree);\n')
+    c_file.append('        json_c_object_keys_values *kvobj = json_object_to_keys_values(tree);\n')
+    c_file.append('        const char **keys = (const char **)kvobj->keys;\n')
+    c_file.append('        json_object *values = kvobj->values;\n')
     c_file.append('        ret->len = len;\n')
     c_file.append('        ret->keys = calloc (len + 1, sizeof (*ret->keys));\n')
     c_file.append('        if (ret->keys == NULL)\n')
@@ -71,12 +71,12 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     c_file.append('          return NULL;\n')
     c_file.append('        for (i = 0; i < len; i++)\n')
     c_file.append('          {\n')
-    c_file.append('            json_t *jval;\n')
+    c_file.append('            json_object *jval;\n')
     c_file.append('            const char *tmpkey = keys[i];\n')
     c_file.append('            ret->keys[i] = strdup (tmpkey ? tmpkey : "");\n')
     c_file.append('            if (ret->keys[i] == NULL)\n')
     c_file.append("              return NULL;\n")
-    c_file.append('             jval = &values[i];\n')
+    c_file.append('            jval = json_object_array_get_idx(values, i);\n')
     c_file.append(f'            ret->{child.fixname}[i] = make_{childname} (jval, ctx, err);\n')
     c_file.append(f'            if (ret->{child.fixname}[i] == NULL)\n')
     c_file.append("              return NULL;\n")
@@ -92,31 +92,31 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
             typename = helpers.get_name_substr(obj.name, prefix)
         c_file.append('    do\n')
         c_file.append('      {\n')
-        c_file.append(f'       json_t *tmp = json_object_get (tree, "{obj.origname}");\n')                       
-        c_file.append('        if (tmp != NULL && json_is_array(tmp))\n')
+        c_file.append(f'       json_object *tmp = json_object_object_get (tree, "{obj.origname}");\n')                       
+        c_file.append('        if (tmp != NULL && json_object_is_type(tmp, json_type_array))\n')
         c_file.append('          {\n')
-        c_file.append('            size_t len = json_array_size (tmp);\n')
+        c_file.append('            int len = json_object_array_length (tmp);\n')
         c_file.append(f'            ret->{obj.fixname}_len = len;\n')
         c_file.append(f'            ret->{obj.fixname} = calloc (len + 1, sizeof (*ret->{obj.fixname}));\n')
         c_file.append(f'            if (ret->{obj.fixname} == NULL)\n')
         c_file.append('              return NULL;\n')
-        c_file.append('             json_t *value;\n')
+        c_file.append('             json_object *value;\n')
         c_file.append('             size_t i;\n')
         if obj.doublearray:
             c_file.append(f'            ret->{obj.fixname}_item_lens = calloc ( len + 1, sizeof (size_t));\n')
             c_file.append(f'            if (ret->{obj.fixname}_item_lens == NULL)\n')
             c_file.append('                return NULL;\n')
-        c_file.append('            json_array_foreach(tmp, i, value)\n')
+        c_file.append('            for(int i = 0; i < len ; i++)\n')
         c_file.append('              {\n')
+        c_file.append('                 json_object *value = json_object_array_get_idx(tmp, i);\n')
         if obj.doublearray:
-            c_file.append('                size_t j;\n')
-            c_file.append('                json_t *rec_value;\n')
-            c_file.append('                size_t rec_len = json_array_size(value);\n')
+            c_file.append('                size_t rec_len = json_object_array_length(value);\n')
             c_file.append(f'                ret->{obj.fixname}[i] = calloc ( rec_len + 1, sizeof (**ret->{obj.fixname}));\n')
             c_file.append(f'                if (ret->{obj.fixname}[i] == NULL)\n')
             c_file.append('                    return NULL;\n')
-            c_file.append('                json_array_foreach(value, j, rec_value)\n')
+            c_file.append('                for(size_t j = 0; j < rec_len ; j++)\n')
             c_file.append('                  {\n')
+            c_file.append('                     json_object *rec_value = json_object_array_get_idx(value, j);\n')
             c_file.append(f'                    ret->{obj.fixname}[i][j] = make_{typename} (rec_value, ctx, err);\n')
             c_file.append(f'                    if (ret->{obj.fixname}[i][j] == NULL)\n')
             c_file.append("                        return NULL;\n")
@@ -133,12 +133,10 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
     else:
         c_file.append('    do\n')
         c_file.append('      {\n')
-        c_file.append(f'       json_t *tmp = json_object_get (tree, "{obj.origname}");\n')
-        c_file.append('        if (tmp != NULL &&  !json_is_null(tmp))\n')
+        c_file.append(f'       json_object *tmp = json_object_object_get (tree, "{obj.origname}");\n')
+        c_file.append('        if (tmp != NULL &&  !json_object_is_type(tmp, json_type_null))\n')
         c_file.append('          {\n')
-        c_file.append('            size_t i;\n')
-        c_file.append('            json_t *value;\n')
-        c_file.append('            size_t len = json_array_size(tmp);\n')
+        c_file.append('            int len = json_object_array_length(tmp);\n')
         c_file.append(f'            ret->{obj.fixname}_len = len;\n')
         c_file.append(f'            ret->{obj.fixname} = calloc (len + 1, sizeof (*ret->{obj.fixname}));\n')
         c_file.append(f'            if (ret->{obj.fixname} == NULL)\n')
@@ -147,16 +145,17 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
             c_file.append(f'            ret->{obj.fixname}_item_lens = calloc ( len + 1, sizeof (size_t));\n')
             c_file.append(f'            if (ret->{obj.fixname}_item_lens == NULL)\n')
             c_file.append('                return NULL;\n')
-        c_file.append('            json_array_foreach(tmp, i, value)\n')
+        c_file.append('            for(int i = 0; i < len; i++)\n')
         c_file.append('              {\n')
+        c_file.append('                 json_object *value = json_object_array_get_idx(tmp, i);\n')
         if obj.doublearray:
-            c_file.append(f'                    ret->{obj.fixname}[i] = calloc ( json_array_size(value) + 1, sizeof (**ret->{obj.fixname}));\n')
+            c_file.append('                     int rec_len = json_object_array_length(value);\n')
+            c_file.append(f'                    ret->{obj.fixname}[i] = calloc ( json_object_array_length(value) + 1, sizeof (**ret->{obj.fixname}));\n')
             c_file.append(f'                    if (ret->{obj.fixname}[i] == NULL)\n')
             c_file.append('                        return NULL;\n')
-            c_file.append('                    size_t j;\n')
-            c_file.append('                    json_t *rec_value;\n')
-            c_file.append('                    json_array_foreach(value, j, rec_value)\n')
+            c_file.append('                    for(int j = 0; j < rec_len; i++)\n')
             c_file.append('                      {\n')
+            c_file.append('                         json_object *rec_value = json_object_array_get_idx(value, j);\n\n')
             read_val_generator(c_file, 5, 'rec_value', \
                                 f"ret->{obj.fixname}[i][j]", obj.subtyp, obj.origname, obj_typename)
             c_file.append(f'                        ret->{obj.fixname}_item_lens[i] += 1;\n')
@@ -178,35 +177,35 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
     if obj.typ == 'string':
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
     elif helpers.judge_data_type(obj.typ):
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
     elif helpers.judge_data_pointer_type(obj.typ):
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
     if obj.typ == 'boolean':
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
     if obj.typ == 'booleanPointer':
         c_file.append('    do\n')
         c_file.append('      {\n')
-        read_val_generator(c_file, 2, f'json_object_get (tree, "{obj.origname}")', \
+        read_val_generator(c_file, 2, f'json_object_object_get (tree, "{obj.origname}")', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
         c_file.append('      }\n')
         c_file.append('    while (0);\n')
@@ -216,7 +215,7 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
         else:
             typename = helpers.get_prefixed_name(obj.name, prefix)
         c_file.append(
-            f'    ret->{obj.fixname} = make_{typename} (json_object_get (tree, "{obj.origname}"), ctx, err);\n')
+            f'    ret->{obj.fixname} = make_{typename} (json_object_object_get (tree, "{obj.origname}"), ctx, err);\n')
         c_file.append(f"    if (ret->{obj.fixname} == NULL && *err != 0)\n")
         c_file.append("      return NULL;\n")
     elif obj.typ == 'array':
@@ -224,7 +223,7 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
     elif helpers.valid_basic_map_name(obj.typ):
         c_file.append('    do\n')
         c_file.append('      {\n')
-        c_file.append(f'        json_t *tmp = json_object_get (tree, "{obj.origname}");\n')
+        c_file.append(f'        json_object *tmp = json_object_object_get (tree, "{obj.origname}");\n')
         c_file.append('        if (tmp != NULL)\n')
         c_file.append('          {\n')
         c_file.append(f'            ret->{obj.fixname} = make_{helpers.make_basic_map_name(obj.typ)} (tmp, ctx, err);\n')
@@ -269,7 +268,7 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
         
         condition = ", ".join([f'"{i.origname}"' for i in obj.children])
         c_file.append("""
-    if (json_is_object(tree))
+    if (json_object_is_type(tree, json_type_object))
       {
         if (ctx->options & OPT_PARSE_FULLKEY)
           {
@@ -280,9 +279,9 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
         f"int len = {len(obj.children)};\n"
         f"const char *excluded[] = {'{'}{condition}{'}'};"
         """
-        json_t *resi = copy_unmatched_fields(tree, excluded, len);
+        json_object *resi = copy_unmatched_fields(tree, excluded, len);
 
-        size_t resilen = json_object_size(resi);
+        int resilen = json_object_object_length(resi);
 
         if (ctx->options & OPT_PARSE_FULLKEY && resi != NULL && resilen > 0)
           ret->_residual = resi;
@@ -290,7 +289,7 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
 """)
 
 
-def parse_json_to_c(obj, c_file, prefix):
+def parse_json_objecto_c(obj, c_file, prefix):
     """
     Description: generate c language for parse json file
     Interface: None
@@ -308,14 +307,14 @@ def parse_json_to_c(obj, c_file, prefix):
         if objs is None or obj.subtypname:
             return
     c_file.append(f"define_cleaner_function ({typename} *, free_{typename})\n")
-    c_file.append(f"{typename} *\nmake_{typename} (json_t *tree, const struct parser_context *ctx, parser_error *err)\n")
+    c_file.append(f"{typename} *\nmake_{typename} (json_object *tree, const struct parser_context *ctx, parser_error *err)\n")
     c_file.append("{\n")
     c_file.append(f"    __auto_cleanup(free_{typename}) {typename} *ret = NULL;\n")
     c_file.append("    *err = NULL;\n")
     c_file.append("    (void) ctx;  /* Silence compiler warning.  */\n")
     c_file.append("    if (tree == NULL)\n")
     c_file.append("      return NULL;\n")
-    c_file.append("    if (json_is_null(tree))\n")
+    c_file.append("    if (json_object_is_type(tree, json_type_null))\n")
     c_file.append("      return NULL;\n")
     c_file.append("    ret = calloc (1, sizeof (*ret));\n")
     c_file.append("    if (ret == NULL)\n")
@@ -350,12 +349,12 @@ def get_map_string_obj(obj, c_file, prefix):
     c_file.append('      {\n')
     c_file.append('        for (i = 0; i < len; i++)\n')
     c_file.append('          {\n')
-    c_file.append('             json_t *subroot = json_object();\n')
+    c_file.append('             json_object *subroot = json_object_new_object();\n')
     c_file.append(f'            stat = gen_{childname} (subroot, ptr->{child.fixname}[i], err);\n')
     c_file.append("            if (stat != JSON_GEN_SUCCESS)\n")
     c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
     c_file.append('            char *str = ptr->keys[i] ? ptr->keys[i] : "";\n')
-    c_file.append('            stat = json_object_set (root, (const char *)str, subroot);\n')
+    c_file.append('            stat = json_object_object_add (root, (const char *)str, subroot);\n')
     c_file.append("            if (stat != JSON_GEN_SUCCESS)\n")
     c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
     c_file.append('          }\n')
@@ -373,33 +372,33 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
         c_file.append('        size_t len = 0, i;\n')
         c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
         c_file.append(f"            len = ptr->{obj.fixname}_len;//{obj.subtypobj}\n")
-        c_file.append(f'        json_t *subroot = json_array();\n')
+        c_file.append(f'        json_object *subroot = json_object_new_array();\n')
         c_file.append('        for (i = 0; i < len; i++)\n')
         c_file.append('          {\n')
         if obj.doublearray:
-            c_file.append('            json_t *subsubroot = json_array();\n')
+            c_file.append('            json_object *subsubroot = json_object_new_array();\n')
             c_file.append("            size_t j;\n")
             c_file.append(f'            for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)\n')
             c_file.append('              {\n')
-            c_file.append('                 json_t *subobj = json_object();\n')
+            c_file.append('                 json_object *subobj = json_object_new_object();\n')
             c_file.append(f'                stat = gen_{typename} (subobj, ptr->{obj.fixname}[i][j], err);\n')
             c_file.append("                if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-            c_file.append("                stat = json_array_append(subsubroot, subobj);\n")
+            c_file.append("                stat = json_object_array_add (subsubroot, subobj);\n")
             c_file.append("                if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                     GEN_SET_ERROR_AND_RETURN (stat, err);\n")
             c_file.append('              }\n')
-            c_file.append('            stat = json_array_append(subroot, subsubroot);\n')
+            c_file.append('            stat = json_object_array_add (subroot, subsubroot);\n')
         else:
-            c_file.append(f'            json_t *obj = json_object();\n')
+            c_file.append(f'            json_object *obj = json_object_new_object();\n')
             c_file.append(f'            stat = gen_{typename} (obj, ptr->{obj.fixname}[i], err);\n')
             c_file.append("            if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-            c_file.append("            stat = json_array_append(subroot, obj);\n")
+            c_file.append("            stat = json_object_array_add (subroot, obj);\n")
             c_file.append("            if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append('          }\n')
-        c_file.append(f'         stat = json_object_set(root, (const char *)("{obj.origname}"), subroot);\n')
+        c_file.append(f'         stat = json_object_object_add(root, (const char *)("{obj.origname}"), subroot);\n')
         c_file.append('      }\n')
     elif obj.subtyp == 'byte':
         l = len(obj.origname)
@@ -408,7 +407,7 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
         c_file.append('        const char *str = "";\n')
         c_file.append('        size_t len = 0;\n')
         if obj.doublearray:
-            c_file.append('         json_t *subroot = json_array();\n')
+            c_file.append('         json_object *subroot = json_object_new_array();\n')
             c_file.append("        {\n")
             c_file.append("            size_t i;\n")
             c_file.append(f"            for (i = 0; i < ptr->{obj.fixname}_len; i++)\n")
@@ -417,17 +416,17 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
             c_file.append(f"                    str = (const char *)ptr->{obj.fixname}[i];\n")
             c_file.append("                else ()\n")
             c_file.append("                    str = "";\n")
-            c_file.append('                stat = json_array_append (subroot, json_string((const char *)str));\n')
+            c_file.append('                stat = json_object_array_add  (subroot, json_object_new_string((const char *)str));\n')
             c_file.append("              }\n")
             c_file.append("        }\n")
-            c_file.append(f'        stat = json_object_set (root, (const char *)("{obj.origname}"), subroot);\n')
+            c_file.append(f'        stat = json_object_object_add (root, (const char *)("{obj.origname}"), subroot);\n')
         else:
             c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
             c_file.append("          {\n")
             c_file.append(f"            str = (const char *)ptr->{obj.fixname};\n")
             c_file.append(f"            len = ptr->{obj.fixname}_len;\n")
             c_file.append("          }\n")
-            c_file.append(f'        stat = json_object_set (root, (const char *)("{obj.origname}"), json_string((const char *)str));\n')
+            c_file.append(f'        stat = json_object_object_add (root, (const char *)("{obj.origname}"), json_object_new_string((const char *)str));\n')
         c_file.append("        if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append("      }\n")
@@ -435,7 +434,7 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
         c_file.append(f'    if (ptr != NULL && ptr->{obj.fixname} != NULL)\n')
         c_file.append('      {\n')
         c_file.append('        size_t len = 0, i;\n')
-        c_file.append('        json_t *subroot = json_array();\n')
+        c_file.append('        json_object *subroot = json_object_new_array();\n')
         c_file.append("        if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
@@ -445,17 +444,17 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
 
         if obj.doublearray:
             typename = helpers.get_map_c_types(obj.subtyp)
-            c_file.append('            json_t *subsubroot = json_array();\n')
+            c_file.append('            json_object *subsubroot = json_object_new_array();\n')
             c_file.append("            size_t j;\n")
             c_file.append(f'            for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)\n')
             c_file.append('              {\n')
             json_value_generator(c_file, 4, f"ptr->{obj.fixname}[i][j]", 'subsubroot', obj.subtyp)
             c_file.append('              }\n')
-            c_file.append('            stat = json_array_append(subroot, subsubroot);\n')
+            c_file.append('            stat = json_object_array_add (subroot, subsubroot);\n')
         else:
             json_value_generator(c_file, 3, f"ptr->{obj.fixname}[i]", 'subroot', obj.subtyp)
         c_file.append('          }\n')
-        c_file.append(f'     stat =  json_object_set(root, (const char *)("{obj.origname}"), subroot);\n')
+        c_file.append(f'     stat =  json_object_object_add(root, (const char *)("{obj.origname}"), subroot);\n')
         c_file.append('   }\n')
 
 def get_obj_arr_obj(obj, c_file, prefix):
@@ -468,7 +467,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         l = len(obj.origname)
         c_file.append(f'    if (ptr != NULL && ptr->{obj.fixname} != NULL)\n' )
         c_file.append('      {\n')
-        c_file.append(f'        stat = json_object_set(root, (const char *)("{obj.origname}"), json_string(ptr->{obj.fixname}));\n')
+        c_file.append(f'        stat = json_object_object_add(root, (const char *)("{obj.origname}"), json_object_new_string(ptr->{obj.fixname}));\n')
         c_file.append("        if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append("      }\n")
@@ -478,14 +477,17 @@ def get_obj_arr_obj(obj, c_file, prefix):
         json_conv = 'json_real'
         if obj.typ == 'double':
             numtyp = 'double'
+        elif obj.typ.startswith("int") :
+            numtyp = 'int64_t'
+            json_conv = 'json_object_new_int64'
         else:
-            numtyp = 'json_int_t'
-            json_conv = 'json_integer'
+            numtyp = 'uint64_t'
+            json_conv = 'json_object_new_uint64'
         l = len(obj.origname)
         c_file.append(f'       {numtyp} num = 0;\n')
         c_file.append(f"       if (ptr != NULL && ptr->{obj.fixname})\n")
         c_file.append(f"            num = ({numtyp})ptr->{obj.fixname};\n")
-        c_file.append(f'        stat =  json_object_set(root, (const char *)("{obj.origname}"), {json_conv}(num));\n')
+        c_file.append(f'        stat =  json_object_object_add(root, (const char *)("{obj.origname}"), {json_conv}(num));\n')
         c_file.append("        if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append("      }\n")
@@ -495,7 +497,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.append('        bool b = false;\n')
         c_file.append(f"       if (ptr != NULL && ptr->{obj.fixname})\n")
         c_file.append(f"           b = ptr->{obj.fixname};\n")
-        c_file.append(f'        stat = json_object_set(root, (const char *)("{obj.origname}"), json_boolean(b));\n')
+        c_file.append(f'        stat = json_object_object_add(root, (const char *)("{obj.origname}"), json_object_new_boolean(b));\n')
         c_file.append("        if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append("        \n")
@@ -508,11 +510,11 @@ def get_obj_arr_obj(obj, c_file, prefix):
             typename = helpers.get_prefixed_name(obj.name, prefix)
         c_file.append(f'    if (ptr != NULL && ptr->{obj.fixname} != NULL)\n')
         c_file.append("      {\n")
-        c_file.append('        json_t *subroot = json_object();\n')
+        c_file.append('        json_object *subroot = json_object_new_object();\n')
         c_file.append(f'       stat = gen_{typename} (subroot, ptr != NULL ? ptr->{obj.fixname} : NULL, err);\n')
         c_file.append("        if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-        c_file.append(f'        stat = json_object_set(root, (const char *)("{obj.origname}"), subroot);\n')
+        c_file.append(f'        stat = json_object_object_add(root, (const char *)("{obj.origname}"), subroot);\n')
         c_file.append("        if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append("      }\n")
@@ -522,11 +524,11 @@ def get_obj_arr_obj(obj, c_file, prefix):
         l = len(obj.origname)
         c_file.append(f'    if (ptr != NULL && ptr->{obj.fixname} != NULL)\n')
         c_file.append('      {\n')
-        c_file.append('        json_t *subroot = json_object();\n')
+        c_file.append('        json_object *subroot = json_object_new_object();\n')
         c_file.append(f'       stat = gen_{helpers.make_basic_map_name(obj.typ)} (subroot, ptr ? ptr->{obj.fixname} : NULL, err);\n')
         c_file.append("        if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-        c_file.append(f'       stat = json_object_set(root, (const char *)("{obj.fixname}"), subroot);\n')
+        c_file.append(f'       stat = json_object_object_add(root, (const char *)("{obj.fixname}"), subroot);\n')
         c_file.append("        if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append("      }\n")
@@ -548,12 +550,12 @@ def get_c_json(obj, c_file, prefix):
         if objs is None:
             return
     c_file.append(
-        f"int\ngen_{typename} (json_t *root, const {typename} *ptr, " \
+        f"int\ngen_{typename} (json_object *root, const {typename} *ptr, " \
         "parser_error *err)\n")
     c_file.append("{\n")
     c_file.append("    int stat = JSON_GEN_SUCCESS;\n")
     c_file.append("    /* Handle cases where root is not used within body of function */\n")
-    c_file.append("    if (json_is_null(root))\n")
+    c_file.append("    if (json_object_is_type(root, json_type_null))\n")
     c_file.append("         return stat;\n")
     c_file.append("    *err = NULL;\n")
     c_file.append("    (void) ptr;  /* Silence compiler warning.  */\n")
@@ -567,7 +569,7 @@ def get_c_json(obj, c_file, prefix):
             if obj.children is not None:
                 c_file.append("    if (ptr != NULL && ptr->_residual != NULL)\n")
                 c_file.append("      {\n")
-                c_file.append("        stat = json_object_update_missing(root, ptr->_residual);\n")
+                c_file.append("        stat = json_object_update_missing_generic(root, ptr->_residual);\n")
                 c_file.append("        if (JSON_GEN_SUCCESS != stat)\n")
                 c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
                 c_file.append("      }\n")
@@ -582,7 +584,7 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
     History: 2019-06-17
     """
     if helpers.valid_basic_map_name(typ):
-        c_file.append(f"{'    ' * level}const json_t *jval = {src};\n")
+        c_file.append(f"{'    ' * level}const json_object *jval = {src};\n")
         c_file.append(f"{'    ' * level}if (jval != NULL)\n")
         c_file.append(f'{"    " * level}  {{\n')
         c_file.append(f'{"    " * (level + 1)}{dest} = make_{helpers.make_basic_map_name(typ)} (jval, ctx, err);\n')
@@ -597,57 +599,49 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f'{"    " * (level + 1)}  }}\n')
         c_file.append(f'{"    " * (level)}}}\n')
     elif typ == 'string':
-        c_file.append(f"{'    ' * level}const json_t *val = {src};\n")
+        c_file.append(f"{'    ' * level}const json_object *val = {src};\n")
         c_file.append(f"{'    ' * level}if (val != NULL)\n")
         c_file.append(f"{'    ' * (level)}  {{\n")
-        c_file.append(f"{'    ' * (level + 1)}const char *str = json_string_value (val);\n")
+        c_file.append(f"{'    ' * (level + 1)}const char *str = json_object_get_string (val);\n")
         c_file.append(f"{'    ' * (level + 1)}{dest} = strdup (str ? str : \"\");\n")
         c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
         c_file.append(f"{'    ' * (level + 1)}  return NULL;\n")
         c_file.append(f'{"    " * level}  }}\n')
     elif helpers.judge_data_type(typ):
-        c_file.append(f"{'    ' * level}const json_t *val = {src};\n")
+        c_file.append(f"{'    ' * level}const json_object *val = {src};\n")
         c_file.append(f"{'    ' * level}if (val != NULL)\n")
         c_file.append(f'{"    " * (level)}  {{\n')
         if typ.startswith("uint") or \
                 (typ.startswith("int") and typ != "integer") or typ == "double":
-            c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-            c_file.append(f"{'    ' * (level + 1)}if (!json_is_number (val))\n")
+            c_file.append(f"{'    ' * (level + 1)}if (!json_object_is_type (val, json_type_double))\n")
             c_file.append(f'{"    " * (level + 1)}  {{\n')
             c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
-            c_file.append(f'{"    " * (level + 1)}invalid = json_double_to_{typ} (json_number_value(val), &{dest});\n')
+            c_file.append(f'{"    " * (level + 1)}{dest} = json_object_get_double(val);\n')
         elif typ == "integer":
-            c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-            c_file.append(f"{'    ' * (level + 1)}if (!json_is_number (val))\n")
+            c_file.append(f"{'    ' * (level + 1)}if (!json_object_is_type (val, json_type_int))\n")
             c_file.append(f'{"    " * (level + 1)}  {{\n')
             c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
-            c_file.append(f'{"    " * (level + 1)}invalid = json_double_to_int (json_number_value(val), (int *)&{dest});\n')
+            c_file.append(f'{"    " * (level + 1)}{dest} = json_object_get_int64(val);\n')
         elif typ == "UID" or typ == "GID":
-            c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-            c_file.append(f"{'    ' * (level + 1)}if (!json_is_number (val))\n")
+            c_file.append(f"{'    ' * (level + 1)}if (!json_object_is_type (val, json_type_int))\n")
             c_file.append(f'{"    " * (level + 1)}  {{\n')
             c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
-            c_file.append(f'{"    " * (level + 1)}invalid = json_double_to_uint (json_number_value(val), (unsigned int *)&{dest});\n')
-        c_file.append(f"{'    ' * (level + 1)}if (invalid)\n")
-        c_file.append(f'{"    " * (level + 1)}  {{\n')
-        c_file.append(f'{"    " * (level + 1)}    if (asprintf (err, "Invalid value \'%f\' with type \'{typ}\' for key \'{keyname}\': %s", json_number_value (val), strerror (-invalid)) < 0)\n')
-        c_file.append(f'{"    " * (level + 1)}        *err = strdup ("error allocating memory");\n')
-        c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
+            c_file.append(f'{"    " * (level + 1)}{dest} = json_object_get_uint64(val);\n')
         c_file.append(f'{"    " * (level + 1)}}}\n')
         if '[' not in dest:
             c_file.append(f"{'    ' * (level + 1)}{dest}_present = 1;\n")
-        c_file.append(f'{"    " * (level)}}}\n')
+        # c_file.append(f'{"    " * (level)}}}\n')
     elif helpers.judge_data_pointer_type(typ):
         num_type = helpers.obtain_data_pointer_type(typ)
         if num_type == "":
             return
-        c_file.append(f"{'    ' * level}const json_t *val = {src};\n")
+        c_file.append(f"{'    ' * level}const json_object *val = {src};\n")
         c_file.append(f"{'    ' * level}if (val != NULL)\n")
         c_file.append(f'{"    " * (level)}  {{\n')
         c_file.append(f'{"    " * (level + 1)}{dest} = calloc (1, sizeof ({helpers.get_map_c_types(num_type)}));\n')
@@ -667,10 +661,10 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         c_file.append(f'{"    " * (level + 1)}}}\n')
         c_file.append(f'{"    " * (level)}}}\n')
     elif typ == 'boolean':
-        c_file.append(f"{'    ' * level}json_t *val = {src};\n")
+        c_file.append(f"{'    ' * level}json_object *val = {src};\n")
         c_file.append(f"{'    ' * level}if (val != NULL)\n")
         c_file.append(f'{"    " * (level)}  {{\n')
-        c_file.append(f"{'    ' * (level + 1)}{dest} = json_is_true(val);\n")
+        c_file.append(f"{'    ' * (level + 1)}{dest} = json_object_get_boolean(val);\n")
         if '[' not in dest:
             c_file.append(f"{'    ' * (level + 1)}{dest}_present = 1;\n")
             c_file.append(f'{"    " * (level)}  }}\n')
@@ -684,23 +678,23 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
             c_file.append(f'{"    " * (level+1)}  }}\n')
         c_file.append(f'{"    " * (level)}  }}\n')
     elif typ == 'booleanPointer':
-        c_file.append(f"{'    ' * level}json_t *val = {src};\n")
+        c_file.append(f"{'    ' * level}json_object *val = {src};\n")
         c_file.append(f"{'    ' * level}if (val != NULL)\n")
         c_file.append(f'{"    " * (level)}  {{\n')
         c_file.append(f"{'    ' * (level + 1)}{dest} = calloc (1, sizeof (bool));\n")
         c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
         c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-        c_file.append(f"{'    ' * (level + 1)}*({dest}) = json_is_true(jval);\n")
+        c_file.append(f"{'    ' * (level + 1)}*({dest}) = json_object_get_boolean(val);\n")
         c_file.append(f'{"    " * (level)}  }}\n')
         c_file.append(f"{'    ' * level}else\n")
         c_file.append(f'{"    " * (level)} {{\n')
-        c_file.append(f'{"    " * (level + 1)}val = json_object_get (tree, "{keyname}");\n')
+        c_file.append(f'{"    " * (level + 1)}val = json_object_object_get (tree, "{keyname}");\n')
         c_file.append(f"{'    ' * (level + 1)}if (val != NULL)\n")
         c_file.append(f'{"    " * (level + 1)}  {{\n')
         c_file.append(f"{'    ' * (level + 2)}{dest} = calloc (1, sizeof (bool));\n")
         c_file.append(f"{'    ' * (level + 2)}if ({dest} == NULL)\n")
         c_file.append(f"{'    ' * (level + 2)}  return NULL;\n")
-        c_file.append(f"{'    ' * (level + 2)}*({dest}) = json_is_true(val);\n")
+        c_file.append(f"{'    ' * (level + 2)}*({dest}) = json_object_get_boolean(val);\n")
         c_file.append(f'{"    " * (level + 1)}}}\n')
         c_file.append(f'{"    " * (level)}}}\n')
 
@@ -860,20 +854,20 @@ def json_value_generator(c_file, level, src, dst, typ):
         c_file.append(f"{'    ' * level}if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append(f"{'    ' * (level + 1)}GEN_SET_ERROR_AND_RETURN (stat, err);\n")
     elif typ == 'string':
-        c_file.append(f'{"    " * (level)}stat = json_array_append({dst}, json_string({src}));\n')
+        c_file.append(f'{"    " * (level)}stat = json_object_array_add ({dst}, json_object_new_string({src}));\n')
         c_file.append(f"{'    ' * level}if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append(f"{'    ' * (level + 1)}GEN_SET_ERROR_AND_RETURN (stat, err);\n")
     elif helpers.judge_data_type(typ):
         if typ == 'double':
-            c_file.append(f'{"    " * (level)}stat = json_array_append({dst}, json_real({src}));\n')
+            c_file.append(f'{"    " * (level)}stat = json_object_array_add ({dst}, json_object_new_double({src}));\n')
         elif typ.startswith("uint") or typ == 'GID' or typ == 'UID':
-            c_file.append(f"{'    ' * level}stat = json_array_append ({dst}, json_integer({src}));\n")
+            c_file.append(f"{'    ' * level}stat = json_object_array_add  ({dst}, json_object_new_uint64({src}));\n")
         else:
-            c_file.append(f"{'    ' * level}stat = json_array_append({dst}, json_integer({src}));\n")
+            c_file.append(f"{'    ' * level}stat = json_object_array_add ({dst}, json_object_new_int64({src}));\n")
         c_file.append(f"{'    ' * level}if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append(f"{'    ' * (level + 1)}GEN_SET_ERROR_AND_RETURN (stat, err);\n")
     elif typ == 'boolean':
-        c_file.append(f'{"    " * (level)}stat = json_array_append({dst}, json_boolean({src}));\n')
+        c_file.append(f'{"    " * (level)}stat = json_object_array_add ({dst}, json_object_new_boolean({src}));\n')
         c_file.append(f"{'    ' * level}if (stat != JSON_GEN_SUCCESS)\n")
         c_file.append(f"{'    ' * (level + 1)}GEN_SET_ERROR_AND_RETURN (stat, err);\n")
 
@@ -1015,7 +1009,7 @@ def make_c_free (obj, c_file, prefix):
                 c_file.append("      }\n")
     if obj.typ == 'object':
         if obj.children is not None:
-            c_file.append("    json_decref (ptr->_residual);\n")
+            c_file.append("    json_object_put (ptr->_residual);\n")
             c_file.append("    ptr->_residual = NULL;\n")
     c_file.append("    free (ptr);\n")
     c_file.append("}\n\n")
@@ -1105,17 +1099,17 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
 
     c_file.append(f"\ndefine_cleaner_function ({typename} *, free_{typename})\n" +
                     f"{typename}\n" +
-                    f"*make_{typename} (json_t *tree, const struct parser_context *ctx, parser_error *err)\n" +
+                    f"*make_{typename} (json_object *tree, const struct parser_context *ctx, parser_error *err)\n" +
                     "{\n" +
                     f"    __auto_cleanup(free_{typename}) {typename} *ptr = NULL;\n" +
-                    f"    size_t i, alen;\n" +
+                    f"    size_t alen;\n" +
                     f" "+
                     f"    (void) ctx;\n" +
                     f" "+
-                    f"    if (tree == NULL || err == NULL || !json_is_array (tree))\n" +
+                    f"    if (tree == NULL || err == NULL || !json_object_is_type (tree, json_type_array))\n" +
                     f"      return NULL;\n" +
                     f"    *err = NULL;\n" +
-                    f"    alen = json_array_size (tree);\n" +
+                    f"    alen = json_object_array_length (tree);\n" +
                     f"    if (alen == 0)\n" +
                     f"      return NULL;\n" +
                     f"    ptr = calloc (1, sizeof ({typename}));\n" +
@@ -1125,7 +1119,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
                     f"    if (ptr->items == NULL)\n" +
                     f"      return NULL;\n" +
                     f"    ptr->len = alen;\n"
-                    f"    json_t *work;"
+                    f"    json_object *work;"
     )
 
     if obj.doublearray:
@@ -1134,8 +1128,9 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
         c_file.append('      return NULL;')
 
     c_file.append("""\n
-    json_array_foreach(tree, i, work)
+    for(size_t i = 0; i < alen; i++)
       {
+            json_object *work = json_object_array_get_idx(tree, i);
 """)
 
     if obj.subtypobj or obj.subtyp == 'object':
@@ -1146,12 +1141,13 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
 
         if obj.doublearray:
             c_file.append('        size_t j;\n')
-            c_file.append('        ptr->items[i] = calloc ( json_array_size(work) + 1, sizeof (**ptr->items));\n')
+            c_file.append('        size_t sublen = json_object_array_length(work);\n')
+            c_file.append('        ptr->items[i] = calloc ( sublen + 1, sizeof (**ptr->items));\n')
             c_file.append('        if (ptr->items[i] == NULL)\n')
             c_file.append('          return NULL;\n')
-            c_file.append('        json_t *nested_item;\n')
-            c_file.append('        json_array_foreach(work, j, nested_item)\n')
+            c_file.append('        for(size_t j = 0; j < sublen; j++)\n')
             c_file.append('          {\n')
+            c_file.append('              json_object *nested_item = json_object_array_get_idx(work, j);\n')
             c_file.append(f'              ptr->items[i][j] = make_{subtypename} (nested_item, ctx, err);\n')
             c_file.append('              if (ptr->items[i][j] == NULL)\n')
             c_file.append("                return NULL;\n")
@@ -1163,23 +1159,23 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
             c_file.append("          return NULL;\n")
     elif obj.subtyp == 'byte':
         if obj.doublearray:
-            c_file.append('        const char *str = json_string_value (work);\n')
+            c_file.append('        const char *str = json_object_get_string (work);\n')
             c_file.append('        ptr->items[j] = (uint8_t *)strdup (str ? str : "");\n')
             c_file.append('        if (ptr->items[j] == NULL)\n')
             c_file.append("          return NULL;\n")
         else:
-            c_file.append('        const char *str = json_string_value (tree);\n')
+            c_file.append('        const char *str = json_object_get_string (tree);\n')
             c_file.append('        memcpy(ptr->items, str ? str : "", strlen(str ? str : ""));\n')
             c_file.append('        break;\n')
     else:
         if obj.doublearray:
-            c_file.append('        ptr->items[i] = calloc ( json_array_size(work) + 1, sizeof (**ptr->items));\n')
+            c_file.append('        size_t sublen = json_object_array_length(work);\n')
+            c_file.append('        ptr->items[i] = calloc ( json_object_array_length(work) + 1, sizeof (**ptr->items));\n')
             c_file.append('        if (ptr->items[i] == NULL)\n')
             c_file.append('          return NULL;\n')
-            c_file.append('        size_t j;\n')
-            c_file.append('        json_t *nested_item;\n')
-            c_file.append('        json_array_foreach(work, j, nested_item)\n')
+            c_file.append('        for(size_t j = 0; j < sublen; j++)\n')
             c_file.append('          {\n')
+            c_file.append('             json_object *nested_item = json_object_array_get_idx(work, j);\n')
             read_val_generator(c_file, 3, 'nested_item', \
                                 "ptr->items[i][j]", obj.subtyp, obj.origname, c_typ)
             c_file.append('            ptr->subitem_lens[i] += 1;\n')
@@ -1291,7 +1287,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         return
     typename = helpers.get_top_array_type_name(obj.name, prefix)
 
-    c_file.append(f"int gen_{typename} (json_t *root, const {typename} *ptr, " + """
+    c_file.append(f"int gen_{typename} (json_object *root, const {typename} *ptr, " + """
                        parser_error *err)
 {
     size_t i;
@@ -1311,27 +1307,27 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
             subtypename = helpers.get_name_substr(obj.name, prefix)
         c_file.append('      {\n')
         if obj.doublearray:
-            c_file.append("            json_t *subroot = json_array();\n")
+            c_file.append("            json_object *subroot = json_object_new_array();\n")
             c_file.append("            size_t j;\n")
             c_file.append('            for (j = 0; j < ptr->subitem_lens[i]; j++)\n')
             c_file.append('              {\n')
-            c_file.append('                json_t *subobj = json_object();\n')
+            c_file.append('                json_object *subobj = json_object_new_object();\n')
             c_file.append(f'               stat = gen_{subtypename} (subobj, ptr->items[i][j], err);\n')
             c_file.append("                if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-            c_file.append("                stat = json_array_append(subroot, subobj);\n")
+            c_file.append("                stat = json_object_array_add (subroot, subobj);\n")
             c_file.append("                if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
             c_file.append('              }\n')
-            c_file.append("            int stat = json_array_append(root, subroot);\n")
+            c_file.append("            int stat = json_object_array_add (root, subroot);\n")
             c_file.append("            if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         else:
-            c_file.append("            json_t *obj = json_object();\n")
+            c_file.append("            json_object *obj = json_object_new_object();\n")
             c_file.append(f'           stat = gen_{subtypename} (obj, ptr->items[i], err);\n')
             c_file.append("            if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-            c_file.append("            stat = json_array_append(root, obj);\n\n")
+            c_file.append("            stat = json_object_array_add (root, obj);\n\n")
             c_file.append("            if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append("""\n
@@ -1343,19 +1339,19 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         if obj.doublearray:
             c_file.append("            {\n")
             c_file.append("                size_t i;\n")
-            c_file.append("                json_t *subroot = json_array();\n")
+            c_file.append("                json_object *subroot = json_object_new_array();\n")
             c_file.append("                for (i = 0; i < ptr->len; i++)\n")
             c_file.append("                  {\n")
             c_file.append("                    if (ptr->items[i] != NULL)\n")
             c_file.append("                        str = (const char *)ptr->items[i];\n")
             c_file.append("                    else ()\n")
             c_file.append("                        str = "";\n")
-            c_file.append("                    json_t *jstr = json_string(str);\n")
-            c_file.append("                    int stat = json_array_append(subroot, jstr);\n")
+            c_file.append("                    json_object *jstr = json_object_new_string(str);\n")
+            c_file.append("                    int stat = json_object_array_add (subroot, jstr);\n")
             c_file.append("                    if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                         GEN_SET_ERROR_AND_RETURN (stat, err);\n")
             c_file.append("                  }\n")
-            c_file.append("                int stat = json_array_append(root, subroot);\n")
+            c_file.append("                int stat = json_object_array_add (root, subroot);\n")
             c_file.append("                if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                     GEN_SET_ERROR_AND_RETURN (stat, err);\n")
             c_file.append("            }\n")
@@ -1364,8 +1360,8 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
             c_file.append("          {\n")
             c_file.append("            str = (const char *)ptr->items;\n")
             c_file.append("          }\n")
-            c_file.append("          json_t *jstr = json_string(str);\n")
-            c_file.append("          int stat = json_array_append(root, jstr);\n")
+            c_file.append("          json_object *jstr = json_object_new_string(str);\n")
+            c_file.append("          int stat = json_object_array_add (root, jstr);\n")
             c_file.append("          if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("               GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         c_file.append('    }\n')
@@ -1377,12 +1373,12 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         c_file.append('        {\n')
         if obj.doublearray:
             c_file.append("            size_t j;\n")
-            c_file.append("            json_t *subroot = json_array();\n")
+            c_file.append("            json_object *subroot = json_object_new_array();\n")
             c_file.append('            for (j = 0; j < ptr->subitem_lens[i]; j++)\n')
             c_file.append('              {\n')
             json_value_generator(c_file, 4, "ptr->items[i][j]", 'subroot', obj.subtyp)
             c_file.append('            }\n')
-            c_file.append("            int stat = json_array_append(root, subroot);\n")
+            c_file.append("            int stat = json_object_array_add (root, subroot);\n")
             c_file.append("            if (stat != JSON_GEN_SUCCESS)\n")
             c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
         else:
@@ -1439,7 +1435,7 @@ def get_c_epilog(c_file, prefix, typ, obj):
             *err = strdup ("error allocating memory");
         return NULL;
       }""" +
-    f"ptr = {typename}_parse_data (content, ctx, err);" +
+    f"\n\t\t\tptr = {typename}_parse_data (content, ctx, err);\n\t\t\t" +
     """return ptr;
 }
 """)
@@ -1467,13 +1463,13 @@ f"{typename}_parse_file_stream (FILE *stream, const struct parser_context *ctx, 
 """)
 
     c_file.append("""
-define_cleaner_function (json_t *, json_decref)
+define_cleaner_function (json_object *, json_object_put)
 """ +
 f"\n {typename} * " +
 f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err)\n {{ \n" +
     f"  {typename} *ptr = NULL;\n" +
-    """\t__auto_cleanup(json_decref) json_t *tree = NULL;
-    json_error_t error;
+    """\t__auto_cleanup(json_object_put) json_object *tree = NULL;
+    enum json_tokener_error *error;
     struct parser_context tmp_ctx = { 0 };
 
     if (jsondata == NULL || err == NULL)
@@ -1483,10 +1479,10 @@ f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx,
     if (ctx == NULL)
      ctx = (const struct parser_context *)(&tmp_ctx);
 
-    tree = json_loads (jsondata, JSON_DECODE_INT_AS_REAL, &error);
+    tree = json_tokener_parse_verbose (jsondata, error);
     if (tree == NULL)
       {
-        if (asprintf (err, "cannot parse the data: %s", error.text) < 0)
+        if (asprintf (err, "cannot parse the data: %s", "TODO") < 0)
             *err = strdup ("error allocating memory");
         return NULL;
       }\n""" +
@@ -1498,7 +1494,7 @@ f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx,
 f"{typename}_generate_json (const {typename} *ptr, parser_error *err)" +
 """{
 """ +
-f"    __auto_cleanup(json_decref) json_t *root = json_{typ}();" +
+f"    __auto_cleanup(json_object_put) json_object *root = json_object_new_{typ}();" +
 """
 
     if (ptr == NULL || err == NULL)
@@ -1513,7 +1509,7 @@ f"    __auto_cleanup(json_decref) json_t *root = json_{typ}();" +
         return NULL;
       }
 
-    char *json_str = json_dumps(root, JSON_INDENT(2));
+    const char *json_str = json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY);
 
     return json_str;
 }

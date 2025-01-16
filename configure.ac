@@ -17,6 +17,8 @@ AM_COND_IF([HAVE_EMBEDDED_JANSSON], [], [
 AC_SEARCH_LIBS(json_object, [jansson], [AC_DEFINE([HAVE_JANSSON], 1, [Define if libjansson is available])], [AC_MSG_ERROR([*** libjansson headers not found])])
 ])
 
+AC_SEARCH_LIBS(json_c_version, [json-c], [AC_DEFINE([HAVE_JSONC], 1, [Define if json-c is available])], [AC_MSG_ERROR([*** json-c headers not found])])
+
 # Optionally install the library.
 AC_ARG_ENABLE(libocispec-install,
 AS_HELP_STRING([--enable-libocispec-install], [Enable libocispec installation]),

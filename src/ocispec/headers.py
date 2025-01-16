@@ -60,7 +60,7 @@ def append_header_arr(obj, header, prefix):
     typename = helpers.get_name_substr(obj.name, prefix)
     header.append(f"}}\n{typename};\n\n")
     header.append(f"void free_{typename} ({typename} *ptr);\n\n")
-    header.append(f"{typename} *make_{typename} (json_t *jtree, const struct parser_context *ctx, parser_error *err);\n\n")
+    header.append(f"{typename} *make_{typename} (json_object *jtree, const struct parser_context *ctx, parser_error *err);\n\n")
 
 
 def append_header_map_str_obj(obj, header, prefix):
@@ -164,7 +164,7 @@ def append_type_c_header(obj, header, prefix):
             else:
                 append_header_child_others(i, header, prefix)
         if obj.children is not None:
-            header.append("    json_t *_residual;\n")
+            header.append("    struct json_object *_residual;\n")
         if len(present_tags) > 0:
             header.append("\n")
             for tag in present_tags:
@@ -173,8 +173,8 @@ def append_type_c_header(obj, header, prefix):
     header.append(f"}}\n{typename};\n\n")
     header.append(f"void free_{typename} ({typename} *ptr);\n\n")
     header.append(f"{typename} *clone_{typename} ({typename} *src);\n")
-    header.append(f"{typename} *make_{typename} (json_t *jtree, const struct parser_context *ctx, parser_error *err);\n\n")
-    header.append(f"int gen_{typename} (json_t *root, const {typename} *ptr, parser_error *err);\n\n")
+    header.append(f"{typename} *make_{typename} (json_object *jtree, const struct parser_context *ctx, parser_error *err);\n\n")
+    header.append(f"int gen_{typename} (json_object *root, const {typename} *ptr, parser_error *err);\n\n")
 
 def header_reflect_top_array(obj, prefix, header):
     c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \

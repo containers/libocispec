@@ -458,7 +458,7 @@ append_json_map_string_bool (json_map_string_bool *map, const char *key, bool va
 }
 
 int
-gen_json_map_string_string (json_t *root, const json_map_string_string *map, parser_error *err)
+gen_json_map_string_string (json_object *root, const json_map_string_string *map, parser_error *err)
 {
   int stat = JSON_GEN_SUCCESS;
   size_t len = 0, i = 0;
@@ -467,7 +467,7 @@ gen_json_map_string_string (json_t *root, const json_map_string_string *map, par
   
   for (i = 0; i < len; i++)
     {
-      stat = json_object_set(root, (const char *)(map->keys[i]), json_string((const char *)(map->values[i])));
+      stat = json_object_object_add(root, (const char *)(map->keys[i]), json_object_new_string((const char *)(map->values[i])));
       if (JSON_GEN_SUCCESS != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     }
@@ -498,19 +498,19 @@ free_json_map_string_string (json_map_string_string *map)
 define_cleaner_function (json_map_string_string *, free_json_map_string_string)
 
 json_map_string_string *
-make_json_map_string_string (json_t *src, const struct parser_context *ctx,
+make_json_map_string_string (json_object *src, const struct parser_context *ctx,
                                                          parser_error *err)
 {
   __auto_cleanup (free_json_map_string_string) json_map_string_string *ret = NULL;
   size_t i;
-  size_t len;
+  int len;
 
   (void) ctx; /* Silence compiler warning.  */
   if (src == NULL)
     return NULL;
 
   
-  len = json_object_size (src);
+  len = json_object_object_length (src);
 
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
@@ -534,12 +534,9 @@ make_json_map_string_string (json_t *src, const struct parser_context *ctx,
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
-  
-  const char *key;
-  json_t *value;
 
   i = 0;
-  json_object_foreach(src, key, value)
+  json_object_object_foreach(src, key, value)
   {
     ret->keys[i] = strdup (key ? key : "");
     if (ret->keys[i] == NULL)
@@ -549,7 +546,7 @@ make_json_map_string_string (json_t *src, const struct parser_context *ctx,
 
     if (value != NULL)
     {
-      if (! json_is_string (value))
+      if (! json_object_is_type (value, json_type_string))
       {
         if (*err == NULL && asprintf (err, "Invalid value with type 'string' for key '%s'", key) < 0)
         {
@@ -558,7 +555,7 @@ make_json_map_string_string (json_t *src, const struct parser_context *ctx,
         return NULL;
       }
 
-      const char *str = json_string_value(value);
+      const char *str = json_object_get_string(value);
 
       ret->values[i] = strdup (str ? str : "");
       if (ret->values[i] == NULL)
@@ -674,40 +671,38 @@ append_json_map_string_string (json_map_string_string *map, const char *key, con
 
 /**
  * json_object_to_keys_values This function extracts keys and values and stores it in array of keys and values
- * Input: json_t
- * Output: jansson_object_keys_values *
+ * Input: json_object
+ * Output: json_c_object_keys_values *
  */
-jansson_object_keys_values *json_object_to_keys_values(json_t *object) {
-    if (!json_is_object(object)) {
+json_c_object_keys_values *json_object_to_keys_values(json_object *object) {
+    if (!json_object_is_type(object, json_type_object)) {
         // Handle error: Input is not an object
         return NULL;
     }
 
-    size_t len = json_object_size(object);
-    jansson_object_keys_values *result = malloc(sizeof(jansson_object_keys_values));
+    size_t len = json_object_object_length(object);
+    json_c_object_keys_values *result = malloc(sizeof(json_c_object_keys_values));
     if (!result) {
         return NULL; // Handle allocation failure
     }
 
     result->keys = calloc(len, sizeof(char*));
-    result->values = json_array();
+    result->values = json_object_new_array();
     result->len = len;
 
     if (!result->keys || !result->values) {
         free(result->keys);
-        json_decref(result->values);
+        json_object_put(result->values);
         free(result);
         return NULL; // Handle allocation failure
     }
 
-    json_t *key_iter = json_object_iter(object);
-    for (size_t i = 0; key_iter; key_iter = json_object_iter_next(object, key_iter)) {
-        const char *key = json_object_iter_key(key_iter);
-        json_t *value = json_object_iter_value(key_iter);
-
-        result->keys[i] = strdup(key);
-        json_array_append_new(result->values, json_incref(value));
-        i++;
+    int i = 0;
+    json_object_object_foreach(object, key, value)
+    {
+      result->keys[i] = key;
+      json_object_array_add(result->values, value);
+      i++;
     }
 
     return result;
@@ -716,17 +711,14 @@ jansson_object_keys_values *json_object_to_keys_values(json_t *object) {
 
 /**
  * copy_unmatched_fields We extract all the fields and we match them with the supplied keys if they don't match
- * we add it to new json_t
- * Input: json_t, const char **
+ * we add it to new json_object
+ * Input: json_object, const char **
  * Ouput: jsont_t
  */
-json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys, int len) {
-    json_t *dst = json_object();
-    
-    const char *key;
-    json_t *value;
+json_object *copy_unmatched_fields(json_object *src, const char **exclude_keys, int len) {
+    json_object *dst = json_object_new_object();
 
-    json_object_foreach(src, key, value) {
+    json_object_object_foreach(src, key, value) {
         int match = 0;
         for (int i = 0; i < len; i++) {
           if (strcmp(key, exclude_keys[i]) == 0) {
@@ -735,9 +727,21 @@ json_t *copy_unmatched_fields(json_t *src, const char **exclude_keys, int len) {
           }
         }
         if (match == 0) {
-          json_object_set(dst, key, value);
+          json_object_object_add(dst, key, value);
         }
     }
 
     return dst;
+}
+
+int json_object_update_missing_generic(struct json_object *obj1, struct json_object *obj2) {
+    
+    json_object_object_foreach(obj2, key, val) {
+      struct json_object *p = json_object_object_get(obj1, key);
+      if (p == NULL) {
+        json_object_object_add(obj1, key, val);
+      }
+    }
+
+    return 0;
 }
