@@ -145,7 +145,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
             c_file.append(f'            ret->{obj.fixname}_item_lens = calloc ( len + 1, sizeof (size_t));\n')
             c_file.append(f'            if (ret->{obj.fixname}_item_lens == NULL)\n')
             c_file.append('                return NULL;\n')
-        c_file.append('            for(int i = 0; i < len; i++)\n')
+        c_file.append('            for(size_t i = 0; i < len; i++)\n')
         c_file.append('              {\n')
         c_file.append('                 json_object *value = json_object_array_get_idx(tmp, i);\n')
         if obj.doublearray:
@@ -153,7 +153,7 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
             c_file.append(f'                    ret->{obj.fixname}[i] = calloc ( json_object_array_length(value) + 1, sizeof (**ret->{obj.fixname}));\n')
             c_file.append(f'                    if (ret->{obj.fixname}[i] == NULL)\n')
             c_file.append('                        return NULL;\n')
-            c_file.append('                    for(int j = 0; j < rec_len; i++)\n')
+            c_file.append('                    for(size_t j = 0; j < rec_len; j++)\n')
             c_file.append('                      {\n')
             c_file.append('                         json_object *rec_value = json_object_array_get_idx(value, j);\n\n')
             read_val_generator(c_file, 5, 'rec_value', \
@@ -632,10 +632,10 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
             c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
             c_file.append(f'{"    " * (level + 1)}  }}\n')
             c_file.append(f'{"    " * (level + 1)}{dest} = json_object_get_uint64(val);\n')
-        c_file.append(f'{"    " * (level + 1)}}}\n')
+        # c_file.append(f'{"    " * (level + 1)}}}\n')
         if '[' not in dest:
             c_file.append(f"{'    ' * (level + 1)}{dest}_present = 1;\n")
-        # c_file.append(f'{"    " * (level)}}}\n')
+        c_file.append(f'{"    " * (level)}}}\n')
     elif helpers.judge_data_pointer_type(typ):
         num_type = helpers.obtain_data_pointer_type(typ)
         if num_type == "":
@@ -1467,8 +1467,9 @@ define_cleaner_function (json_object *, json_object_put)
 f"\n {typename} * " +
 f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err)\n {{ \n" +
     f"  {typename} *ptr = NULL;\n" +
-    """\t__auto_cleanup(json_object_put) json_object *tree = NULL;
+    """\t//__auto_cleanup(json_object_put)\n\tjson_object *tree = NULL;
     enum json_tokener_error *error;
+    struct json_tokener *tok = json_tokener_new();
     struct parser_context tmp_ctx = { 0 };
 
     if (jsondata == NULL || err == NULL)
@@ -1478,10 +1479,11 @@ f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx,
     if (ctx == NULL)
      ctx = (const struct parser_context *)(&tmp_ctx);
 
-    tree = json_tokener_parse (jsondata);
+    tree = json_tokener_parse_ex (tok, jsondata, strlen(jsondata));
     if (tree == NULL)
       {
-        if (asprintf (err, "cannot parse the data: %s", "TODO") < 0)
+        enum json_tokener_error e = json_tokener_get_error(tok);
+        if (asprintf (err, "cannot parse the data: %s", json_tokener_error_desc(e)) < 0)
             *err = strdup ("error allocating memory");
         return NULL;
       }\n""" +
@@ -1493,7 +1495,7 @@ f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx,
 f"{typename}_generate_json (const {typename} *ptr, parser_error *err)" +
 """{
 """ +
-f"    __auto_cleanup(json_object_put) json_object *root = json_object_new_{typ}();" +
+f"    //__auto_cleanup(json_object_put)\n\tjson_object *root = json_object_new_{typ}();" +
 """
 
     if (ptr == NULL || err == NULL)
@@ -1501,14 +1503,14 @@ f"    __auto_cleanup(json_object_put) json_object *root = json_object_new_{typ}(
 
     *err = NULL;
 """ +
-    f"if (JSON_GEN_FAILED == gen_{typename} (root, ptr, err))" +
+    f"\tif (JSON_GEN_FAILED == gen_{typename} (root, ptr, err))" +
     """  {
         if (*err == NULL)
             *err = strdup ("Failed to generate json");
         return NULL;
       }
 
-    char *json_str = (char *)json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY);
+    char *json_str = (char *)json_object_to_json_string_ext(root, JSON_C_TO_STRING_NOSLASHESCAPE | JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_SPACED);
 
     return json_str;
 }

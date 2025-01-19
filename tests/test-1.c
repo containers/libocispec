@@ -40,7 +40,7 @@ main ()
     exit (1);
   }
   container_gen = runtime_spec_schema_config_schema_parse_data(json_buf, 0, &err);
-  if (container == NULL) {
+  if (container_gen == NULL) {
     printf ("parse error %s\n", err);
     exit (1);
   }
@@ -56,7 +56,7 @@ main ()
   if (!container->process->terminal_present)
     exit (53);
   if (!container->process->user->uid_present || container_gen->process->user->gid_present)
-    exit (6);
+    exit (65);
   if (strcmp (container->process->args[0], "ARGS1") && strcmp (container->process->args[0], container_gen->process->args[0]))
     exit (61);
   if (container->process->rlimits[0]->hard != hard_limit)

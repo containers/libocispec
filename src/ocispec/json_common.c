@@ -471,6 +471,7 @@ gen_json_map_string_string (json_object *root, const json_map_string_string *map
       if (JSON_GEN_SUCCESS != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     }
+  // printf(">X> \n%s\n", json_object_to_json_string_ext(root, JSON_C_TO_STRING_NOSLASHESCAPE | JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_PRETTY_TAB));
   return JSON_GEN_SUCCESS;
 }
 
