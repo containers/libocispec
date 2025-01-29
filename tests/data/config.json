@@ -51,9 +51,19 @@
         },
         "rlimits": [
             {
+                "type": "RLIMIT_CORE",
+                "hard": 18446744073709551615,
+                "soft": 18446744073709551615
+            },
+            {
                 "type": "RLIMIT_NOFILE",
                 "hard": 1024,
                 "soft": 1024
+            },
+            {
+                "type": "RLIMIT_NPROC",
+                "hard": 1048576,
+                "soft": 1048576
             }
         ],
         "noNewPrivileges": true

@@ -1,11 +1,4 @@
-DIST_SUBDIRS = yajl
-SUBDIRS = yajl
-
 AM_CFLAGS = $(WARN_CFLAGS) -I$(top_srcdir)/src -I$(top_builddir)/src
-
-if HAVE_EMBEDDED_YAJL
-AM_CFLAGS += -I$(top_srcdir)/yajl/src/headers
-endif HAVE_EMBEDDED_YAJL
 
 CLEANFILES = $(man_MANS) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 
@@ -155,12 +148,6 @@ CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES) $(TMP_H_FILES) $(TMP_C_FILES)
 
 TESTS_LDADD = libocispec.la $(SELINUX_LIBS)
 
-if HAVE_EMBEDDED_YAJL
-TESTS_LDADD += yajl/libyajl.la
-else
-TESTS_LDADD += $(YAJL_LIBS)
-endif
-
 libocispec_a_SOURCES =
 
 libocispec.a: libocispec.la $(BUILT_SOURCES) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
@@ -256,13 +243,12 @@ EXTRA_DIST = autogen.sh \
 	runtime-spec \
 	image-spec \
 	src/ocispec/json_common.h \
-	src/ocispec/json_common.c \
-	src/yajl
+	src/ocispec/json_common.c
 
 sync:
 	(cd image-spec; git pull https://github.com/opencontainers/image-spec)
 	(cd runtime-spec; git pull https://github.com/opencontainers/runtime-spec)
-	(cd yajl; git pull https://github.com/containers/yajl main)
+	
 
 generate: src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 
