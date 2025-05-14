@@ -450,7 +450,11 @@ def gen_obj_typnode(node_info, src, typ, refname):
     subtypobj = None
     required = None
 
-    if 'allOf' in cur:
+    if 'additionalProperties' in cur and isinstance(cur['additionalProperties'], dict):
+        child, src_child = resolve_type(schema_info, name, src, cur['additionalProperties'], curfile)
+        child.fixname = "values"
+        return helpers.SchemaNode(name, 'mapStringObject', [child], None, None, None), src
+    elif 'allOf' in cur:
         children = merge(resolve_list(schema_info, name, src, cur['allOf'], curfile))
     elif 'anyOf' in cur:
         children = resolve_list(schema_info, name, src, cur['anyOf'], curfile)

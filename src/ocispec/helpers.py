@@ -178,7 +178,7 @@ def get_prefixed_pointer(name, typ, prefix):
     Interface: None
     History: 2019-06-17
     '''
-    if typ != 'object' and typ != 'mapStringObject' and \
+    if typ != 'array' and typ != 'object' and typ != 'mapStringObject' and \
             not valid_basic_map_name(typ):
         return ""
     return '%s *' % make_basic_map_name(typ) if valid_basic_map_name(typ) \
