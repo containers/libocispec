@@ -235,7 +235,7 @@ def obtain_pointer(name, typ, prefix):
     return "char *" if typ == "string" else \
         ("%s *" % typ if typ == "ArrayOfStrings" else "")
 
-class HierarchicalName(object):
+class HierarchicalName:
     '''
     Description: Store HierarchicalName information
     Interface: None
@@ -259,7 +259,7 @@ class HierarchicalName(object):
         return HierarchicalName(prefix_name + leaf, leaf)
 
 
-class SchemaNode(object):
+class SchemaNode:
     '''
     Description: Store SchemaNode information
     Interface: None
@@ -287,7 +287,7 @@ class SchemaNode(object):
         return "name:(%s) type:(%s)" % (self.name, self.typ)
 
 
-class FilePath(object):
+class FilePath:
     '''
     Description: Store filepath information
     Interface: None
@@ -303,7 +303,7 @@ class FilePath(object):
             % (self.name, self.dirname, self.basename)
 
 
-class SchemaInfo(object):
+class SchemaInfo:
     '''
     Description: Store schema information
     Interface: None

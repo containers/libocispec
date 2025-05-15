@@ -53,7 +53,7 @@ Description: root paths
 Interface: rootpaths
 History: 2019-06-17
 '''
-class MyRoot(object):
+class MyRoot:
     '''
     Description: Store schema information
     Interface: None
@@ -275,7 +275,7 @@ def get_type_pattern_incur(cur, schema_info, src, curfile):
     return typ
 
 
-class GenerateNodeInfo(object):
+class GenerateNodeInfo:
     '''
     Description: Store schema information
     Interface: None
