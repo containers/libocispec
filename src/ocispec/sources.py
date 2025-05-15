@@ -355,7 +355,7 @@ def parse_json_to_c(obj, c_file, prefix):
     Interface: None
     History: 2019-06-17
     """
-    if not helpers.judge_complex(obj.typ):
+    if not helpers.is_compound_type(obj.typ):
         return
     if obj.typ == 'object' or obj.typ == 'mapStringObject':
         if obj.subtypname:
@@ -653,7 +653,7 @@ def get_c_json(obj, c_file, prefix):
     Interface: None
     History: 2019-06-17
     """
-    if not helpers.judge_complex(obj.typ) or obj.subtypname:
+    if not helpers.is_compound_type(obj.typ) or obj.subtypname:
         return
     if obj.typ == 'object' or obj.typ == 'mapStringObject':
         typename = helpers.get_prefixed_name(obj.name, prefix)
@@ -839,7 +839,7 @@ def make_clone(obj, c_file, prefix):
     History: 2024-09-03
     """
 
-    if not helpers.judge_complex(obj.typ) or obj.subtypname:
+    if not helpers.is_compound_type(obj.typ) or obj.subtypname:
         return
     typename = helpers.get_prefixed_name(obj.name, prefix)
     case = obj.typ
@@ -1041,7 +1041,7 @@ def make_c_array_free (i, c_file, prefix):
         c_file.append("      }\n")
     elif i.subtyp == 'string':
         c_file_str(c_file, i)
-    elif not helpers.judge_complex(i.subtyp):
+    elif not helpers.is_compound_type(i.subtyp):
         c_file.append("   {\n")
         if i.doublearray:
             c_file.append("            size_t i;\n")
@@ -1103,7 +1103,7 @@ def make_c_free (obj, c_file, prefix):
     Interface: None
     History: 2019-06-17
     """
-    if not helpers.judge_complex(obj.typ) or obj.subtypname:
+    if not helpers.is_compound_type(obj.typ) or obj.subtypname:
         return
     typename = helpers.get_prefixed_name(obj.name, prefix)
     case = obj.typ
@@ -1382,7 +1382,7 @@ def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
         else:
             c_file.append("        free (ptr->items[i]);\n")
             c_file.append("        ptr->items[i] = NULL;\n")
-    elif not helpers.judge_complex(obj.subtyp):
+    elif not helpers.is_compound_type(obj.subtyp):
         if obj.doublearray:
             c_file.append("        free (ptr->items[i]);\n")
             c_file.append("        ptr->items[i] = NULL;\n")

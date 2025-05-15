@@ -184,7 +184,7 @@ def get_prefixed_pointer(name, typ, prefix):
     return '%s *' % make_basic_map_name(typ) if valid_basic_map_name(typ) \
         else "%s *" % get_prefixed_name(name, prefix)
 
-def judge_complex(typ):
+def is_compound_type(typ):
     '''
     Description: Check compound object
     Interface: None
