@@ -259,9 +259,9 @@ class CombinateName(object):
         return CombinateName(prefix_name + leaf, leaf)
 
 
-class Unite(object):
+class SchemaNode(object):
     '''
-    Description: Store Unite information
+    Description: Store SchemaNode information
     Interface: None
     History: 2019-06-17
     '''

@@ -321,7 +321,7 @@ def gen_all_arr_typnode(node_info, src, typ, refname):
     children = merge(resolve_list(schema_info, name, src, cur["items"]['allOf'], curfile))
     subtyp = children[0].typ
     subtypobj = children
-    return helpers.Unite(name,
+    return helpers.SchemaNode(name,
                         typ,
                         children,
                         subtyp=subtyp,
@@ -348,7 +348,7 @@ def gen_any_arr_typnode(node_info, src, typ, refname):
     children = anychildren[0].children
     subtypobj = children
     refname = anychildren[0].subtypname
-    return helpers.Unite(name,
+    return helpers.SchemaNode(name,
                         typ,
                         children,
                         subtyp=subtyp,
@@ -375,7 +375,7 @@ def gen_ref_arr_typnode(node_info, src, typ, refname):
         refname = make_ref_name(subrefname, curfile)
     else:
         refname = item_type.subtypname
-    return helpers.Unite(name,
+    return helpers.SchemaNode(name,
                         typ,
                         None,
                         subtyp=item_type.typ,
@@ -398,7 +398,7 @@ def gen_type_arr_typnode(node_info, src, typ, refname):
     item_type, src = resolve_type(schema_info, name, src, cur["items"], curfile)
 
     if typ == 'array' and typ == item_type.typ and not helpers.valid_basic_map_name(item_type.subtyp):
-        return helpers.Unite(name,
+        return helpers.SchemaNode(name,
                         typ,
                         None,
                         subtyp=item_type.subtyp,
@@ -406,7 +406,7 @@ def gen_type_arr_typnode(node_info, src, typ, refname):
                         subtypname=item_type.subtypname,
                         required=item_type.required, doublearray=True), src
     else:
-        return helpers.Unite(name,
+        return helpers.SchemaNode(name,
                         typ,
                         None,
                         subtyp=item_type.typ,
@@ -466,7 +466,7 @@ def gen_obj_typnode(node_info, src, typ, refname):
             if 'properties' in cur else None
     if 'required' in cur:
         required = cur['required']
-    return helpers.Unite(name,\
+    return helpers.SchemaNode(name,\
             typ,\
             children,\
             subtyp=subtyp,\
@@ -532,7 +532,7 @@ def resolve_type(schema_info, name, src, cur, curfile):
             raise RuntimeError("Invalid schema type: %s" % typ)
         children = None
 
-    return helpers.Unite(name,
+    return helpers.SchemaNode(name,
                         typ,
                         children,
                         subtyp=subtyp,
@@ -599,7 +599,7 @@ def handle_type_not_in_schema(schema_info, schema, prefix):
     """
     required = None
     if 'definitions' in schema:
-        return helpers.Unite( \
+        return helpers.SchemaNode( \
             helpers.CombinateName("definitions"), 'definitions', \
             parse_properties(schema_info, helpers.CombinateName(""), schema, schema, \
                             schema_info.name.name), None, None, None, None)
@@ -614,11 +614,11 @@ def handle_type_not_in_schema(schema_info, schema, prefix):
             childrens = parse_properties(schema_info, helpers.CombinateName(""), \
                                         schema[value], schema[value], \
                                         schema_info.name.name)
-            value_node = helpers.Unite(helpers.CombinateName(prefix), \
+            value_node = helpers.SchemaNode(helpers.CombinateName(prefix), \
                                        'object', childrens, None, None, \
                                        None, required)
             value_nodes.append(value_node)
-        return helpers.Unite(helpers.CombinateName("definitions"), \
+        return helpers.SchemaNode(helpers.CombinateName("definitions"), \
                              'definitions', value_nodes, None, None, \
                             None, None)
 
@@ -636,7 +636,7 @@ def parse_schema(schema_info, schema, prefix):
     if 'object' in schema['type']:
         if 'required' in schema:
             required = schema['required']
-        return helpers.Unite(
+        return helpers.SchemaNode(
             helpers.CombinateName(prefix), 'object',
             parse_properties(schema_info, \
                             helpers.CombinateName(""), \
@@ -649,7 +649,7 @@ def parse_schema(schema_info, schema, prefix):
             item_type.doublearray = True
             return item_type
         else:
-            return helpers.Unite(helpers.CombinateName(prefix), 'array', None, item_type.typ, \
+            return helpers.SchemaNode(helpers.CombinateName(prefix), 'array', None, item_type.typ, \
                             item_type.children, None, item_type.required)
 
     else:
@@ -674,7 +674,7 @@ def expand(tree, structs, visited):
 
     if tree.typ == 'array' and helpers.valid_basic_map_name(tree.subtyp):
         name = helpers.CombinateName(tree.name + "_element")
-        node = helpers.Unite(name, tree.subtyp, None)
+        node = helpers.SchemaNode(name, tree.subtyp, None)
         expand(node, structs, visited)
 
     id_ = "%s:%s" % (tree.name, tree.typ)
