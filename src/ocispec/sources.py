@@ -355,7 +355,7 @@ def parse_json_to_c(obj, c_file, prefix):
     Interface: None
     History: 2019-06-17
     """
-    if not helpers.judge_complex(obj.typ):
+    if not helpers.is_compound_type(obj.typ):
         return
     if obj.typ == 'object' or obj.typ == 'mapStringObject':
         if obj.subtypname:
@@ -653,7 +653,7 @@ def get_c_json(obj, c_file, prefix):
     Interface: None
     History: 2019-06-17
     """
-    if not helpers.judge_complex(obj.typ) or obj.subtypname:
+    if not helpers.is_compound_type(obj.typ) or obj.subtypname:
         return
     if obj.typ == 'object' or obj.typ == 'mapStringObject':
         typename = helpers.get_prefixed_name(obj.name, prefix)
@@ -839,11 +839,12 @@ def make_clone(obj, c_file, prefix):
     History: 2024-09-03
     """
 
-    if not helpers.judge_complex(obj.typ) or obj.subtypname:
+    if not helpers.is_compound_type(obj.typ) or obj.subtypname:
         return
     typename = helpers.get_prefixed_name(obj.name, prefix)
     case = obj.typ
-    result = {'mapStringObject': lambda x: [], 'object': lambda x: x.children,
+    result = {'mapStringObject': lambda x: [],
+              'object': lambda x: x.children,
               'array': lambda x: x.subtypobj}[case](obj)
     objs = result
     if obj.typ == 'array':
@@ -861,7 +862,7 @@ def make_clone(obj, c_file, prefix):
     c_file.append("    if (ret == NULL)\n")
     c_file.append("      return NULL;\n")
 
-    nodes = obj.children if obj.typ == 'object' else obj.subtypobj
+    nodes = obj.children if obj.subtypobj is None else obj.subtypobj
     for i in nodes or []:
         if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
             c_file.append(f"    ret->{i.fixname} = src->{i.fixname};\n")
@@ -870,9 +871,19 @@ def make_clone(obj, c_file, prefix):
             node_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
             c_file.append(f"    if (src->{i.fixname})\n")
             c_file.append(f"      {{\n")
-            c_file.append(f"        ret->{i.fixname} = clone_{node_name} (src->{i.fixname});\n")
-            c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
-            c_file.append(f"          return NULL;\n")
+            if obj.typ != 'mapStringObject':
+                c_file.append(f"        ret->{i.fixname} = clone_{node_name} (src->{i.fixname});\n")
+                c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
+                c_file.append(f"          return NULL;\n")
+            else:
+                c_file.append(f"        size_t i;\n")
+                c_file.append(f"        ret->{i.fixname} = calloc (src->len + 1, sizeof (*ret->{i.fixname}));\n")
+                c_file.append(f"        for (i = 0; i < src->len; i++)\n")
+                c_file.append("          {\n")
+                c_file.append(f"             ret->{i.fixname}[i] = clone_{node_name} (src->{i.fixname}[i]);\n")
+                c_file.append(f"             if (ret->{i.fixname}[i] == NULL);\n")
+                c_file.append(f"               return NULL;\n")
+                c_file.append("          }\n")
             c_file.append(f"      }}\n")
         elif i.typ == 'string':
             c_file.append(f"    if (src->{i.fixname})\n")
@@ -947,9 +958,16 @@ def make_clone(obj, c_file, prefix):
             c_file.append(f"    if (ret->{i.fixname} == NULL)\n")
             c_file.append(f"        return NULL;\n")
         elif i.typ == 'mapStringObject':
+            if i.subtypname is not None:
+                subtypname = i.subtypname
+                maybe_element = "_element"
+            else:
+                subtypname = i.children[0].subtypname
+                maybe_element = ""
+
             c_file.append(f"    if (src->{i.fixname})\n")
             c_file.append(f"      {{\n")
-            c_file.append(f"        ret->{i.fixname} = calloc (1, sizeof ({i.subtypname}));\n")
+            c_file.append(f"        ret->{i.fixname} = calloc (1, sizeof (*ret->{i.fixname}));\n")
             c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
             c_file.append(f"            return NULL;\n")
             c_file.append(f"        ret->{i.fixname}->len = src->{i.fixname}->len;\n")
@@ -964,7 +982,7 @@ def make_clone(obj, c_file, prefix):
             c_file.append(f"            ret->{i.fixname}->keys[i] = strdup (src->{i.fixname}->keys[i]);\n")
             c_file.append(f"            if (ret->{i.fixname}->keys[i] == NULL)\n")
             c_file.append(f"              return NULL;\n")
-            c_file.append(f"            ret->{i.fixname}->values[i] = clone_{i.subtypname}_element (src->{i.fixname}->values[i]);\n")
+            c_file.append(f"            ret->{i.fixname}->values[i] = clone_{subtypname}{maybe_element} (src->{i.fixname}->values[i]);\n")
             c_file.append(f"            if (ret->{i.fixname}->values[i] == NULL)\n")
             c_file.append(f"              return NULL;\n")
             c_file.append(f"          }}\n")
@@ -1023,7 +1041,7 @@ def make_c_array_free (i, c_file, prefix):
         c_file.append("      }\n")
     elif i.subtyp == 'string':
         c_file_str(c_file, i)
-    elif not helpers.judge_complex(i.subtyp):
+    elif not helpers.is_compound_type(i.subtyp):
         c_file.append("   {\n")
         if i.doublearray:
             c_file.append("            size_t i;\n")
@@ -1073,7 +1091,7 @@ def make_c_array_free (i, c_file, prefix):
     c_typ = helpers.obtain_pointer(i.name, i.subtypobj, prefix)
     if c_typ == "":
         return True
-    if i.subobj is not None:
+    if i.subtypname is not None:
         c_typ = c_typ + "_element"
     c_file.append(f"    free_{c_typ} (ptr->{i.fixname});\n")
     c_file.append(f"    ptr->{i.fixname} = NULL;\n")
@@ -1085,11 +1103,12 @@ def make_c_free (obj, c_file, prefix):
     Interface: None
     History: 2019-06-17
     """
-    if not helpers.judge_complex(obj.typ) or obj.subtypname:
+    if not helpers.is_compound_type(obj.typ) or obj.subtypname:
         return
     typename = helpers.get_prefixed_name(obj.name, prefix)
     case = obj.typ
-    result = {'mapStringObject': lambda x: [], 'object': lambda x: x.children,
+    result = {'mapStringObject': lambda x: [],
+              'object': lambda x: x.children,
               'array': lambda x: x.subtypobj}[case](obj)
     objs = result
     if obj.typ == 'array':
@@ -1363,7 +1382,7 @@ def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
         else:
             c_file.append("        free (ptr->items[i]);\n")
             c_file.append("        ptr->items[i] = NULL;\n")
-    elif not helpers.judge_complex(obj.subtyp):
+    elif not helpers.is_compound_type(obj.subtyp):
         if obj.doublearray:
             c_file.append("        free (ptr->items[i]);\n")
             c_file.append("        ptr->items[i] = NULL;\n")

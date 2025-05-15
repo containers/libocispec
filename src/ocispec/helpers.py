@@ -178,13 +178,13 @@ def get_prefixed_pointer(name, typ, prefix):
     Interface: None
     History: 2019-06-17
     '''
-    if typ != 'object' and typ != 'mapStringObject' and \
+    if typ != 'array' and typ != 'object' and typ != 'mapStringObject' and \
             not valid_basic_map_name(typ):
         return ""
     return '%s *' % make_basic_map_name(typ) if valid_basic_map_name(typ) \
         else "%s *" % get_prefixed_name(name, prefix)
 
-def judge_complex(typ):
+def is_compound_type(typ):
     '''
     Description: Check compound object
     Interface: None
@@ -235,9 +235,9 @@ def obtain_pointer(name, typ, prefix):
     return "char *" if typ == "string" else \
         ("%s *" % typ if typ == "ArrayOfStrings" else "")
 
-class CombinateName(object):
+class HierarchicalName:
     '''
-    Description: Store CombinateName information
+    Description: Store HierarchicalName information
     Interface: None
     History: 2019-06-17
     '''
@@ -256,12 +256,12 @@ class CombinateName(object):
         History: 2019-06-17
         '''
         prefix_name = self.name + '_' if self.name != "" else ""
-        return CombinateName(prefix_name + leaf, leaf)
+        return HierarchicalName(prefix_name + leaf, leaf)
 
 
-class Unite(object):
+class SchemaNode:
     '''
-    Description: Store Unite information
+    Description: Store SchemaNode information
     Interface: None
     History: 2019-06-17
     '''
@@ -287,7 +287,7 @@ class Unite(object):
         return "name:(%s) type:(%s)" % (self.name, self.typ)
 
 
-class FilePath(object):
+class FilePath:
     '''
     Description: Store filepath information
     Interface: None
@@ -303,7 +303,7 @@ class FilePath(object):
             % (self.name, self.dirname, self.basename)
 
 
-class SchemaInfo(object):
+class SchemaInfo:
     '''
     Description: Store schema information
     Interface: None

@@ -45,7 +45,7 @@ def append_header_arr(obj, header, prefix):
             if i.subtypobj is not None:
                 c_typ = helpers.get_name_substr(i.name, prefix)
 
-            if not helpers.judge_complex(i.subtyp):
+            if not helpers.is_compound_type(i.subtyp):
                 header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}*{i.fixname};\n")
             else:
                 header.append(f"    {c_typ} **{i.fixname};\n")
@@ -75,7 +75,7 @@ def append_header_map_str_obj(obj, header, prefix):
     if helpers.valid_basic_map_name(child.typ):
         c_typ = helpers.get_prefixed_pointer("", child.typ, "")
     elif child.subtypname:
-        c_typ = child.subtypname
+        c_typ = child.subtypname +  " *"
     else:
         c_typ = helpers.get_prefixed_pointer(child.name, child.typ, prefix)
     header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}*{child.fixname};\n")
@@ -105,7 +105,7 @@ def append_header_child_arr(child, header, prefix):
 
     if helpers.valid_basic_map_name(child.subtyp):
         header.append(f"    {helpers.make_basic_map_name(child.subtyp)} **{child.fixname};\n")
-    elif not helpers.judge_complex(child.subtyp):
+    elif not helpers.is_compound_type(child.subtyp):
         header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}*{dflag}{child.fixname};\n")
     else:
         header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}**{dflag}{child.fixname};\n")
@@ -138,7 +138,7 @@ def append_type_c_header(obj, header, prefix):
     Interface: None
     History: 2019-06-17
     '''
-    if not helpers.judge_complex(obj.typ):
+    if not helpers.is_compound_type(obj.typ):
         return
 
     if obj.typ == 'array':
