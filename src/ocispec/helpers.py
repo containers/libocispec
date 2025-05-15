@@ -235,9 +235,9 @@ def obtain_pointer(name, typ, prefix):
     return "char *" if typ == "string" else \
         ("%s *" % typ if typ == "ArrayOfStrings" else "")
 
-class CombinateName(object):
+class HierarchicalName(object):
     '''
-    Description: Store CombinateName information
+    Description: Store HierarchicalName information
     Interface: None
     History: 2019-06-17
     '''
@@ -256,7 +256,7 @@ class CombinateName(object):
         History: 2019-06-17
         '''
         prefix_name = self.name + '_' if self.name != "" else ""
-        return CombinateName(prefix_name + leaf, leaf)
+        return HierarchicalName(prefix_name + leaf, leaf)
 
 
 class SchemaNode(object):

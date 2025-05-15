@@ -550,9 +550,9 @@ def resolve_list(schema_info, name, schema, objs, curfile):
     obj = []
     index = 0
     for i in objs:
-        generated_name = helpers.CombinateName( \
+        generated_name = helpers.HierarchicalName( \
             i['$ref'].split("/")[-1]) if '$ref' in i \
-            else helpers.CombinateName(name.name + str(index))
+            else helpers.HierarchicalName(name.name + str(index))
         node, _ = resolve_type(schema_info, generated_name, schema, i, curfile)
         if node:
             obj.append(node)
@@ -600,8 +600,8 @@ def handle_type_not_in_schema(schema_info, schema, prefix):
     required = None
     if 'definitions' in schema:
         return helpers.SchemaNode( \
-            helpers.CombinateName("definitions"), 'definitions', \
-            parse_properties(schema_info, helpers.CombinateName(""), schema, schema, \
+            helpers.HierarchicalName("definitions"), 'definitions', \
+            parse_properties(schema_info, helpers.HierarchicalName(""), schema, schema, \
                             schema_info.name.name), None, None, None, None)
     else:
         if len(schema) > 1:
@@ -611,14 +611,14 @@ def handle_type_not_in_schema(schema_info, schema, prefix):
         for value in schema:
             if 'required' in schema[value]:
                 required = schema[value]['required']
-            childrens = parse_properties(schema_info, helpers.CombinateName(""), \
+            childrens = parse_properties(schema_info, helpers.HierarchicalName(""), \
                                         schema[value], schema[value], \
                                         schema_info.name.name)
-            value_node = helpers.SchemaNode(helpers.CombinateName(prefix), \
+            value_node = helpers.SchemaNode(helpers.HierarchicalName(prefix), \
                                        'object', childrens, None, None, \
                                        None, required)
             value_nodes.append(value_node)
-        return helpers.SchemaNode(helpers.CombinateName("definitions"), \
+        return helpers.SchemaNode(helpers.HierarchicalName("definitions"), \
                              'definitions', value_nodes, None, None, \
                             None, None)
 
@@ -637,19 +637,19 @@ def parse_schema(schema_info, schema, prefix):
         if 'required' in schema:
             required = schema['required']
         return helpers.SchemaNode(
-            helpers.CombinateName(prefix), 'object',
+            helpers.HierarchicalName(prefix), 'object',
             parse_properties(schema_info, \
-                            helpers.CombinateName(""), \
+                            helpers.HierarchicalName(""), \
                             schema, schema, schema_info.name.name), \
             None, None, None, required)
     elif 'array' in schema['type']:
-        item_type, _ = resolve_type(schema_info, helpers.CombinateName(""), \
+        item_type, _ = resolve_type(schema_info, helpers.HierarchicalName(""), \
                                     schema['items'], schema['items'], schema_info.name.name)
         if item_type.typ == 'array' and not helpers.valid_basic_map_name(item_type.subtyp):
             item_type.doublearray = True
             return item_type
         else:
-            return helpers.SchemaNode(helpers.CombinateName(prefix), 'array', None, item_type.typ, \
+            return helpers.SchemaNode(helpers.HierarchicalName(prefix), 'array', None, item_type.typ, \
                             item_type.children, None, item_type.required)
 
     else:
@@ -673,7 +673,7 @@ def expand(tree, structs, visited):
             expand(i, structs, visited=visited)
 
     if tree.typ == 'array' and helpers.valid_basic_map_name(tree.subtyp):
-        name = helpers.CombinateName(tree.name + "_element")
+        name = helpers.HierarchicalName(tree.name + "_element")
         node = helpers.SchemaNode(name, tree.subtyp, None)
         expand(node, structs, visited)
 
