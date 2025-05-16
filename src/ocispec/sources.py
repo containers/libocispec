@@ -881,7 +881,7 @@ def make_clone(obj, c_file, prefix):
                 c_file.append(f"        for (i = 0; i < src->len; i++)\n")
                 c_file.append("          {\n")
                 c_file.append(f"             ret->{i.fixname}[i] = clone_{node_name} (src->{i.fixname}[i]);\n")
-                c_file.append(f"             if (ret->{i.fixname}[i] == NULL);\n")
+                c_file.append(f"             if (ret->{i.fixname}[i] == NULL)\n")
                 c_file.append(f"               return NULL;\n")
                 c_file.append("          }\n")
             c_file.append(f"      }}\n")
