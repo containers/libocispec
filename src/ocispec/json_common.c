@@ -1330,10 +1330,10 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parse
 
   (void) ctx; /* Silence compiler warning.  */
 
-  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
-
   if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
     return NULL;
+
+  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
 
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
