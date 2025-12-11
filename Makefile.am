@@ -20,14 +20,15 @@ noinst_LTLIBRARIES = libocispec.la
 noinst_LIBRARIES = libocispec.a
 endif
 
-SOURCE_FILES = \
-	src/ocispec/image_spec_schema_config_schema.c \
-	src/ocispec/image_spec_schema_content_descriptor.c \
-	src/ocispec/image_spec_schema_defs.c \
-	src/ocispec/image_spec_schema_defs_descriptor.c \
-	src/ocispec/image_spec_schema_image_index_schema.c \
-	src/ocispec/image_spec_schema_image_layout_schema.c \
-	src/ocispec/image_spec_schema_image_manifest_schema.c \
+SOURCE_FILES =							\
+	src/ocispec/image_spec_schema_config_schema.c		\
+	src/ocispec/image_spec_schema_content_descriptor.c	\
+	src/ocispec/image_spec_schema_defs.c			\
+	src/ocispec/image_spec_schema_defs_descriptor.c		\
+	src/ocispec/image_spec_schema_image_index_schema.c	\
+	src/ocispec/image_spec_schema_image_layout_schema.c	\
+	src/ocispec/image_spec_schema_image_manifest_schema.c	\
+	src/ocispec/runtime_spec_schema_config_freebsd.c \
 	src/ocispec/runtime_spec_schema_config_linux.c \
 	src/ocispec/runtime_spec_schema_config_zos.c \
 	src/ocispec/runtime_spec_schema_config_schema.c \
@@ -35,6 +36,7 @@ SOURCE_FILES = \
 	src/ocispec/runtime_spec_schema_config_vm.c \
 	src/ocispec/runtime_spec_schema_config_windows.c \
 	src/ocispec/runtime_spec_schema_defs.c \
+	src/ocispec/runtime_spec_schema_defs_freebsd.c \
 	src/ocispec/runtime_spec_schema_defs_linux.c \
 	src/ocispec/runtime_spec_schema_defs_zos.c \
 	src/ocispec/runtime_spec_schema_defs_vm.c \
@@ -118,6 +120,10 @@ src/ocispec/runtime_spec_schema_config_linux.h \
 	src/ocispec/runtime_spec_schema_defs_vm.c \
 	src/ocispec/runtime_spec_schema_defs_zos.c \
 	src/ocispec/runtime_spec_schema_defs_windows.c \
+        src/ocispec/runtime_spec_schema_config_freebsd.h \
+        src/ocispec/runtime_spec_schema_defs_freebsd.h \
+        src/ocispec/runtime_spec_schema_config_freebsd.c \
+        src/ocispec/runtime_spec_schema_defs_freebsd.c \
 	src/ocispec/runtime_spec_schema_state_schema.c: src/runtime_spec_stamp
 
 src/ocispec/image_manifest_items_image_manifest_items_schema.h \
