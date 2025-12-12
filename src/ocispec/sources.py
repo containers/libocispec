@@ -92,6 +92,18 @@ def calloc_with_check(c_file, dest, count, sizeof_expr, indent=0):
     c_file.append(f"{prefix}  return NULL;\n")
 
 
+def check_gen_status(c_file, indent=0):
+    """Generate yajl_gen status check with error return.
+
+    Args:
+        c_file: List to append code lines to
+        indent: Number of 4-space indentation levels
+    """
+    prefix = '    ' * indent
+    c_file.append(f"{prefix}if (stat != yajl_gen_status_ok)\n")
+    c_file.append(f"{prefix}    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
@@ -448,8 +460,7 @@ def get_map_string_obj(obj, c_file, prefix):
     c_file.append("    if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
     c_file.append('        yajl_gen_config (g, yajl_gen_beautify, 0);\n')
     c_file.append("    stat = yajl_gen_map_open ((yajl_gen) g);\n")
-    c_file.append("    if (stat != yajl_gen_status_ok)\n")
-    c_file.append("        GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+    check_gen_status(c_file, indent=1)
     c_file.append(f'    if (len || (ptr != NULL && ptr->keys != NULL && ptr->{child.fixname} != NULL))\n')
     c_file.append('      {\n')
     c_file.append('        for (i = 0; i < len; i++)\n')
@@ -457,16 +468,13 @@ def get_map_string_obj(obj, c_file, prefix):
     c_file.append('            char *str = ptr->keys[i] ? ptr->keys[i] : "";\n')
     c_file.append('            stat = yajl_gen_string ((yajl_gen) g, \
 (const unsigned char *)str, strlen (str));\n')
-    c_file.append("            if (stat != yajl_gen_status_ok)\n")
-    c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+    check_gen_status(c_file, indent=3)
     c_file.append(f'            stat = gen_{childname} (g, ptr->{child.fixname}[i], ctx, err);\n')
-    c_file.append("            if (stat != yajl_gen_status_ok)\n")
-    c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+    check_gen_status(c_file, indent=3)
     c_file.append('          }\n')
     c_file.append('      }\n')
     c_file.append("    stat = yajl_gen_map_close ((yajl_gen) g);\n")
-    c_file.append("    if (stat != yajl_gen_status_ok)\n")
-    c_file.append("        GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+    check_gen_status(c_file, indent=1)
     c_file.append("    if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
     c_file.append('        yajl_gen_config (g, yajl_gen_beautify, 1);\n')
 
@@ -481,39 +489,33 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
         c_file.append('      {\n')
         c_file.append('        size_t len = 0, i;\n')
         c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {int(l)} /* strlen ("{obj.origname}") */);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
         c_file.append(f"            len = ptr->{obj.fixname}_len;\n")
         c_file.append("        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
         c_file.append('            yajl_gen_config (g, yajl_gen_beautify, 0);\n')
         c_file.append('        stat = yajl_gen_array_open ((yajl_gen) g);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append('        for (i = 0; i < len; i++)\n')
         c_file.append('          {\n')
         if obj.doublearray:
             c_file.append('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
-            c_file.append("            if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            check_gen_status(c_file, indent=3)
             c_file.append("            size_t j;\n")
             c_file.append(f'            for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)\n')
             c_file.append('              {\n')
             c_file.append(f'                stat = gen_{typename} (g, ptr->{obj.fixname}[i][j], ctx, err);\n')
-            c_file.append("                if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            check_gen_status(c_file, indent=4)
             c_file.append('              }\n')
             c_file.append('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
         else:
             c_file.append(f'            stat = gen_{typename} (g, ptr->{obj.fixname}[i], ctx, err);\n')
-            c_file.append("            if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            check_gen_status(c_file, indent=3)
         c_file.append('          }\n')
         c_file.append('        stat = yajl_gen_array_close ((yajl_gen) g);\n')
         c_file.append("        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
         c_file.append('            yajl_gen_config (g, yajl_gen_beautify, 1);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append('      }\n')
     elif obj.subtyp == 'byte':
         l = len(obj.origname)
@@ -522,12 +524,10 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
         c_file.append('        const char *str = "";\n')
         c_file.append('        size_t len = 0;\n')
         c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         if obj.doublearray:
             c_file.append('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
-            c_file.append("            if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            check_gen_status(c_file, indent=3)
             c_file.append("        {\n")
             c_file.append("            size_t i;\n")
             c_file.append(f"            for (i = 0; i < ptr->{obj.fixname}_len; i++)\n")
@@ -549,8 +549,7 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
             c_file.append("          }\n")
             c_file.append('        stat = yajl_gen_string ((yajl_gen) g, \
     (const unsigned char *)str, len);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append("      }\n")
     else:
         l = len(obj.origname)
@@ -558,23 +557,20 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
         c_file.append('      {\n')
         c_file.append('        size_t len = 0, i;\n')
         c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
         c_file.append(f"          len = ptr->{obj.fixname}_len;\n")
         c_file.append("        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
         c_file.append('            yajl_gen_config (g, yajl_gen_beautify, 0);\n')
         c_file.append('        stat = yajl_gen_array_open ((yajl_gen) g);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append('        for (i = 0; i < len; i++)\n')
         c_file.append('          {\n')
 
         if obj.doublearray:
             typename = helpers.get_map_c_types(obj.subtyp)
             c_file.append('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
-            c_file.append("            if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            check_gen_status(c_file, indent=3)
             c_file.append("            size_t j;\n")
             c_file.append(f'            for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)\n')
             c_file.append('              {\n')
@@ -586,8 +582,7 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
 
         c_file.append('          }\n')
         c_file.append('        stat = yajl_gen_array_close ((yajl_gen) g);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append("        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
         c_file.append('            yajl_gen_config (g, yajl_gen_beautify, 1);\n')
         c_file.append('      }\n')
@@ -604,8 +599,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.append('      {\n')
         c_file.append('        char *str = "";\n')
         c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
         c_file.append(f"            str = ptr->{obj.fixname};\n")
         json_value_generator(c_file, 2, "str", 'g', 'ctx', obj.typ)
@@ -622,8 +616,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         l = len(obj.origname)
         c_file.append(f'        {numtyp} num = 0;\n')
         c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname})\n")
         c_file.append(f"            num = ({numtyp})ptr->{obj.fixname};\n")
         json_value_generator(c_file, 2, "num", 'g', 'ctx', obj.typ)
@@ -638,8 +631,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.append(f'        {helpers.get_map_c_types(numtyp)} num = 0;\n')
         c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, \
 (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
         c_file.append("          {\n")
         c_file.append(f"            num = ({helpers.get_map_c_types(numtyp)})*(ptr->{obj.fixname});\n")
@@ -652,8 +644,7 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.append('        bool b = false;\n')
         l = len(obj.origname)
         c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname})\n")
         c_file.append(f"            b = ptr->{obj.fixname};\n")
         c_file.append("        \n")
@@ -668,11 +659,9 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.append(f'    if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))\n')
         c_file.append("      {\n")
         c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append(f'        stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append("      }\n")
     elif obj.typ == 'array':
         get_obj_arr_obj_array(obj, c_file, prefix)
@@ -681,11 +670,9 @@ def get_obj_arr_obj(obj, c_file, prefix):
         c_file.append(f'    if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))\n')
         c_file.append('      {\n')
         c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.fixname}"), {l} /* strlen ("{obj.fixname}") */);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append(f'        stat = gen_{helpers.make_basic_map_name(obj.typ)} (g, ptr ? ptr->{obj.fixname} : NULL, ctx, err);\n')
-        c_file.append("        if (stat != yajl_gen_status_ok)\n")
-        c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=2)
         c_file.append("      }\n")
 
 
@@ -720,8 +707,7 @@ def get_c_json(obj, c_file, prefix):
             c_file.append('        yajl_gen_config (g, yajl_gen_beautify, 0);\n')
 
         c_file.append("    stat = yajl_gen_map_open ((yajl_gen) g);\n")
-        c_file.append("    if (stat != yajl_gen_status_ok)\n")
-        c_file.append("        GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=1)
         for i in nodes or []:
             get_obj_arr_obj(i, c_file, prefix)
         if obj.typ == 'object':
@@ -733,8 +719,7 @@ def get_c_json(obj, c_file, prefix):
                 c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
                 c_file.append("      }\n")
         c_file.append("    stat = yajl_gen_map_close ((yajl_gen) g);\n")
-        c_file.append("    if (stat != yajl_gen_status_ok)\n")
-        c_file.append("        GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        check_gen_status(c_file, indent=1)
         if nodes is None:
             c_file.append('    if (!(ctx->options & OPT_GEN_SIMPLIFY))\n')
             c_file.append('        yajl_gen_config (g, yajl_gen_beautify, 1);\n')
@@ -1494,8 +1479,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         c_file.append('      {\n')
         if obj.doublearray:
             c_file.append('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
-            c_file.append("            if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            check_gen_status(c_file, indent=3)
             c_file.append("            size_t j;\n")
             c_file.append('            for (j = 0; j < ptr->subitem_lens[i]; j++)\n')
             c_file.append('              {\n')
@@ -1506,8 +1490,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
             c_file.append('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
         else:
             c_file.append(f'            stat = gen_{subtypename} (g, ptr->items[i], ctx, err);\n')
-            c_file.append("            if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            check_gen_status(c_file, indent=3)
         c_file.append("""\n
             }
       }
@@ -1518,8 +1501,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         c_file.append('            const char *str = NULL;\n')
         if obj.doublearray:
             c_file.append('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
-            c_file.append("            if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            check_gen_status(c_file, indent=3)
             c_file.append("            {\n")
             c_file.append("                size_t i;\n")
             c_file.append("                for (i = 0; i < ptr->len; i++)\n")
@@ -1552,8 +1534,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         c_file.append('        {\n')
         if obj.doublearray:
             c_file.append('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
-            c_file.append("            if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            check_gen_status(c_file, indent=3)
             c_file.append("            size_t j;\n")
             c_file.append('            for (j = 0; j < ptr->subitem_lens[i]; j++)\n')
             c_file.append('              {\n')
