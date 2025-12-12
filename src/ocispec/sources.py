@@ -28,7 +28,25 @@
 # libocispec output files to be licensed under the GNU General Public
 # License without this special exception.
 
+from textwrap import dedent
+
 import helpers
+
+
+def emit(c_file, code, indent=0):
+    """Emit code with proper indentation.
+
+    Args:
+        c_file: List to append code lines to
+        code: Multi-line string (will be dedented)
+        indent: Number of 4-space indentation levels
+    """
+    prefix = '    ' * indent
+    for line in dedent(code).strip().split('\n'):
+        if line:
+            c_file.append(prefix + line + '\n')
+        else:
+            c_file.append('\n')
 
 def append_c_code(obj, c_file, prefix):
     """
