@@ -1013,14 +1013,9 @@ def get_c_json(obj, c_file, prefix):
     elif obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
         nodes = obj.children if obj.typ == 'object' else obj.subtypobj
         if nodes is None:
-            emit(c_file, '''
-                if (!(ctx->options & OPT_GEN_SIMPLIFY))
-                    yajl_gen_config (g, yajl_gen_beautify, 0);
-            ''', indent=1)
+            emit_beautify_off(c_file, 'true', indent=1)
 
-        emit(c_file, '''
-            stat = yajl_gen_map_open ((yajl_gen) g);
-        ''', indent=1)
+        emit_gen_map_open(c_file, indent=1)
         check_gen_status(c_file, indent=1)
         for i in nodes or []:
             get_obj_arr_obj(i, c_file, prefix)
@@ -1034,15 +1029,10 @@ def get_c_json(obj, c_file, prefix):
                             GEN_SET_ERROR_AND_RETURN (stat, err);
                       }
                 ''', indent=1)
-        emit(c_file, '''
-            stat = yajl_gen_map_close ((yajl_gen) g);
-        ''', indent=1)
+        emit_gen_map_close(c_file, indent=1)
         check_gen_status(c_file, indent=1)
         if nodes is None:
-            emit(c_file, '''
-                if (!(ctx->options & OPT_GEN_SIMPLIFY))
-                    yajl_gen_config (g, yajl_gen_beautify, 1);
-            ''', indent=1)
+            emit_beautify_on(c_file, 'true', indent=1)
     c_file.append("    return yajl_gen_status_ok;\n")
     c_file.append("}\n")
     c_file.append("\n")
