@@ -1799,7 +1799,28 @@ def make_c_free (obj, c_file, prefix):
                 childname = child.subtypname
             else:
                 childname = helpers.get_prefixed_name(child.name, prefix)
-        c_file_map_str(c_file, child, childname)
+        emit(c_file, f'''
+            if (ptr->keys != NULL && ptr->{child.fixname} != NULL)
+              {{
+                size_t i;
+                for (i = 0; i < ptr->len; i++)
+                  {{
+        ''', indent=1)
+
+        free_and_null(c_file, "ptr", "keys[i]", indent=3)
+
+        emit(c_file, f'''
+                    free_{childname} (ptr->{child.fixname}[i]);
+                    ptr->{child.fixname}[i] = NULL;
+                  }}
+        ''', indent=3)
+
+        free_and_null(c_file, "ptr", "keys", indent=2)
+        free_and_null(c_file, "ptr", child.fixname, indent=2)
+
+        emit(c_file, '''
+              }
+        ''', indent=1)
     for i in objs or []:
         handler = get_type_handler(i.typ)
         if handler:
@@ -1818,35 +1839,6 @@ def make_c_free (obj, c_file, prefix):
 
     ''', indent=1)
 
-
-def c_file_map_str(c_file, child, childname):
-    """
-    Description: generate c code for map string
-    Interface: None
-    History: 2019-10-31
-    """
-    emit(c_file, f'''
-        if (ptr->keys != NULL && ptr->{child.fixname} != NULL)
-          {{
-            size_t i;
-            for (i = 0; i < ptr->len; i++)
-              {{
-    ''', indent=1)
-
-    free_and_null(c_file, "ptr", "keys[i]", indent=3)
-
-    emit(c_file, f'''
-                free_{childname} (ptr->{child.fixname}[i]);
-                ptr->{child.fixname}[i] = NULL;
-              }}
-    ''', indent=3)
-
-    free_and_null(c_file, "ptr", "keys", indent=2)
-    free_and_null(c_file, "ptr", child.fixname, indent=2)
-
-    emit(c_file, '''
-          }
-    ''', indent=1)
 
 def src_reflect(structs, schema_info, c_file, root_typ):
     """
