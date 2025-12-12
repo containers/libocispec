@@ -1956,11 +1956,10 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
     ''', indent=0)
 
     if obj.subtypobj or obj.subtyp == 'object':
+        c_file.append('\n')
+        emit_gen_array_open(c_file, indent=1)
+        check_gen_status(c_file, indent=1)
         emit(c_file, '''
-
-            stat = yajl_gen_array_open ((yajl_gen) g);
-            if (stat != yajl_gen_status_ok)
-                GEN_SET_ERROR_AND_RETURN (stat, err);
             for (i = 0; i < ptr->len; i++)
               {
         ''', indent=1)
@@ -1973,9 +1972,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
               {
         ''', indent=1)
         if obj.doublearray:
-            emit(c_file, f'''
-                        stat = yajl_gen_array_open ((yajl_gen) g);
-            ''', indent=3)
+            emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, f'''
                         size_t j;
@@ -1985,28 +1982,26 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
                             if (stat != yajl_gen_status_ok)
                                 GEN_SET_ERROR_AND_RETURN (stat, err);
                           }}
-                        stat = yajl_gen_array_close ((yajl_gen) g);
             ''', indent=3)
+            emit_gen_array_close(c_file, indent=3)
         else:
             emit(c_file, f'''
                         stat = gen_{subtypename} (g, ptr->items[i], ctx, err);
             ''', indent=3)
             check_gen_status(c_file, indent=3)
-        emit(c_file, f'''
+        emit(c_file, '''
 
-                    }}
-              }}
-            stat = yajl_gen_array_close ((yajl_gen) g);
+                    }
+              }
         ''', indent=2)
+        emit_gen_array_close(c_file, indent=1)
     elif obj.subtyp == 'byte':
         emit(c_file, '''
             {
                     const char *str = NULL;
         ''', indent=1)
         if obj.doublearray:
-            emit(c_file, '''
-                        stat = yajl_gen_array_open ((yajl_gen) g);
-            ''', indent=3)
+            emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, '''
                         {
@@ -2020,8 +2015,8 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
                                 stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
                               }
                         }
-                        stat = yajl_gen_array_close ((yajl_gen) g);
             ''', indent=3)
+            emit_gen_array_close(c_file, indent=3)
         else:
             emit(c_file, '''
                     if (ptr != NULL && ptr->items != NULL)
@@ -2034,11 +2029,10 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
             }
         ''', indent=1)
     else:
+        c_file.append('\n')
+        emit_gen_array_open(c_file, indent=1)
+        check_gen_status(c_file, indent=1)
         emit(c_file, '''
-
-            stat = yajl_gen_array_open ((yajl_gen) g);
-            if (stat != yajl_gen_status_ok)
-                GEN_SET_ERROR_AND_RETURN (stat, err);
             for (i = 0; i < ptr->len; i++)
               {
         ''', indent=1)
@@ -2046,9 +2040,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
                 {
         ''', indent=2)
         if obj.doublearray:
-            emit(c_file, '''
-                        stat = yajl_gen_array_open ((yajl_gen) g);
-            ''', indent=3)
+            emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, '''
                         size_t j;
@@ -2058,17 +2050,17 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
             json_value_generator(c_file, 4, "ptr->items[i][j]", 'g', 'ctx', obj.subtyp)
             emit(c_file, '''
                         }
-                        stat = yajl_gen_array_close ((yajl_gen) g);
             ''', indent=3)
+            emit_gen_array_close(c_file, indent=3)
         else:
             json_value_generator(c_file, 3, "ptr->items[i]", 'g', 'ctx', obj.subtyp)
 
-        emit(c_file, f'''
+        emit(c_file, '''
 
-                    }}
-              }}
-            stat = yajl_gen_array_close ((yajl_gen) g);
+                    }
+              }
         ''', indent=2)
+        emit_gen_array_close(c_file, indent=1)
 
 
     emit(c_file, '''
