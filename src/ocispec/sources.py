@@ -326,71 +326,93 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
     History: 2019-06-17
     """
     if obj.typ == 'string':
-        c_file.append('    do\n')
-        c_file.append('      {\n')
+        emit(c_file, f'''
+            do
+              {{
+        ''', indent=1)
         read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_string)', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        c_file.append('      }\n')
-        c_file.append('    while (0);\n')
+        emit(c_file, '''
+              }
+            while (0);
+        ''', indent=1)
     elif helpers.judge_data_type(obj.typ):
-        c_file.append('    do\n')
-        c_file.append('      {\n')
+        emit(c_file, f'''
+            do
+              {{
+        ''', indent=1)
         read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_number)', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        c_file.append('      }\n')
-        c_file.append('    while (0);\n')
+        emit(c_file, '''
+              }
+            while (0);
+        ''', indent=1)
     elif helpers.judge_data_pointer_type(obj.typ):
-        c_file.append('    do\n')
-        c_file.append('      {\n')
+        emit(c_file, f'''
+            do
+              {{
+        ''', indent=1)
         read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_number)', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        c_file.append('      }\n')
-        c_file.append('    while (0);\n')
+        emit(c_file, '''
+              }
+            while (0);
+        ''', indent=1)
     if obj.typ == 'boolean':
-        c_file.append('    do\n')
-        c_file.append('      {\n')
+        emit(c_file, f'''
+            do
+              {{
+        ''', indent=1)
         read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_true)', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        c_file.append('      }\n')
-        c_file.append('    while (0);\n')
+        emit(c_file, '''
+              }
+            while (0);
+        ''', indent=1)
     if obj.typ == 'booleanPointer':
-        c_file.append('    do\n')
-        c_file.append('      {\n')
+        emit(c_file, f'''
+            do
+              {{
+        ''', indent=1)
         read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_true)', \
                              f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        c_file.append('      }\n')
-        c_file.append('    while (0);\n')
+        emit(c_file, '''
+              }
+            while (0);
+        ''', indent=1)
     elif obj.typ == 'object' or obj.typ == 'mapStringObject':
         if obj.subtypname is not None:
             typename = obj.subtypname
         else:
             typename = helpers.get_prefixed_name(obj.name, prefix)
-        c_file.append(
-            f'    ret->{obj.fixname} = make_{typename} (get_val (tree, "{obj.origname}", yajl_t_object), ctx, err);\n')
-        c_file.append(f"    if (ret->{obj.fixname} == NULL && *err != 0)\n")
-        c_file.append("      return NULL;\n")
+        emit(c_file, f'''
+            ret->{obj.fixname} = make_{typename} (get_val (tree, "{obj.origname}", yajl_t_object), ctx, err);
+            if (ret->{obj.fixname} == NULL && *err != 0)
+              return NULL;
+        ''', indent=1)
     elif obj.typ == 'array':
         parse_obj_type_array(obj, c_file, prefix, obj_typename)
     elif helpers.valid_basic_map_name(obj.typ):
-        c_file.append('    do\n')
-        c_file.append('      {\n')
-        c_file.append(f'        yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_object);\n')
-        c_file.append('        if (tmp != NULL)\n')
-        c_file.append('          {\n')
-        c_file.append(f'            ret->{obj.fixname} = make_{helpers.make_basic_map_name(obj.typ)} (tmp, ctx, err);\n')
-        c_file.append(f'            if (ret->{obj.fixname} == NULL)\n')
-        c_file.append('              {\n')
-        c_file.append('                char *new_error = NULL;\n')
-        c_file.append(f"                if (asprintf (&new_error, \"Value error for key '{obj.origname}': %s\", *err ? *err : \"null\") < 0)\n")
-        c_file.append('                  new_error = strdup (' \
-                     '"error allocating memory");\n')
-        c_file.append('                free (*err);\n')
-        c_file.append('                *err = new_error;\n')
-        c_file.append('                return NULL;\n')
-        c_file.append('              }\n')
-        c_file.append('          }\n')
-        c_file.append('      }\n')
-        c_file.append('    while (0);\n')
+        emit(c_file, f'''
+            do
+              {{
+                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_object);
+                if (tmp != NULL)
+                  {{
+                    ret->{obj.fixname} = make_{helpers.make_basic_map_name(obj.typ)} (tmp, ctx, err);
+                    if (ret->{obj.fixname} == NULL)
+                      {{
+                        char *new_error = NULL;
+                        if (asprintf (&new_error, "Value error for key '{obj.origname}': %s", *err ? *err : "null") < 0)
+                          new_error = strdup ("error allocating memory");
+                        free (*err);
+                        *err = new_error;
+                        return NULL;
+                      }}
+                  }}
+              }}
+            while (0);
+        ''', indent=1)
 
 def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
     """
@@ -407,69 +429,70 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
         parse_obj_type(i, c_file, prefix, obj_typename)
 
     for i in required_to_check:
-        c_file.append(f'    if (ret->{i.fixname} == NULL)\n')
-        c_file.append('      {\n')
-        c_file.append(f'        if (asprintf (err, "Required field \'%s\' not present",  "{i.origname}") < 0)\n')
-        c_file.append('            *err = strdup ("error allocating memory");\n')
-        c_file.append("        return NULL;\n")
-        c_file.append('      }\n')
+        emit(c_file, f'''
+            if (ret->{i.fixname} == NULL)
+              {{
+                if (asprintf (err, "Required field '%s' not present",  "{i.origname}") < 0)
+                    *err = strdup ("error allocating memory");
+                return NULL;
+              }}
+        ''', indent=1)
 
     if obj.typ == 'object' and obj.children is not None:
         # O(n^2) complexity, but the objects should not really be big...
         condition = "\n                && ".join( \
             [f'strcmp (tree->u.object.keys[i], "{i.origname}")' for i in obj.children])
-        c_file.append("""
-    if (tree->type == yajl_t_object)
-      {
-        size_t i;
-        size_t j = 0;
-        size_t cnt = tree->u.object.len;
-        yajl_val resi = NULL;
+        emit(c_file, f'''
+            if (tree->type == yajl_t_object)
+              {{
+                size_t i;
+                size_t j = 0;
+                size_t cnt = tree->u.object.len;
+                yajl_val resi = NULL;
 
-        if (ctx->options & OPT_PARSE_FULLKEY)
-          {
-            resi = calloc (1, sizeof(*tree));
-            if (resi == NULL)
-              return NULL;
-
-            resi->type = yajl_t_object;
-            resi->u.object.keys = calloc (cnt, sizeof (const char *));
-            if (resi->u.object.keys == NULL)
-              {
-                yajl_tree_free (resi);
-                return NULL;
-              }
-            resi->u.object.values = calloc (cnt, sizeof (yajl_val));
-            if (resi->u.object.values == NULL)
-              {
-                yajl_tree_free (resi);
-                return NULL;
-              }
-          }
-
-        for (i = 0; i < tree->u.object.len; i++)
-          {\n""" \
-            f"            if ({condition})" \
-           """{
                 if (ctx->options & OPT_PARSE_FULLKEY)
-                  {
-                    resi->u.object.keys[j] = tree->u.object.keys[i];
-                    tree->u.object.keys[i] = NULL;
-                    resi->u.object.values[j] = tree->u.object.values[i];
-                    tree->u.object.values[i] = NULL;
-                    resi->u.object.len++;
-                  }
-                j++;
-              }
-          }
+                  {{
+                    resi = calloc (1, sizeof(*tree));
+                    if (resi == NULL)
+                      return NULL;
 
-        if ((ctx->options & OPT_PARSE_STRICT) && j > 0 && ctx->errfile != NULL)
-          (void) fprintf (ctx->errfile, "WARNING: unknown key found\\n");
+                    resi->type = yajl_t_object;
+                    resi->u.object.keys = calloc (cnt, sizeof (const char *));
+                    if (resi->u.object.keys == NULL)
+                      {{
+                        yajl_tree_free (resi);
+                        return NULL;
+                      }}
+                    resi->u.object.values = calloc (cnt, sizeof (yajl_val));
+                    if (resi->u.object.values == NULL)
+                      {{
+                        yajl_tree_free (resi);
+                        return NULL;
+                      }}
+                  }}
 
-        if (ctx->options & OPT_PARSE_FULLKEY)
-          ret->_residual = resi;
-      }
-""")
+                for (i = 0; i < tree->u.object.len; i++)
+                  {{
+                    if ({condition}){{
+                        if (ctx->options & OPT_PARSE_FULLKEY)
+                          {{
+                            resi->u.object.keys[j] = tree->u.object.keys[i];
+                            tree->u.object.keys[i] = NULL;
+                            resi->u.object.values[j] = tree->u.object.values[i];
+                            tree->u.object.values[i] = NULL;
+                            resi->u.object.len++;
+                          }}
+                        j++;
+                      }}
+                  }}
+
+                if ((ctx->options & OPT_PARSE_STRICT) && j > 0 && ctx->errfile != NULL)
+                  (void) fprintf (ctx->errfile, "WARNING: unknown key found\\n");
+
+                if (ctx->options & OPT_PARSE_FULLKEY)
+                  ret->_residual = resi;
+              }}
+        ''', indent=1)
 
 
 def parse_json_to_c(obj, c_file, prefix):
@@ -489,24 +512,30 @@ def parse_json_to_c(obj, c_file, prefix):
         objs = obj.subtypobj
         if objs is None or obj.subtypname:
             return
-    c_file.append(f"define_cleaner_function ({typename} *, free_{typename})\n")
-    c_file.append(f"{typename} *\nmake_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)\n")
-    c_file.append("{\n")
-    c_file.append(f"    __auto_cleanup(free_{typename}) {typename} *ret = NULL;\n")
-    c_file.append("    *err = NULL;\n")
-    c_file.append("    (void) ctx;  /* Silence compiler warning.  */\n")
-    c_file.append("    if (tree == NULL)\n")
-    c_file.append("      return NULL;\n")
-    c_file.append("    ret = calloc (1, sizeof (*ret));\n")
-    c_file.append("    if (ret == NULL)\n")
-    c_file.append("      return NULL;\n")
+    emit(c_file, f'''
+        define_cleaner_function ({typename} *, free_{typename})
+        {typename} *
+        make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)
+        {{
+            __auto_cleanup(free_{typename}) {typename} *ret = NULL;
+            *err = NULL;
+            (void) ctx;  /* Silence compiler warning.  */
+            if (tree == NULL)
+              return NULL;
+            ret = calloc (1, sizeof (*ret));
+            if (ret == NULL)
+              return NULL;
+    ''', indent=0)
     if obj.typ == 'mapStringObject':
         parse_map_string_obj(obj, c_file, prefix, obj_typename)
 
     if obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
         parse_obj_arr_obj(obj, c_file, prefix, obj_typename)
-    c_file.append('    return move_ptr (ret);\n')
-    c_file.append("}\n\n")
+    emit(c_file, '''
+            return move_ptr (ret);
+        }
+
+    ''', indent=1)
 
 
 def get_map_string_obj(obj, c_file, prefix):
@@ -743,18 +772,22 @@ def get_obj_arr_obj(obj, c_file, prefix):
     """
     if obj.typ == 'string':
         l = len(obj.origname)
-        c_file.append(f'    if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))\n' )
-        c_file.append('      {\n')
-        c_file.append('        char *str = "";\n')
-        c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+                char *str = "";
+                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
+        ''', indent=1)
         check_gen_status(c_file, indent=2)
-        c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
-        c_file.append(f"            str = ptr->{obj.fixname};\n")
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname} != NULL)
+                    str = ptr->{obj.fixname};
+        ''', indent=2)
         json_value_generator(c_file, 2, "str", 'g', 'ctx', obj.typ)
-        c_file.append("      }\n")
+        emit(c_file, '''
+              }
+        ''', indent=1)
     elif helpers.judge_data_type(obj.typ):
-        c_file.append(f'    if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))\n')
-        c_file.append('      {\n')
         if obj.typ == 'double':
             numtyp = 'double'
         elif obj.typ.startswith("uint") or obj.typ == 'GID' or obj.typ == 'UID':
@@ -762,66 +795,97 @@ def get_obj_arr_obj(obj, c_file, prefix):
         else:
             numtyp = 'long long int'
         l = len(obj.origname)
-        c_file.append(f'        {numtyp} num = 0;\n')
-        c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))
+              {{
+                {numtyp} num = 0;
+                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
+        ''', indent=1)
         check_gen_status(c_file, indent=2)
-        c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname})\n")
-        c_file.append(f"            num = ({numtyp})ptr->{obj.fixname};\n")
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname})
+                    num = ({numtyp})ptr->{obj.fixname};
+        ''', indent=2)
         json_value_generator(c_file, 2, "num", 'g', 'ctx', obj.typ)
-        c_file.append("      }\n")
+        emit(c_file, '''
+              }
+        ''', indent=1)
     elif helpers.judge_data_pointer_type(obj.typ):
-        c_file.append(f'    if ((ptr != NULL && ptr->{obj.fixname} != NULL))\n')
-        c_file.append('      {\n')
         numtyp = helpers.obtain_data_pointer_type(obj.typ)
         if numtyp == "":
             return
         l = len(obj.origname)
-        c_file.append(f'        {helpers.get_map_c_types(numtyp)} num = 0;\n')
-        c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
+        emit(c_file, f'''
+            if ((ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+                {helpers.get_map_c_types(numtyp)} num = 0;
+                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
+        ''', indent=1)
         check_gen_status(c_file, indent=2)
-        c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname} != NULL)\n")
-        c_file.append("          {\n")
-        c_file.append(f"            num = ({helpers.get_map_c_types(numtyp)})*(ptr->{obj.fixname});\n")
-        c_file.append("          }\n")
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname} != NULL)
+                  {{
+                    num = ({helpers.get_map_c_types(numtyp)})*(ptr->{obj.fixname});
+                  }}
+        ''', indent=2)
         json_value_generator(c_file, 2, "num", 'g', 'ctx', numtyp)
-        c_file.append("      }\n")
+        emit(c_file, '''
+              }
+        ''', indent=1)
     elif obj.typ == 'boolean':
-        c_file.append(f'    if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))\n')
-        c_file.append('      {\n')
-        c_file.append('        bool b = false;\n')
         l = len(obj.origname)
-        c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))
+              {{
+                bool b = false;
+                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
+        ''', indent=1)
         check_gen_status(c_file, indent=2)
-        c_file.append(f"        if (ptr != NULL && ptr->{obj.fixname})\n")
-        c_file.append(f"            b = ptr->{obj.fixname};\n")
-        c_file.append("        \n")
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname})
+                    b = ptr->{obj.fixname};
+
+        ''', indent=2)
         json_value_generator(c_file, 2, "b", 'g', 'ctx', obj.typ)
-        c_file.append("      }\n")
+        emit(c_file, '''
+              }
+        ''', indent=1)
     elif obj.typ == 'object' or obj.typ == 'mapStringObject':
         l = len(obj.origname)
         if obj.subtypname:
             typename = obj.subtypname
         else:
             typename = helpers.get_prefixed_name(obj.name, prefix)
-        c_file.append(f'    if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))\n')
-        c_file.append("      {\n")
-        c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);\n')
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
+        ''', indent=1)
         check_gen_status(c_file, indent=2)
-        c_file.append(f'        stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);\n')
+        emit(c_file, f'''
+                stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);
+        ''', indent=2)
         check_gen_status(c_file, indent=2)
-        c_file.append("      }\n")
+        emit(c_file, '''
+              }
+        ''', indent=1)
     elif obj.typ == 'array':
         get_obj_arr_obj_array(obj, c_file, prefix)
     elif helpers.valid_basic_map_name(obj.typ):
         l = len(obj.origname)
-        c_file.append(f'    if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))\n')
-        c_file.append('      {\n')
-        c_file.append(f'        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.fixname}"), {l} /* strlen ("{obj.fixname}") */);\n')
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.fixname}"), {l} /* strlen ("{obj.fixname}") */);
+        ''', indent=1)
         check_gen_status(c_file, indent=2)
-        c_file.append(f'        stat = gen_{helpers.make_basic_map_name(obj.typ)} (g, ptr ? ptr->{obj.fixname} : NULL, ctx, err);\n')
+        emit(c_file, f'''
+                stat = gen_{helpers.make_basic_map_name(obj.typ)} (g, ptr ? ptr->{obj.fixname} : NULL, ctx, err);
+        ''', indent=2)
         check_gen_status(c_file, indent=2)
-        c_file.append("      }\n")
+        emit(c_file, '''
+              }
+        ''', indent=1)
 
 
 def get_c_json(obj, c_file, prefix):
@@ -839,40 +903,52 @@ def get_c_json(obj, c_file, prefix):
         objs = obj.subtypobj
         if objs is None:
             return
-    c_file.append(
-        f"yajl_gen_status\ngen_{typename} (yajl_gen g, const {typename} *ptr, const struct parser_context " \
-        "*ctx, parser_error *err)\n")
-    c_file.append("{\n")
-    c_file.append("    yajl_gen_status stat = yajl_gen_status_ok;\n")
-    c_file.append("    *err = NULL;\n")
-    c_file.append("    (void) ptr;  /* Silence compiler warning.  */\n")
+    emit(c_file, f'''
+        yajl_gen_status
+        gen_{typename} (yajl_gen g, const {typename} *ptr, const struct parser_context *ctx, parser_error *err)
+        {{
+            yajl_gen_status stat = yajl_gen_status_ok;
+            *err = NULL;
+            (void) ptr;  /* Silence compiler warning.  */
+    ''', indent=0)
     if obj.typ == 'mapStringObject':
         get_map_string_obj(obj, c_file, prefix)
     elif obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
         nodes = obj.children if obj.typ == 'object' else obj.subtypobj
         if nodes is None:
-            c_file.append('    if (!(ctx->options & OPT_GEN_SIMPLIFY))\n')
-            c_file.append('        yajl_gen_config (g, yajl_gen_beautify, 0);\n')
+            emit(c_file, '''
+                if (!(ctx->options & OPT_GEN_SIMPLIFY))
+                    yajl_gen_config (g, yajl_gen_beautify, 0);
+            ''', indent=1)
 
-        c_file.append("    stat = yajl_gen_map_open ((yajl_gen) g);\n")
+        emit(c_file, '''
+            stat = yajl_gen_map_open ((yajl_gen) g);
+        ''', indent=1)
         check_gen_status(c_file, indent=1)
         for i in nodes or []:
             get_obj_arr_obj(i, c_file, prefix)
         if obj.typ == 'object':
             if obj.children is not None:
-                c_file.append("    if (ptr != NULL && ptr->_residual != NULL)\n")
-                c_file.append("      {\n")
-                c_file.append("        stat = gen_yajl_object_residual (ptr->_residual, g, err);\n")
-                c_file.append("        if (yajl_gen_status_ok != stat)\n")
-                c_file.append("            GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-                c_file.append("      }\n")
-        c_file.append("    stat = yajl_gen_map_close ((yajl_gen) g);\n")
+                emit(c_file, '''
+                    if (ptr != NULL && ptr->_residual != NULL)
+                      {
+                        stat = gen_yajl_object_residual (ptr->_residual, g, err);
+                        if (yajl_gen_status_ok != stat)
+                            GEN_SET_ERROR_AND_RETURN (stat, err);
+                      }
+                ''', indent=1)
+        emit(c_file, '''
+            stat = yajl_gen_map_close ((yajl_gen) g);
+        ''', indent=1)
         check_gen_status(c_file, indent=1)
         if nodes is None:
-            c_file.append('    if (!(ctx->options & OPT_GEN_SIMPLIFY))\n')
-            c_file.append('        yajl_gen_config (g, yajl_gen_beautify, 1);\n')
-    c_file.append('    return yajl_gen_status_ok;\n')
-    c_file.append("}\n\n")
+            emit(c_file, '''
+                if (!(ctx->options & OPT_GEN_SIMPLIFY))
+                    yajl_gen_config (g, yajl_gen_beautify, 1);
+            ''', indent=1)
+    c_file.append("    return yajl_gen_status_ok;\n")
+    c_file.append("}\n")
+    c_file.append("\n")
 
 
 def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
@@ -882,129 +958,158 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
     History: 2019-06-17
     """
     if helpers.valid_basic_map_name(typ):
-        c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
-        c_file.append(f'{"    " * level}  {{\n')
-        c_file.append(f'{"    " * (level + 1)}{dest} = make_{helpers.make_basic_map_name(typ)} (val, ctx, err);\n')
-        c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
-        c_file.append(f'{"    " * (level + 1)}  {{\n')
-        c_file.append(f"{'    ' * (level + 1)}    char *new_error = NULL;\n")
-        c_file.append(f"{'    ' * (level + 1)}    if (asprintf (&new_error, \"Value error for key '{keyname}': %s\", *err ? *err : \"null\") < 0)\n")
-        c_file.append(f'{"    " * (level + 1)}        new_error = strdup ("error allocating memory");\n')
-        c_file.append(f"{'    ' * (level + 1)}    free (*err);\n")
-        c_file.append(f"{'    ' * (level + 1)}    *err = new_error;\n")
-        c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-        c_file.append(f'{"    " * (level + 1)}  }}\n')
-        c_file.append(f'{"    " * (level)}}}\n')
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                {dest} = make_{helpers.make_basic_map_name(typ)} (val, ctx, err);
+                if ({dest} == NULL)
+                  {{
+                    char *new_error = NULL;
+                    if (asprintf (&new_error, "Value error for key '{keyname}': %s", *err ? *err : "null") < 0)
+                        new_error = strdup ("error allocating memory");
+                    free (*err);
+                    *err = new_error;
+                    return NULL;
+                  }}
+              }}
+        ''', indent=level)
     elif typ == 'string':
-        c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
-        c_file.append(f"{'    ' * (level)}  {{\n")
-        c_file.append(f"{'    ' * (level + 1)}char *str = YAJL_GET_STRING (val);\n")
-        c_file.append(f"{'    ' * (level + 1)}{dest} = strdup (str ? str : \"\");\n")
-        c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
-        c_file.append(f"{'    ' * (level + 1)}  return NULL;\n")
-        c_file.append(f'{"    " * level}  }}\n')
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                char *str = YAJL_GET_STRING (val);
+                {dest} = strdup (str ? str : "");
+                if ({dest} == NULL)
+                  return NULL;
+              }}
+        ''', indent=level)
     elif helpers.judge_data_type(typ):
-        c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
-        c_file.append(f'{"    " * (level)}  {{\n')
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+        ''', indent=level)
         if typ.startswith("uint") or \
                 (typ.startswith("int") and typ != "integer") or typ == "double":
-            c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-            c_file.append(f"{'    ' * (level + 1)}if (! YAJL_IS_NUMBER (val))\n")
-            c_file.append(f'{"    " * (level + 1)}  {{\n')
-            c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
-            c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-            c_file.append(f'{"    " * (level + 1)}  }}\n')
-            c_file.append(f'{"    " * (level + 1)}invalid = common_safe_{typ} (YAJL_GET_NUMBER (val), &{dest});\n')
+            emit(c_file, f'''
+                    int invalid;
+                    if (! YAJL_IS_NUMBER (val))
+                      {{
+                        *err = strdup ("invalid type");
+                        return NULL;
+                      }}
+                    invalid = common_safe_{typ} (YAJL_GET_NUMBER (val), &{dest});
+            ''', indent=level + 1)
         elif typ == "integer":
-            c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-            c_file.append(f"{'    ' * (level + 1)}if (! YAJL_IS_NUMBER (val))\n")
-            c_file.append(f'{"    " * (level + 1)}  {{\n')
-            c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
-            c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-            c_file.append(f'{"    " * (level + 1)}  }}\n')
-            c_file.append(f'{"    " * (level + 1)}invalid = common_safe_int (YAJL_GET_NUMBER (val), (int *)&{dest});\n')
+            emit(c_file, f'''
+                    int invalid;
+                    if (! YAJL_IS_NUMBER (val))
+                      {{
+                        *err = strdup ("invalid type");
+                        return NULL;
+                      }}
+                    invalid = common_safe_int (YAJL_GET_NUMBER (val), (int *)&{dest});
+            ''', indent=level + 1)
         elif typ == "UID" or typ == "GID":
-            c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-            c_file.append(f"{'    ' * (level + 1)}if (! YAJL_IS_NUMBER (val))\n")
-            c_file.append(f'{"    " * (level + 1)}  {{\n')
-            c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
-            c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-            c_file.append(f'{"    " * (level + 1)}  }}\n')
-            c_file.append(f'{"    " * (level + 1)}invalid = common_safe_uint (YAJL_GET_NUMBER (val), (unsigned int *)&{dest});\n')
-        c_file.append(f"{'    ' * (level + 1)}if (invalid)\n")
-        c_file.append(f'{"    " * (level + 1)}  {{\n')
-        c_file.append(f'{"    " * (level + 1)}    if (asprintf (err, "Invalid value \'%s\' with type \'{typ}\' for key \'{keyname}\': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)\n')
-        c_file.append(f'{"    " * (level + 1)}        *err = strdup ("error allocating memory");\n')
-        c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-        c_file.append(f'{"    " * (level + 1)}}}\n')
+            emit(c_file, f'''
+                    int invalid;
+                    if (! YAJL_IS_NUMBER (val))
+                      {{
+                        *err = strdup ("invalid type");
+                        return NULL;
+                      }}
+                    invalid = common_safe_uint (YAJL_GET_NUMBER (val), (unsigned int *)&{dest});
+            ''', indent=level + 1)
+        emit(c_file, f'''
+                if (invalid)
+                  {{
+                    if (asprintf (err, "Invalid value '%s' with type '{typ}' for key '{keyname}': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)
+                        *err = strdup ("error allocating memory");
+                    return NULL;
+                  }}
+        ''', indent=level + 1)
         if '[' not in dest:
-            c_file.append(f"{'    ' * (level + 1)}{dest}_present = 1;\n")
-        c_file.append(f'{"    " * (level)}}}\n')
+            emit(c_file, f'''
+                    {dest}_present = 1;
+            ''', indent=level + 1)
+        emit(c_file, f'''
+              }}
+        ''', indent=level)
     elif helpers.judge_data_pointer_type(typ):
         num_type = helpers.obtain_data_pointer_type(typ)
         if num_type == "":
             return
-        c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
-        c_file.append(f'{"    " * (level)}  {{\n')
-        c_file.append(f'{"    " * (level + 1)}{dest} = calloc (1, sizeof ({helpers.get_map_c_types(num_type)}));\n')
-        c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
-        c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-        c_file.append(f"{'    ' * (level + 1)}int invalid;\n")
-        c_file.append(f"{'    ' * (level + 1)}if (! YAJL_IS_NUMBER (val))\n")
-        c_file.append(f'{"    " * (level + 1)}  {{\n')
-        c_file.append(f"{'    ' * (level + 1)}    *err = strdup (\"invalid type\");\n")
-        c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-        c_file.append(f'{"    " * (level + 1)}}}\n')
-        c_file.append(f'{"    " * (level + 1)}sinvalid = common_safe_{num_type} (YAJL_GET_NUMBER (val), {dest});\n')
-        c_file.append(f"{'    ' * (level + 1)}if (invalid)\n")
-        c_file.append(f'{"    " * (level + 1)}  {{\n')
-        c_file.append(f'{"    " * (level + 1)}    if (asprintf (err, "Invalid value \'%s\' with type \'{typ}\' ' \
-                     f'for key \'{keyname}\': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)\n')
-        c_file.append(f'{"    " * (level + 1)}        *err = strdup ("error allocating memory");\n')
-        c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-        c_file.append(f'{"    " * (level + 1)}}}\n')
-        c_file.append(f'{"    " * (level)}}}\n')
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                {dest} = calloc (1, sizeof ({helpers.get_map_c_types(num_type)}));
+                if ({dest} == NULL)
+                    return NULL;
+                int invalid;
+                if (! YAJL_IS_NUMBER (val))
+                  {{
+                    *err = strdup ("invalid type");
+                    return NULL;
+                  }}
+                invalid = common_safe_{num_type} (YAJL_GET_NUMBER (val), {dest});
+                if (invalid)
+                  {{
+                    if (asprintf (err, "Invalid value '%s' with type '{typ}' for key '{keyname}': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)
+                        *err = strdup ("error allocating memory");
+                    return NULL;
+                  }}
+              }}
+        ''', indent=level)
     elif typ == 'boolean':
-        c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
-        c_file.append(f'{"    " * (level)}  {{\n')
-        c_file.append(f"{'    ' * (level + 1)}{dest} = YAJL_IS_TRUE(val);\n")
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                {dest} = YAJL_IS_TRUE(val);
+        ''', indent=level)
         if '[' not in dest:
-            c_file.append(f"{'    ' * (level + 1)}{dest}_present = 1;\n")
-            c_file.append(f'{"    " * (level)}  }}\n')
-            c_file.append(f"{'    ' * level}else\n")
-            c_file.append(f'{"    " * (level)}  {{\n')
-            c_file.append(f"{'    ' * (level + 1)}val = {src.replace('yajl_t_true', 'yajl_t_false')};\n")
-            c_file.append(f"{'    ' * (level + 1)}if (val != NULL)\n")
-            c_file.append(f'{"    " * (level+1)}  {{\n')
-            c_file.append(f"{'    ' * (level + 2)}{dest} = 0;\n")
-            c_file.append(f"{'    ' * (level + 2)}{dest}_present = 1;\n")
-            c_file.append(f'{"    " * (level+1)}  }}\n')
-        c_file.append(f'{"    " * (level)}  }}\n')
+            emit(c_file, f'''
+                    {dest}_present = 1;
+              }}
+            else
+              {{
+                val = {src.replace('yajl_t_true', 'yajl_t_false')};
+                if (val != NULL)
+                  {{
+                    {dest} = 0;
+                    {dest}_present = 1;
+                  }}
+              }}
+            ''', indent=level + 1)
+        else:
+            emit(c_file, f'''
+              }}
+            ''', indent=level)
     elif typ == 'booleanPointer':
-        c_file.append(f"{'    ' * level}yajl_val val = {src};\n")
-        c_file.append(f"{'    ' * level}if (val != NULL)\n")
-        c_file.append(f'{"    " * (level)}  {{\n')
-        c_file.append(f"{'    ' * (level + 1)}{dest} = calloc (1, sizeof (bool));\n")
-        c_file.append(f"{'    ' * (level + 1)}if ({dest} == NULL)\n")
-        c_file.append(f"{'    ' * (level + 1)}    return NULL;\n")
-        c_file.append(f"{'    ' * (level + 1)}*({dest}) = YAJL_IS_TRUE(val);\n")
-        c_file.append(f'{"    " * (level)}  }}\n')
-        c_file.append(f"{'    ' * level}else\n")
-        c_file.append(f'{"    " * (level)} {{\n')
-        c_file.append(f'{"    " * (level + 1)}val = get_val (tree, "{keyname}", yajl_t_false);\n')
-        c_file.append(f"{'    ' * (level + 1)}if (val != NULL)\n")
-        c_file.append(f'{"    " * (level + 1)}  {{\n')
-        c_file.append(f"{'    ' * (level + 2)}{dest} = calloc (1, sizeof (bool));\n")
-        c_file.append(f"{'    ' * (level + 2)}if ({dest} == NULL)\n")
-        c_file.append(f"{'    ' * (level + 2)}  return NULL;\n")
-        c_file.append(f"{'    ' * (level + 2)}*({dest}) = YAJL_IS_TRUE(val);\n")
-        c_file.append(f'{"    " * (level + 1)}}}\n')
-        c_file.append(f'{"    " * (level)}}}\n')
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                {dest} = calloc (1, sizeof (bool));
+                if ({dest} == NULL)
+                    return NULL;
+                *({dest}) = YAJL_IS_TRUE(val);
+              }}
+            else
+             {{
+               val = get_val (tree, "{keyname}", yajl_t_false);
+               if (val != NULL)
+                 {{
+                   {dest} = calloc (1, sizeof (bool));
+                   if ({dest} == NULL)
+                     return NULL;
+                   *({dest}) = YAJL_IS_TRUE(val);
+                 }}
+             }}
+        ''', indent=level)
 
 
 def make_clone(obj, c_file, prefix):
@@ -1028,110 +1133,142 @@ def make_clone(obj, c_file, prefix):
         else:
             typename = helpers.get_name_substr(obj.name, prefix)
 
-    c_file.append(f"{typename} *\nclone_{typename} ({typename} *src)\n")
-    c_file.append("{\n")
-    c_file.append("    (void) src;  /* Silence compiler warning.  */\n")
-    c_file.append(f"    __auto_cleanup(free_{typename}) {typename} *ret = NULL;\n")
+    emit(c_file, f'''
+        {typename} *
+        clone_{typename} ({typename} *src)
+        {{
+            (void) src;  /* Silence compiler warning.  */
+            __auto_cleanup(free_{typename}) {typename} *ret = NULL;
 
-    c_file.append("    ret = calloc (1, sizeof (*ret));\n")
-    c_file.append("    if (ret == NULL)\n")
-    c_file.append("      return NULL;\n")
+            ret = calloc (1, sizeof (*ret));
+            if (ret == NULL)
+              return NULL;
+    ''', indent=0)
 
     nodes = obj.children if obj.subtypobj is None else obj.subtypobj
     for i in nodes or []:
         if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
-            c_file.append(f"    ret->{i.fixname} = src->{i.fixname};\n")
-            c_file.append(f"    ret->{i.fixname}_present = src->{i.fixname}_present;\n")
+            emit(c_file, f'''
+                ret->{i.fixname} = src->{i.fixname};
+                ret->{i.fixname}_present = src->{i.fixname}_present;
+            ''', indent=1)
         elif i.typ == 'object':
             node_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
-            c_file.append(f"    if (src->{i.fixname})\n")
-            c_file.append(f"      {{\n")
             if obj.typ != 'mapStringObject':
-                c_file.append(f"        ret->{i.fixname} = clone_{node_name} (src->{i.fixname});\n")
-                c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
-                c_file.append(f"          return NULL;\n")
+                emit(c_file, f'''
+                    if (src->{i.fixname})
+                      {{
+                        ret->{i.fixname} = clone_{node_name} (src->{i.fixname});
+                        if (ret->{i.fixname} == NULL)
+                          return NULL;
+                      }}
+                ''', indent=1)
             else:
-                c_file.append(f"        size_t i;\n")
-                c_file.append(f"        ret->{i.fixname} = calloc (src->len + 1, sizeof (*ret->{i.fixname}));\n")
-                c_file.append(f"        for (i = 0; i < src->len; i++)\n")
-                c_file.append("          {\n")
-                c_file.append(f"             ret->{i.fixname}[i] = clone_{node_name} (src->{i.fixname}[i]);\n")
-                c_file.append(f"             if (ret->{i.fixname}[i] == NULL)\n")
-                c_file.append(f"               return NULL;\n")
-                c_file.append("          }\n")
-            c_file.append(f"      }}\n")
+                emit(c_file, f'''
+                    if (src->{i.fixname})
+                      {{
+                        size_t i;
+                        ret->{i.fixname} = calloc (src->len + 1, sizeof (*ret->{i.fixname}));
+                        for (i = 0; i < src->len; i++)
+                          {{
+                             ret->{i.fixname}[i] = clone_{node_name} (src->{i.fixname}[i]);
+                             if (ret->{i.fixname}[i] == NULL)
+                               return NULL;
+                          }}
+                      }}
+                ''', indent=1)
         elif i.typ == 'string':
-            c_file.append(f"    if (src->{i.fixname})\n")
-            c_file.append(f"      {{\n")
-            c_file.append(f"        ret->{i.fixname} = strdup (src->{i.fixname});\n")
-            c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
-            c_file.append(f"          return NULL;\n")
-            c_file.append(f"      }}\n")
+            emit(c_file, f'''
+                if (src->{i.fixname})
+                  {{
+                    ret->{i.fixname} = strdup (src->{i.fixname});
+                    if (ret->{i.fixname} == NULL)
+                      return NULL;
+                  }}
+            ''', indent=1)
         elif i.typ == 'array':
-            c_file.append(f"    if (src->{i.fixname})\n")
-            c_file.append(f"      {{\n")
-            c_file.append(f"        ret->{i.fixname}_len = src->{i.fixname}_len;\n")
-            c_file.append(f"        ret->{i.fixname} = calloc (src->{i.fixname}_len + 1, sizeof (*ret->{i.fixname}));\n")
-            c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
-            c_file.append(f"          return NULL;\n")
-            c_file.append(f"        for (size_t i = 0; i < src->{i.fixname}_len; i++)\n")
-            c_file.append(f"          {{\n")
+            emit(c_file, f'''
+                if (src->{i.fixname})
+                  {{
+                    ret->{i.fixname}_len = src->{i.fixname}_len;
+                    ret->{i.fixname} = calloc (src->{i.fixname}_len + 1, sizeof (*ret->{i.fixname}));
+                    if (ret->{i.fixname} == NULL)
+                      return NULL;
+                    for (size_t i = 0; i < src->{i.fixname}_len; i++)
+                      {{
+            ''', indent=1)
             if helpers.judge_data_type(i.subtyp) or i.subtyp == 'boolean':
-               c_file.append(f"            ret->{i.fixname}[i] = src->{i.fixname}[i];\n")
+               emit(c_file, f'''
+                           ret->{i.fixname}[i] = src->{i.fixname}[i];
+               ''', indent=3)
             elif i.subtyp == 'object':
                 subnode_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
                 if False: # i.subtypname is not None:
                     typename = i.subtypname
-                    c_file.append(f"            ret->{i.fixname}[i] = clone_{typename} (src->{i.fixname}[i]);\n")
-                    c_file.append(f"            if (ret->{i.fixname}[i] == NULL)\n")
-                    c_file.append(f"                return NULL;\n")
+                    emit(c_file, f'''
+                                ret->{i.fixname}[i] = clone_{typename} (src->{i.fixname}[i]);
+                                if (ret->{i.fixname}[i] == NULL)
+                                    return NULL;
+                    ''', indent=3)
                 else:
                     typename = helpers.get_prefixed_name(i.name, prefix)
                     if i.subtypname is not None:
                         typename = i.subtypname
                     maybe_element = "_element" if i.subtypname is None else ""
                     if i.doublearray:
-                        c_file.append(f"            ret->{i.fixname}_item_lens[i] = src->{i.fixname}_item_lens[i];\n")
-                        c_file.append(f"            ret->{i.fixname}[i] = calloc (ret->{i.fixname}_item_lens[i] + 1, sizeof (**ret->{i.fixname}[i]));\n")
-                        c_file.append(f"            if (ret->{i.fixname}[i] == NULL)\n")
-                        c_file.append(f"                return NULL;\n")
-                        c_file.append(f"            for (size_t j = 0; j < src->{i.fixname}_item_lens[i]; j++)\n")
-                        c_file.append(f"              {{\n")
-                        c_file.append(f"                ret->{i.fixname}[i][j] = clone_{typename}{maybe_element} (src->{i.fixname}[i][j]);\n")
-                        c_file.append(f"                if (ret->{i.fixname}[i][j] == NULL)\n")
-                        c_file.append(f"                    return NULL;\n")
-                        c_file.append(f"              }}\n")
+                        emit(c_file, f'''
+                                ret->{i.fixname}_item_lens[i] = src->{i.fixname}_item_lens[i];
+                                ret->{i.fixname}[i] = calloc (ret->{i.fixname}_item_lens[i] + 1, sizeof (**ret->{i.fixname}[i]));
+                                if (ret->{i.fixname}[i] == NULL)
+                                    return NULL;
+                                for (size_t j = 0; j < src->{i.fixname}_item_lens[i]; j++)
+                                  {{
+                                    ret->{i.fixname}[i][j] = clone_{typename}{maybe_element} (src->{i.fixname}[i][j]);
+                                    if (ret->{i.fixname}[i][j] == NULL)
+                                        return NULL;
+                                  }}
+                        ''', indent=3)
                     else:
-                        c_file.append(f"            ret->{i.fixname}[i] = clone_{typename}{maybe_element} (src->{i.fixname}[i]);\n")
-                        c_file.append(f"            if (ret->{i.fixname}[i] == NULL)\n")
-                        c_file.append(f"                return NULL;\n")
+                        emit(c_file, f'''
+                                ret->{i.fixname}[i] = clone_{typename}{maybe_element} (src->{i.fixname}[i]);
+                                if (ret->{i.fixname}[i] == NULL)
+                                    return NULL;
+                        ''', indent=3)
 
             elif i.subtyp == 'string':
                 if i.doublearray:
-                    c_file.append(f"            ret->{i.fixname}[i] = calloc (ret->{i.fixname}_item_lens[i] + 1, sizeof (**ret->{i.fixname}[i]));\n")
-                    c_file.append(f"            if (ret->{i.fixname}[i] == NULL)\n")
-                    c_file.append(f"                return NULL;\n")
-                    c_file.append(f"            for (size_t j = 0; j < src->{i.fixname}_item_lens[i]; j++)\n")
-                    c_file.append(f"              {{\n")
-                    c_file.append(f"                ret->{i.fixname}[i][j] = strdup (src->{i.fixname}[i][j]);\n")
-                    c_file.append(f"                if (ret->{i.fixname}[i][j] == NULL)\n")
-                    c_file.append(f"                    return NULL;\n")
-                    c_file.append(f"              }}\n")
+                    emit(c_file, f'''
+                                ret->{i.fixname}[i] = calloc (ret->{i.fixname}_item_lens[i] + 1, sizeof (**ret->{i.fixname}[i]));
+                                if (ret->{i.fixname}[i] == NULL)
+                                    return NULL;
+                                for (size_t j = 0; j < src->{i.fixname}_item_lens[i]; j++)
+                                  {{
+                                    ret->{i.fixname}[i][j] = strdup (src->{i.fixname}[i][j]);
+                                    if (ret->{i.fixname}[i][j] == NULL)
+                                        return NULL;
+                                  }}
+                    ''', indent=3)
                 else:
-                    c_file.append(f"            if (src->{i.fixname}[i])\n")
-                    c_file.append(f"              {{\n")
-                    c_file.append(f"                ret->{i.fixname}[i] = strdup (src->{i.fixname}[i]);\n")
-                    c_file.append(f"                if (ret->{i.fixname}[i] == NULL)\n")
-                    c_file.append(f"                  return NULL;\n")
-                    c_file.append(f"              }}\n")
+                    emit(c_file, f'''
+                                if (src->{i.fixname}[i])
+                                  {{
+                                    ret->{i.fixname}[i] = strdup (src->{i.fixname}[i]);
+                                    if (ret->{i.fixname}[i] == NULL)
+                                      return NULL;
+                                  }}
+                    ''', indent=3)
             else:
                 raise Exception("Unimplemented type for array clone: %s (%s)" % (i.subtyp, i.subtypname))
-            c_file.append(f"          }}\n")
-            c_file.append(f"      }}\n")
+            emit(c_file, f'''
+                          }}
+                      }}
+            ''', indent=2)
         elif i.typ == 'mapStringString':
-            c_file.append(f"    ret->{i.fixname} = clone_map_string_string (src->{i.fixname});\n")
-            c_file.append(f"    if (ret->{i.fixname} == NULL)\n")
-            c_file.append(f"        return NULL;\n")
+            emit(c_file, f'''
+                ret->{i.fixname} = clone_map_string_string (src->{i.fixname});
+                if (ret->{i.fixname} == NULL)
+                    return NULL;
+            ''', indent=1)
         elif i.typ == 'mapStringObject':
             if i.subtypname is not None:
                 subtypname = i.subtypname
@@ -1140,33 +1277,38 @@ def make_clone(obj, c_file, prefix):
                 subtypname = i.children[0].subtypname
                 maybe_element = ""
 
-            c_file.append(f"    if (src->{i.fixname})\n")
-            c_file.append(f"      {{\n")
-            c_file.append(f"        ret->{i.fixname} = calloc (1, sizeof (*ret->{i.fixname}));\n")
-            c_file.append(f"        if (ret->{i.fixname} == NULL)\n")
-            c_file.append(f"            return NULL;\n")
-            c_file.append(f"        ret->{i.fixname}->len = src->{i.fixname}->len;\n")
-            c_file.append(f"        ret->{i.fixname}->keys = calloc (src->{i.fixname}->len + 1, sizeof (char *));\n")
-            c_file.append(f"        if (ret->{i.fixname}->keys == NULL)\n")
-            c_file.append(f"            return NULL;\n")
-            c_file.append(f"        ret->{i.fixname}->values = calloc (src->{i.fixname}->len + 1, sizeof (*ret->{i.fixname}->values));\n")
-            c_file.append(f"        if (ret->{i.fixname}->values == NULL)\n")
-            c_file.append(f"            return NULL;\n")
-            c_file.append(f"        for (size_t i = 0; i < ret->{i.fixname}->len; i++)\n")
-            c_file.append(f"          {{\n")
-            c_file.append(f"            ret->{i.fixname}->keys[i] = strdup (src->{i.fixname}->keys[i]);\n")
-            c_file.append(f"            if (ret->{i.fixname}->keys[i] == NULL)\n")
-            c_file.append(f"              return NULL;\n")
-            c_file.append(f"            ret->{i.fixname}->values[i] = clone_{subtypname}{maybe_element} (src->{i.fixname}->values[i]);\n")
-            c_file.append(f"            if (ret->{i.fixname}->values[i] == NULL)\n")
-            c_file.append(f"              return NULL;\n")
-            c_file.append(f"          }}\n")
-            c_file.append(f"      }}\n")
+            emit(c_file, f'''
+                if (src->{i.fixname})
+                  {{
+                    ret->{i.fixname} = calloc (1, sizeof (*ret->{i.fixname}));
+                    if (ret->{i.fixname} == NULL)
+                        return NULL;
+                    ret->{i.fixname}->len = src->{i.fixname}->len;
+                    ret->{i.fixname}->keys = calloc (src->{i.fixname}->len + 1, sizeof (char *));
+                    if (ret->{i.fixname}->keys == NULL)
+                        return NULL;
+                    ret->{i.fixname}->values = calloc (src->{i.fixname}->len + 1, sizeof (*ret->{i.fixname}->values));
+                    if (ret->{i.fixname}->values == NULL)
+                        return NULL;
+                    for (size_t i = 0; i < ret->{i.fixname}->len; i++)
+                      {{
+                        ret->{i.fixname}->keys[i] = strdup (src->{i.fixname}->keys[i]);
+                        if (ret->{i.fixname}->keys[i] == NULL)
+                          return NULL;
+                        ret->{i.fixname}->values[i] = clone_{subtypname}{maybe_element} (src->{i.fixname}->values[i]);
+                        if (ret->{i.fixname}->values[i] == NULL)
+                          return NULL;
+                      }}
+                  }}
+            ''', indent=1)
         else:
             raise Exception("Unimplemented type for clone: %s" % i.typ)
 
-    c_file.append(f"    return move_ptr (ret);\n")
-    c_file.append("}\n\n")
+    emit(c_file, '''
+            return move_ptr (ret);
+        }
+
+    ''', indent=1)
 
 
 def json_value_generator(c_file, level, src, dst, ptx, typ):
@@ -1176,26 +1318,40 @@ def json_value_generator(c_file, level, src, dst, ptx, typ):
     History: 2019-06-17
     """
     if helpers.valid_basic_map_name(typ):
-        c_file.append(f'{"    " * (level)}stat = gen_{helpers.make_basic_map_name(typ)} ({dst}, {src}, {ptx}, err);\n')
-        c_file.append(f"{'    ' * level}if (stat != yajl_gen_status_ok)\n")
-        c_file.append(f"{'    ' * (level + 1)}GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        emit(c_file, f'''
+            stat = gen_{helpers.make_basic_map_name(typ)} ({dst}, {src}, {ptx}, err);
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+        ''', indent=level)
     elif typ == 'string':
-        c_file.append(f'{"    " * (level)}stat = yajl_gen_string ((yajl_gen){dst}, (const unsigned char *)({src}), strlen ({src}));\n')
-        c_file.append(f"{'    ' * level}if (stat != yajl_gen_status_ok)\n")
-        c_file.append(f"{'    ' * (level + 1)}GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        emit(c_file, f'''
+            stat = yajl_gen_string ((yajl_gen){dst}, (const unsigned char *)({src}), strlen ({src}));
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+        ''', indent=level)
     elif helpers.judge_data_type(typ):
         if typ == 'double':
-            c_file.append(f'{"    " * (level)}stat = yajl_gen_double ((yajl_gen){dst}, {src});\n')
+            emit(c_file, f'''
+                stat = yajl_gen_double ((yajl_gen){dst}, {src});
+            ''', indent=level)
         elif typ.startswith("uint") or typ == 'GID' or typ == 'UID':
-            c_file.append(f"{'    ' * level}stat = map_uint ({dst}, {src});\n")
+            emit(c_file, f'''
+                stat = map_uint ({dst}, {src});
+            ''', indent=level)
         else:
-            c_file.append(f"{'    ' * level}stat = map_int ({dst}, {src});\n")
-        c_file.append(f"{'    ' * level}if (stat != yajl_gen_status_ok)\n")
-        c_file.append(f"{'    ' * (level + 1)}GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+            emit(c_file, f'''
+                stat = map_int ({dst}, {src});
+            ''', indent=level)
+        emit(c_file, f'''
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+        ''', indent=level)
     elif typ == 'boolean':
-        c_file.append(f'{"    " * (level)}stat = yajl_gen_bool ((yajl_gen){dst}, (int)({src}));\n')
-        c_file.append(f"{'    ' * level}if (stat != yajl_gen_status_ok)\n")
-        c_file.append(f"{'    ' * (level + 1)}GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+        emit(c_file, f'''
+            stat = yajl_gen_bool ((yajl_gen){dst}, (int)({src}));
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+        ''', indent=level)
 
 def make_c_array_free (i, c_file, prefix):
     if helpers.valid_basic_map_name(i.subtyp):
@@ -1468,15 +1624,19 @@ def src_reflect(structs, schema_info, c_file, root_typ):
     Interface: None
     History: 2019-06-17
     """
-    c_file.append(f"/* Generated from {schema_info.name.basename}. Do not edit!  */\n\n")
-    c_file.append("#ifndef _GNU_SOURCE\n")
-    c_file.append("#define _GNU_SOURCE\n")
-    c_file.append("#endif\n")
-    c_file.append('#include <string.h>\n')
-    c_file.append('#include <ocispec/read-file.h>\n')
-    c_file.append(f'#include "ocispec/{schema_info.header.basename}"\n\n')
-    c_file.append('#define YAJL_GET_ARRAY_NO_CHECK(v) (&(v)->u.array)\n')
-    c_file.append('#define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)\n')
+    emit(c_file, f'''
+        /* Generated from {schema_info.name.basename}. Do not edit!  */
+
+        #ifndef _GNU_SOURCE
+        #define _GNU_SOURCE
+        #endif
+        #include <string.h>
+        #include <ocispec/read-file.h>
+        #include "ocispec/{schema_info.header.basename}"
+
+        #define YAJL_GET_ARRAY_NO_CHECK(v) (&(v)->u.array)
+        #define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)
+    ''', indent=0)
     for i in structs:
         append_c_code(i, c_file, schema_info.prefix)
 
@@ -1492,40 +1652,45 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
         return
     typename = helpers.get_top_array_type_name(obj.name, prefix)
 
-    c_file.append(f"\ndefine_cleaner_function ({typename} *, free_{typename})\n" +
-                    f"{typename}\n" +
-                    f"*make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)\n" +
-                    "{\n" +
-                    f"    __auto_cleanup(free_{typename}) {typename} *ptr = NULL;\n" +
-                    f"    size_t i, alen;\n" +
-                    f" "+
-                    f"    (void) ctx;\n" +
-                    f" "+
-                    f"    if (tree == NULL || err == NULL || YAJL_GET_ARRAY (tree) == NULL)\n" +
-                    f"      return NULL;\n" +
-                    f"    *err = NULL;\n" +
-                    f"    alen = YAJL_GET_ARRAY_NO_CHECK (tree)->len;\n" +
-                    f"    if (alen == 0)\n" +
-                    f"      return NULL;\n" +
-                    f"    ptr = calloc (1, sizeof ({typename}));\n" +
-                    f"    if (ptr == NULL)\n" +
-                    f"      return NULL;\n" +
-                    f"    ptr->items = calloc (alen + 1, sizeof(*ptr->items));\n" +
-                    f"    if (ptr->items == NULL)\n" +
-                    f"      return NULL;\n" +
-                    f"    ptr->len = alen;\n"
-    )
+    emit(c_file, f'''
+
+        define_cleaner_function ({typename} *, free_{typename})
+        {typename}
+        *make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)
+        {{
+            __auto_cleanup(free_{typename}) {typename} *ptr = NULL;
+            size_t i, alen;
+
+            (void) ctx;
+
+            if (tree == NULL || err == NULL || YAJL_GET_ARRAY (tree) == NULL)
+              return NULL;
+            *err = NULL;
+            alen = YAJL_GET_ARRAY_NO_CHECK (tree)->len;
+            if (alen == 0)
+              return NULL;
+            ptr = calloc (1, sizeof ({typename}));
+            if (ptr == NULL)
+              return NULL;
+            ptr->items = calloc (alen + 1, sizeof(*ptr->items));
+            if (ptr->items == NULL)
+              return NULL;
+            ptr->len = alen;
+    ''', indent=0)
 
     if obj.doublearray:
-        c_file.append('    ptr->subitem_lens = calloc ( alen + 1, sizeof (size_t));\n')
-        c_file.append('    if (ptr->subitem_lens == NULL)\n')
-        c_file.append('      return NULL;')
+        emit(c_file, '''
+            ptr->subitem_lens = calloc ( alen + 1, sizeof (size_t));
+            if (ptr->subitem_lens == NULL)
+              return NULL;
+        ''', indent=1)
 
-    c_file.append("""\n
-    for (i = 0; i < alen; i++)
-      {
-        yajl_val work = YAJL_GET_ARRAY_NO_CHECK (tree)->values[i];
-""");
+    emit(c_file, '''
+
+            for (i = 0; i < alen; i++)
+              {
+                yajl_val work = YAJL_GET_ARRAY_NO_CHECK (tree)->values[i];
+    ''', indent=1)
 
     if obj.subtypobj or obj.subtyp == 'object':
         if obj.subtypname:
@@ -1534,54 +1699,67 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
             subtypename = helpers.get_name_substr(obj.name, prefix)
 
         if obj.doublearray:
-            c_file.append('        size_t j;\n')
-            c_file.append('        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));\n')
-            c_file.append('        if (ptr->items[i] == NULL)\n')
-            c_file.append('          return NULL;\n')
-            c_file.append('        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;\n')
-            c_file.append('        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)\n')
-            c_file.append('          {\n')
-            c_file.append(f'              ptr->items[i][j] = make_{subtypename} (tmps[j], ctx, err);\n')
-            c_file.append('              if (ptr->items[i][j] == NULL)\n')
-            c_file.append("                return NULL;\n")
-            c_file.append('              ptr->subitem_lens[i] += 1;\n')
-            c_file.append('          }\n')
+            emit(c_file, f'''
+                        size_t j;
+                        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));
+                        if (ptr->items[i] == NULL)
+                          return NULL;
+                        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;
+                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)
+                          {{
+                              ptr->items[i][j] = make_{subtypename} (tmps[j], ctx, err);
+                              if (ptr->items[i][j] == NULL)
+                                return NULL;
+                              ptr->subitem_lens[i] += 1;
+                          }}
+            ''', indent=2)
         else:
-            c_file.append(f'        ptr->items[i] = make_{subtypename} (work, ctx, err);\n')
-            c_file.append('        if (ptr->items[i] == NULL)\n')
-            c_file.append("          return NULL;\n")
+            emit(c_file, f'''
+                        ptr->items[i] = make_{subtypename} (work, ctx, err);
+                        if (ptr->items[i] == NULL)
+                          return NULL;
+            ''', indent=2)
     elif obj.subtyp == 'byte':
         if obj.doublearray:
-            c_file.append('        char *str = YAJL_GET_STRING (work);\n')
-            c_file.append('        ptr->items[j] = (uint8_t *)strdup (str ? str : "");\n')
-            c_file.append('        if (ptr->items[j] == NULL)\n')
-            c_file.append("          return NULL;\n")
+            emit(c_file, '''
+                        char *str = YAJL_GET_STRING (work);
+                        ptr->items[j] = (uint8_t *)strdup (str ? str : "");
+                        if (ptr->items[j] == NULL)
+                          return NULL;
+            ''', indent=2)
         else:
-            c_file.append('        char *str = YAJL_GET_STRING (tree);\n')
-            c_file.append('        memcpy(ptr->items, str ? str : "", strlen(str ? str : ""));\n')
-            c_file.append('        break;\n')
+            emit(c_file, '''
+                        char *str = YAJL_GET_STRING (tree);
+                        memcpy(ptr->items, str ? str : "", strlen(str ? str : ""));
+                        break;
+            ''', indent=2)
     else:
         if obj.doublearray:
-            c_file.append('        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));\n')
-            c_file.append('        if (ptr->items[i] == NULL)\n')
-            c_file.append('          return NULL;\n')
-            c_file.append('        size_t j;\n')
-            c_file.append('        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;\n')
-            c_file.append('        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)\n')
-            c_file.append('          {\n')
+            emit(c_file, '''
+                        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));
+                        if (ptr->items[i] == NULL)
+                          return NULL;
+                        size_t j;
+                        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;
+                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)
+                          {
+            ''', indent=2)
             read_val_generator(c_file, 3, 'tmps[j]', \
                                 "ptr->items[i][j]", obj.subtyp, obj.origname, c_typ)
-            c_file.append('            ptr->subitem_lens[i] += 1;\n')
-            c_file.append('          }\n')
+            emit(c_file, '''
+                            ptr->subitem_lens[i] += 1;
+                          }
+            ''', indent=3)
         else:
             read_val_generator(c_file, 2, 'work', \
                                 "ptr->items[i]", obj.subtyp, obj.origname, c_typ)
 
-    c_file.append("""\n
-      }
-    return move_ptr(ptr);
-}
-""")
+    emit(c_file, '''
+
+              }
+            return move_ptr(ptr);
+        }
+    ''', indent=1)
 
 def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
     c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
@@ -1592,41 +1770,52 @@ def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
         return
     typename = helpers.get_top_array_type_name(obj.name, prefix)
 
-    c_file.append(f"\n\nvoid free_{typename} ({typename} *ptr)" + """
-{
-    size_t i;
+    emit(c_file, f'''
 
-    if (ptr == NULL)
-        return;
 
-    for (i = 0; i < ptr->len; i++)
-      {
-""")
+        void free_{typename} ({typename} *ptr)
+        {{
+            size_t i;
+
+            if (ptr == NULL)
+                return;
+
+            for (i = 0; i < ptr->len; i++)
+              {{
+    ''', indent=0)
 
     if helpers.valid_basic_map_name(obj.subtyp):
         free_func = helpers.make_basic_map_name(obj.subtyp)
-        c_file.append("        if (ptr->items[i] != NULL)\n")
-        c_file.append("          {\n")
-        c_file.append(f"            free_{free_func} (ptr->items[i]);\n")
-        c_file.append("            ptr->items[i] = NULL;\n")
-        c_file.append("          }\n")
+        emit(c_file, f'''
+                        if (ptr->items[i] != NULL)
+                          {{
+                            free_{free_func} (ptr->items[i]);
+                            ptr->items[i] = NULL;
+                          }}
+        ''', indent=2)
     elif obj.subtyp == 'string':
         if obj.doublearray:
-            c_file.append("        size_t j;\n")
-            c_file.append("        for (j = 0; j < ptr->subitem_lens[i]; j++)\n")
-            c_file.append("          {\n")
-            c_file.append("            free (ptr->items[i][j]);\n")
-            c_file.append("            ptr->items[i][j] = NULL;\n")
-            c_file.append("          }\n")
-            c_file.append("        free (ptr->items[i]);\n")
-            c_file.append("        ptr->items[i] = NULL;\n")
+            emit(c_file, '''
+                        size_t j;
+                        for (j = 0; j < ptr->subitem_lens[i]; j++)
+                          {
+                            free (ptr->items[i][j]);
+                            ptr->items[i][j] = NULL;
+                          }
+                        free (ptr->items[i]);
+                        ptr->items[i] = NULL;
+            ''', indent=2)
         else:
-            c_file.append("        free (ptr->items[i]);\n")
-            c_file.append("        ptr->items[i] = NULL;\n")
+            emit(c_file, '''
+                        free (ptr->items[i]);
+                        ptr->items[i] = NULL;
+            ''', indent=2)
     elif not helpers.is_compound_type(obj.subtyp):
         if obj.doublearray:
-            c_file.append("        free (ptr->items[i]);\n")
-            c_file.append("        ptr->items[i] = NULL;\n")
+            emit(c_file, '''
+                        free (ptr->items[i]);
+                        ptr->items[i] = NULL;
+            ''', indent=2)
     elif obj.subtyp == 'object' or obj.subtypobj is not None:
         if obj.subtypname is not None:
             free_func = obj.subtypname
@@ -1634,42 +1823,51 @@ def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
             free_func = helpers.get_name_substr(obj.name, prefix)
 
         if obj.doublearray:
-            c_file.append("          size_t j;\n")
-            c_file.append("          for (j = 0; j < ptr->subitem_lens[i]; j++)\n")
-            c_file.append("            {\n")
-            c_file.append(f"              free_{free_func} (ptr->items[i][j]);\n")
-            c_file.append("              ptr->items[i][j] = NULL;\n")
-            c_file.append("            }\n")
-            c_file.append("            free (ptr->items[i]);\n")
-            c_file.append("            ptr->items[i] = NULL;\n")
+            emit(c_file, f'''
+                          size_t j;
+                          for (j = 0; j < ptr->subitem_lens[i]; j++)
+                            {{
+                              free_{free_func} (ptr->items[i][j]);
+                              ptr->items[i][j] = NULL;
+                            }}
+                            free (ptr->items[i]);
+                            ptr->items[i] = NULL;
+            ''', indent=2)
         else:
-            c_file.append(f"          free_{free_func} (ptr->items[i]);\n")
-            c_file.append("          ptr->items[i] = NULL;\n")
+            emit(c_file, f'''
+                          free_{free_func} (ptr->items[i]);
+                          ptr->items[i] = NULL;
+            ''', indent=2)
 
-    c_file.append("""
-      }
-""")
+    emit(c_file, '''
+              }
+    ''', indent=1)
     if obj.doublearray:
-        c_file.append("    free (ptr->subitem_lens);\n")
-        c_file.append("    ptr->subitem_lens = NULL;\n")
+        emit(c_file, '''
+            free (ptr->subitem_lens);
+            ptr->subitem_lens = NULL;
+        ''', indent=1)
 
     c_typ = helpers.obtain_pointer(obj.name, obj.subtypobj, prefix)
     if c_typ != "":
         if obj.subobj is not None:
             c_typ = c_typ + "_element"
-        c_file.append(f"    free_{c_typ} (ptr->items);\n")
-        c_file.append("    ptr->items = NULL;\n")
+        emit(c_file, f'''
+            free_{c_typ} (ptr->items);
+            ptr->items = NULL;
+        ''', indent=1)
         return
     else:
-        c_file.append("""
-    free (ptr->items);
-    ptr->items = NULL;
-""")
+        emit(c_file, '''
+            free (ptr->items);
+            ptr->items = NULL;
+        ''', indent=1)
 
-    c_file.append("""\n
-    free (ptr);
-}
-""")
+    emit(c_file, '''
+
+            free (ptr);
+        }
+    ''', indent=1)
 
 def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
     c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
@@ -1680,113 +1878,144 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         return
     typename = helpers.get_top_array_type_name(obj.name, prefix)
 
-    c_file.append(f"yajl_gen_status gen_{typename} (yajl_gen g, const {typename} *ptr, const struct parser_context *ctx," + """
-                       parser_error *err)
-{
-    yajl_gen_status stat;
-    size_t i;
+    emit(c_file, f'''
+        yajl_gen_status gen_{typename} (yajl_gen g, const {typename} *ptr, const struct parser_context *ctx,
+                               parser_error *err)
+        {{
+            yajl_gen_status stat;
+            size_t i;
 
-    if (ptr == NULL)
-        return yajl_gen_status_ok;
-    *err = NULL;
-""")
+            if (ptr == NULL)
+                return yajl_gen_status_ok;
+            *err = NULL;
+    ''', indent=0)
 
     if obj.subtypobj or obj.subtyp == 'object':
-        c_file.append("""\n
-    stat = yajl_gen_array_open ((yajl_gen) g);
-    if (stat != yajl_gen_status_ok)
-        GEN_SET_ERROR_AND_RETURN (stat, err);
-    for (i = 0; i < ptr->len; i++)
-      {
-""")
+        emit(c_file, '''
+
+            stat = yajl_gen_array_open ((yajl_gen) g);
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+            for (i = 0; i < ptr->len; i++)
+              {
+        ''', indent=1)
 
         if obj.subtypname:
             subtypename = obj.subtypname
         else:
             subtypename = helpers.get_name_substr(obj.name, prefix)
-        c_file.append('      {\n')
+        emit(c_file, '''
+              {
+        ''', indent=1)
         if obj.doublearray:
-            c_file.append('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
+            emit(c_file, f'''
+                        stat = yajl_gen_array_open ((yajl_gen) g);
+            ''', indent=3)
             check_gen_status(c_file, indent=3)
-            c_file.append("            size_t j;\n")
-            c_file.append('            for (j = 0; j < ptr->subitem_lens[i]; j++)\n')
-            c_file.append('              {\n')
-            c_file.append(f'                stat = gen_{subtypename} (g, ptr->items[i][j], ctx, err);\n')
-            c_file.append("                if (stat != yajl_gen_status_ok)\n")
-            c_file.append("                    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
-            c_file.append('              }\n')
-            c_file.append('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
+            emit(c_file, f'''
+                        size_t j;
+                        for (j = 0; j < ptr->subitem_lens[i]; j++)
+                          {{
+                            stat = gen_{subtypename} (g, ptr->items[i][j], ctx, err);
+                            if (stat != yajl_gen_status_ok)
+                                GEN_SET_ERROR_AND_RETURN (stat, err);
+                          }}
+                        stat = yajl_gen_array_close ((yajl_gen) g);
+            ''', indent=3)
         else:
-            c_file.append(f'            stat = gen_{subtypename} (g, ptr->items[i], ctx, err);\n')
+            emit(c_file, f'''
+                        stat = gen_{subtypename} (g, ptr->items[i], ctx, err);
+            ''', indent=3)
             check_gen_status(c_file, indent=3)
-        c_file.append("""\n
-            }
-      }
-    stat = yajl_gen_array_close ((yajl_gen) g);
-""")
+        emit(c_file, f'''
+
+                    }}
+              }}
+            stat = yajl_gen_array_close ((yajl_gen) g);
+        ''', indent=2)
     elif obj.subtyp == 'byte':
-        c_file.append('    {\n')
-        c_file.append('            const char *str = NULL;\n')
+        emit(c_file, '''
+            {
+                    const char *str = NULL;
+        ''', indent=1)
         if obj.doublearray:
-            c_file.append('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
+            emit(c_file, '''
+                        stat = yajl_gen_array_open ((yajl_gen) g);
+            ''', indent=3)
             check_gen_status(c_file, indent=3)
-            c_file.append("            {\n")
-            c_file.append("                size_t i;\n")
-            c_file.append("                for (i = 0; i < ptr->len; i++)\n")
-            c_file.append("                  {\n")
-            c_file.append("                    if (ptr->items[i] != NULL)\n")
-            c_file.append("                        str = (const char *)ptr->items[i];\n")
-            c_file.append("                    else ()\n")
-            c_file.append("                        str = "";\n")
-            c_file.append('                    stat = yajl_gen_string ((yajl_gen) g, \
-                    (const unsigned char *)str, strlen(str));\n')
-            c_file.append("                  }\n")
-            c_file.append("            }\n")
-            c_file.append('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
+            emit(c_file, '''
+                        {
+                            size_t i;
+                            for (i = 0; i < ptr->len; i++)
+                              {
+                                if (ptr->items[i] != NULL)
+                                    str = (const char *)ptr->items[i];
+                                else ()
+                                    str = "";
+                                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
+                              }
+                        }
+                        stat = yajl_gen_array_close ((yajl_gen) g);
+            ''', indent=3)
         else:
-            c_file.append("        if (ptr != NULL && ptr->items != NULL)\n")
-            c_file.append("          {\n")
-            c_file.append("            str = (const char *)ptr->items;\n")
-            c_file.append("          }\n")
-            c_file.append('        stat = yajl_gen_string ((yajl_gen) g, \
-    (const unsigned char *)str, ptr->len);\n')
-        c_file.append('    }\n')
+            emit(c_file, '''
+                    if (ptr != NULL && ptr->items != NULL)
+                      {
+                        str = (const char *)ptr->items;
+                      }
+                    stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, ptr->len);
+            ''', indent=2)
+        emit(c_file, '''
+            }
+        ''', indent=1)
     else:
-        c_file.append("""\n
-    stat = yajl_gen_array_open ((yajl_gen) g);
-    if (stat != yajl_gen_status_ok)
-        GEN_SET_ERROR_AND_RETURN (stat, err);
-    for (i = 0; i < ptr->len; i++)
-      {
-""")
-        c_file.append('        {\n')
+        emit(c_file, '''
+
+            stat = yajl_gen_array_open ((yajl_gen) g);
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+            for (i = 0; i < ptr->len; i++)
+              {
+        ''', indent=1)
+        emit(c_file, '''
+                {
+        ''', indent=2)
         if obj.doublearray:
-            c_file.append('            stat = yajl_gen_array_open ((yajl_gen) g);\n')
+            emit(c_file, '''
+                        stat = yajl_gen_array_open ((yajl_gen) g);
+            ''', indent=3)
             check_gen_status(c_file, indent=3)
-            c_file.append("            size_t j;\n")
-            c_file.append('            for (j = 0; j < ptr->subitem_lens[i]; j++)\n')
-            c_file.append('              {\n')
+            emit(c_file, '''
+                        size_t j;
+                        for (j = 0; j < ptr->subitem_lens[i]; j++)
+                          {
+            ''', indent=3)
             json_value_generator(c_file, 4, "ptr->items[i][j]", 'g', 'ctx', obj.subtyp)
-            c_file.append('            }\n')
-            c_file.append('            stat = yajl_gen_array_close ((yajl_gen) g);\n')
+            emit(c_file, '''
+                        }
+                        stat = yajl_gen_array_close ((yajl_gen) g);
+            ''', indent=3)
         else:
             json_value_generator(c_file, 3, "ptr->items[i]", 'g', 'ctx', obj.subtyp)
 
-        c_file.append("""\n
-            }
-      }
-    stat = yajl_gen_array_close ((yajl_gen) g);
-""")
+        emit(c_file, f'''
+
+                    }}
+              }}
+            stat = yajl_gen_array_close ((yajl_gen) g);
+        ''', indent=2)
 
 
-    c_file.append("""\n
+    emit(c_file, '''
+
     if (ptr->len > 0 && !(ctx->options & OPT_GEN_SIMPLIFY))
         yajl_gen_config (g, yajl_gen_beautify, 1);
     if (stat != yajl_gen_status_ok)
         GEN_SET_ERROR_AND_RETURN (stat, err);
-    return yajl_gen_status_ok;
-}
-""")
+    ''', indent=1)
+    c_file.append("    return yajl_gen_status_ok;\n")
+    c_file.append("}\n")
+    c_file.append("\n")
 
 def get_c_epilog_for_array(c_file, prefix, typ, obj):
     typename = helpers.get_top_array_type_name(obj.name, prefix)
@@ -1809,135 +2038,147 @@ def get_c_epilog(c_file, prefix, typ, obj):
         typename = helpers.get_top_array_type_name(obj.name, prefix)
         get_c_epilog_for_array(c_file, prefix, typ, obj)
 
-    c_file.append(f"\n{typename} *\n{typename}_parse_file (const char *filename, const struct parser_context *ctx, parser_error *err)"
-"\n{"
-    f"\n{typename} *ptr = NULL;" +
-    """size_t filesize;
-    __auto_free char *content = NULL;
+    emit(c_file, f'''
 
-    if (filename == NULL || err == NULL)
-      return NULL;
+        {typename} *
+        {typename}_parse_file (const char *filename, const struct parser_context *ctx, parser_error *err)
+        {{
+            {typename} *ptr = NULL;
+            size_t filesize;
+            __auto_free char *content = NULL;
 
-    *err = NULL;
-    content = read_file (filename, &filesize);
-    if (content == NULL)
-      {
-        if (asprintf (err, "cannot read the file: %s", filename) < 0)
-            *err = strdup ("error allocating memory");
-        return NULL;
-      }""" +
-    f"ptr = {typename}_parse_data (content, ctx, err);" +
-    """return ptr;
-}
-""")
+            if (filename == NULL || err == NULL)
+              return NULL;
 
-    c_file.append(
-f"{typename} * \n" +
-f"{typename}_parse_file_stream (FILE *stream, const struct parser_context *ctx, parser_error *err)\n{{" +
-    f"{typename} *ptr = NULL;"+
-    """\nsize_t filesize;
-    __auto_free char *content = NULL;
+            *err = NULL;
+            content = read_file (filename, &filesize);
+            if (content == NULL)
+              {{
+                if (asprintf (err, "cannot read the file: %s", filename) < 0)
+                    *err = strdup ("error allocating memory");
+                return NULL;
+              }}
+            ptr = {typename}_parse_data (content, ctx, err);
+            return ptr;
+        }}
+    ''', indent=0)
 
-    if (stream == NULL || err == NULL)
-      return NULL;
+    emit(c_file, f'''
+        {typename} *
+        {typename}_parse_file_stream (FILE *stream, const struct parser_context *ctx, parser_error *err)
+        {{
+            {typename} *ptr = NULL;
+            size_t filesize;
+            __auto_free char *content = NULL;
 
-    *err = NULL;
-    content = fread_file (stream, &filesize);
-    if (content == NULL)
-      {
-        *err = strdup ("cannot read the file");
-        return NULL;
-      }\n""" +
-    f"ptr = {typename}_parse_data (content, ctx, err);" +
-    """return ptr;
-}
-""")
+            if (stream == NULL || err == NULL)
+              return NULL;
 
-    c_file.append("""
-define_cleaner_function (yajl_val, yajl_tree_free)
-""" +
-f"\n {typename} * " +
-f"{typename}_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err)\n {{ \n" +
-    f"  {typename} *ptr = NULL;" +
-    """__auto_cleanup(yajl_tree_free) yajl_val tree = NULL;
-    char errbuf[1024];
-    struct parser_context tmp_ctx = { 0 };
+            *err = NULL;
+            content = fread_file (stream, &filesize);
+            if (content == NULL)
+              {{
+                *err = strdup ("cannot read the file");
+                return NULL;
+              }}
+            ptr = {typename}_parse_data (content, ctx, err);
+            return ptr;
+        }}
+    ''', indent=0)
 
-    if (jsondata == NULL || err == NULL)
-      return NULL;
+    emit(c_file, f'''
 
-    *err = NULL;
-    if (ctx == NULL)
-     ctx = (const struct parser_context *)(&tmp_ctx);
+        define_cleaner_function (yajl_val, yajl_tree_free)
 
-    tree = yajl_tree_parse (jsondata, errbuf, sizeof (errbuf));
-    if (tree == NULL)
-      {
-        if (asprintf (err, "cannot parse the data: %s", errbuf) < 0)
-            *err = strdup ("error allocating memory");
-        return NULL;
-      }\n""" +
-    f"ptr = make_{typename} (tree, ctx, err);" +
-    "return ptr; \n}\n"
-)
+        {typename} *
+        {typename}_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err)
+        {{
+            {typename} *ptr = NULL;
+            __auto_cleanup(yajl_tree_free) yajl_val tree = NULL;
+            char errbuf[1024];
+            struct parser_context tmp_ctx = {{ 0 }};
 
-    c_file.append("""\nstatic void\ncleanup_yajl_gen (yajl_gen g)
-{
-    if (!g)
-      return;
-    yajl_gen_clear (g);
-    yajl_gen_free (g);
-}
+            if (jsondata == NULL || err == NULL)
+              return NULL;
 
-define_cleaner_function (yajl_gen, cleanup_yajl_gen)
+            *err = NULL;
+            if (ctx == NULL)
+             ctx = (const struct parser_context *)(&tmp_ctx);
 
-""")
+            tree = yajl_tree_parse (jsondata, errbuf, sizeof (errbuf));
+            if (tree == NULL)
+              {{
+                if (asprintf (err, "cannot parse the data: %s", errbuf) < 0)
+                    *err = strdup ("error allocating memory");
+                return NULL;
+              }}
+            ptr = make_{typename} (tree, ctx, err);
+            return ptr;
+        }}
+    ''', indent=0)
 
-    c_file.append("\n char * \n" +
-f"{typename}_generate_json (const {typename} *ptr, const struct parser_context *ctx, parser_error *err)" +
-"""{
-    __auto_cleanup(cleanup_yajl_gen) yajl_gen g = NULL;
-    struct parser_context tmp_ctx = { 0 };
-    const unsigned char *gen_buf = NULL;
-    char *json_buf = NULL;
-    size_t gen_len = 0;
+    emit(c_file, '''
 
-    if (ptr == NULL || err == NULL)
-      return NULL;
+        static void
+        cleanup_yajl_gen (yajl_gen g)
+        {
+            if (!g)
+              return;
+            yajl_gen_clear (g);
+            yajl_gen_free (g);
+        }
 
-    *err = NULL;
-    if (ctx == NULL)
-        ctx = (const struct parser_context *)(&tmp_ctx);
+        define_cleaner_function (yajl_gen, cleanup_yajl_gen)
 
-    if (!json_gen_init(&g, ctx))
-      {
-        *err = strdup ("Json_gen init failed");
-        return json_buf;
-      } \n
-""" +
-    f"if (yajl_gen_status_ok != gen_{typename} (g, ptr, ctx, err))" +
-    """  {
-        if (*err == NULL)
-            *err = strdup ("Failed to generate json");
-        return json_buf;
-      }
+    ''', indent=0)
 
-    yajl_gen_get_buf (g, &gen_buf, &gen_len);
-    if (gen_buf == NULL)
-      {
-        *err = strdup ("Error to get generated json");
-        return json_buf;
-      }
+    emit(c_file, f'''
 
-    json_buf = calloc (1, gen_len + 1);
-    if (json_buf == NULL)
-      {
-        *err = strdup ("Cannot allocate memory");
-        return json_buf;
-      }
-    (void) memcpy (json_buf, gen_buf, gen_len);
-    json_buf[gen_len] = '\\0';
+        char *
+        {typename}_generate_json (const {typename} *ptr, const struct parser_context *ctx, parser_error *err)
+        {{
+            __auto_cleanup(cleanup_yajl_gen) yajl_gen g = NULL;
+            struct parser_context tmp_ctx = {{ 0 }};
+            const unsigned char *gen_buf = NULL;
+            char *json_buf = NULL;
+            size_t gen_len = 0;
 
-    return json_buf;
-}
-""")
+            if (ptr == NULL || err == NULL)
+              return NULL;
+
+            *err = NULL;
+            if (ctx == NULL)
+                ctx = (const struct parser_context *)(&tmp_ctx);
+
+            if (!json_gen_init(&g, ctx))
+              {{
+                *err = strdup ("Json_gen init failed");
+                return json_buf;
+              }}
+
+            if (yajl_gen_status_ok != gen_{typename} (g, ptr, ctx, err))
+              {{
+                if (*err == NULL)
+                    *err = strdup ("Failed to generate json");
+                return json_buf;
+              }}
+
+            yajl_gen_get_buf (g, &gen_buf, &gen_len);
+            if (gen_buf == NULL)
+              {{
+                *err = strdup ("Error to get generated json");
+                return json_buf;
+              }}
+
+            json_buf = calloc (1, gen_len + 1);
+            if (json_buf == NULL)
+              {{
+                *err = strdup ("Cannot allocate memory");
+                return json_buf;
+              }}
+            (void) memcpy (json_buf, gen_buf, gen_len);
+            json_buf[gen_len] = '\\0';
+
+            return json_buf;
+        }}
+    ''', indent=0)
