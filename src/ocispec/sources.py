@@ -1210,7 +1210,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
         ''', indent=1)
 
         calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
-        if obj.doublearray:
+        if obj.nested_array:
             calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
 
         emit(c_file, '''
@@ -1219,7 +1219,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
                         yajl_val val = values[i];
         ''', indent=3)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                         size_t j;
                         ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(val)->len + 1, sizeof (**ret->{obj.fixname}));
@@ -1274,7 +1274,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
                   {
         ''', indent=2)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, f'''
@@ -1316,7 +1316,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
                   {{
         ''', indent=1)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                   size_t j;
                   for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)
@@ -1339,7 +1339,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
                   }
         ''', indent=2)
 
-        if obj.doublearray:
+        if obj.nested_array:
             free_and_null(c_file, "ptr", f"{obj.fixname}_item_lens", indent=2)
 
         free_and_null(c_file, "ptr", obj.fixname, indent=2)
@@ -1354,7 +1354,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
             typename = obj.subtypname
         maybe_element = "_element" if obj.subtypname is None else ""
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                         ret->{obj.fixname}_item_lens[i] = src->{obj.fixname}_item_lens[i];
                         ret->{obj.fixname}[i] = calloc (ret->{obj.fixname}_item_lens[i] + 1, sizeof (**ret->{obj.fixname}[i]));
@@ -1387,7 +1387,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
                   {{
         ''', indent=1)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                     yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(tmp)->values;
                     ret->{obj.fixname} = calloc ( YAJL_GET_ARRAY_NO_CHECK(tmp)->len + 1, sizeof (*ret->{obj.fixname}));
@@ -1433,7 +1433,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
         ''', indent=1)
         emit_gen_key_with_check(c_file, obj.origname, indent=2)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, f'''
@@ -1494,7 +1494,7 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
         ''', indent=1)
 
         calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
-        if obj.doublearray:
+        if obj.nested_array:
             calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
 
         emit(c_file, '''
@@ -1502,7 +1502,7 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
                       {
         ''', indent=3)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                         yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(values[i])->values;
                         ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(values[i])->len + 1, sizeof (**ret->{obj.fixname}));
@@ -1551,7 +1551,7 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
                   {
         ''', indent=2)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, f'''
@@ -1592,7 +1592,7 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
                   {{
         ''', indent=1)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                     size_t j;
                     for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)
@@ -1615,7 +1615,7 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
                   }
         ''', indent=3)
 
-        if obj.doublearray:
+        if obj.nested_array:
             free_and_null(c_file, "ptr", f"{obj.fixname}_item_lens", indent=2)
 
         free_and_null(c_file, "ptr", obj.fixname, indent=2)
@@ -1628,7 +1628,7 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
         emit(c_file, '''
            {
         ''', indent=0)
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                     size_t i;
                     for (i = 0; i < ptr->{obj.fixname}_len; i++)
@@ -1654,7 +1654,7 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
             ''', indent=indent+2)
 
     def _emit_clone_string(self, c_file, obj, indent):
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                         ret->{obj.fixname}[i] = calloc (ret->{obj.fixname}_item_lens[i] + 1, sizeof (**ret->{obj.fixname}[i]));
                         if (ret->{obj.fixname}[i] == NULL)
@@ -2102,7 +2102,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
             ptr->len = alen;
     ''', indent=0)
 
-    if obj.doublearray:
+    if obj.nested_array:
         emit(c_file, '''
             ptr->subitem_lens = calloc ( alen + 1, sizeof (size_t));
             if (ptr->subitem_lens == NULL)
@@ -2122,7 +2122,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
         else:
             subtypename = helpers.get_name_substr(obj.name, prefix)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                         size_t j;
                         ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));
@@ -2144,7 +2144,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
                           return NULL;
             ''', indent=2)
     elif obj.subtyp == 'byte':
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, '''
                         char *str = YAJL_GET_STRING (work);
                         ptr->items[j] = (uint8_t *)strdup (str ? str : "");
@@ -2158,7 +2158,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
                         break;
             ''', indent=2)
     else:
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, '''
                         ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));
                         if (ptr->items[i] == NULL)
@@ -2219,7 +2219,7 @@ def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
                           }}
         ''', indent=2)
     elif obj.subtyp == 'string':
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, '''
                         size_t j;
                         for (j = 0; j < ptr->subitem_lens[i]; j++)
@@ -2236,7 +2236,7 @@ def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
                         ptr->items[i] = NULL;
             ''', indent=2)
     elif not helpers.is_compound_type(obj.subtyp):
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, '''
                         free (ptr->items[i]);
                         ptr->items[i] = NULL;
@@ -2247,7 +2247,7 @@ def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
         else:
             free_func = helpers.get_name_substr(obj.name, prefix)
 
-        if obj.doublearray:
+        if obj.nested_array:
             emit(c_file, f'''
                           size_t j;
                           for (j = 0; j < ptr->subitem_lens[i]; j++)
@@ -2267,7 +2267,7 @@ def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
     emit(c_file, '''
               }
     ''', indent=1)
-    if obj.doublearray:
+    if obj.nested_array:
         emit(c_file, '''
             free (ptr->subitem_lens);
             ptr->subitem_lens = NULL;
@@ -2328,7 +2328,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         emit(c_file, '''
               {
         ''', indent=1)
-        if obj.doublearray:
+        if obj.nested_array:
             emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, f'''
@@ -2357,7 +2357,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
             {
                     const char *str = NULL;
         ''', indent=1)
-        if obj.doublearray:
+        if obj.nested_array:
             emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, '''
@@ -2396,7 +2396,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         emit(c_file, '''
                 {
         ''', indent=2)
-        if obj.doublearray:
+        if obj.nested_array:
             emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, '''

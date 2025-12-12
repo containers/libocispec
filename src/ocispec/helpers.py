@@ -254,7 +254,7 @@ class SchemaNode:
     History: 2019-06-17
     '''
     def __init__(self, name, typ, children, subtyp=None, subtypobj=None, subtypname=None, \
-        required=None, doublearray=False):
+        required=None, nested_array=False):
         self.typ = typ
         self.children = children
         self.subtyp = subtyp
@@ -264,7 +264,7 @@ class SchemaNode:
         self.name = conv_to_c_style(name.name.replace('.', '_'))
         self.origname = name.leaf or name.name
         self.fixname = conv_to_c_style(self.origname.replace('.', '_'))
-        self.doublearray = doublearray
+        self.nested_array = nested_array
 
 
 
