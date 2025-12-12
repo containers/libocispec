@@ -523,29 +523,47 @@ def get_map_string_obj(obj, c_file, prefix):
             childname = child.subtypname
         else:
             childname = helpers.get_prefixed_name(child.name, prefix)
-    c_file.append('    size_t len = 0, i;\n')
-    c_file.append("    if (ptr != NULL)\n")
-    c_file.append("        len = ptr->len;\n")
-    c_file.append("    if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
-    c_file.append('        yajl_gen_config (g, yajl_gen_beautify, 0);\n')
-    c_file.append("    stat = yajl_gen_map_open ((yajl_gen) g);\n")
+
+    emit(c_file, f'''
+        size_t len = 0, i;
+        if (ptr != NULL)
+            len = ptr->len;
+        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))
+            yajl_gen_config (g, yajl_gen_beautify, 0);
+        stat = yajl_gen_map_open ((yajl_gen) g);
+    ''', indent=1)
+
     check_gen_status(c_file, indent=1)
-    c_file.append(f'    if (len || (ptr != NULL && ptr->keys != NULL && ptr->{child.fixname} != NULL))\n')
-    c_file.append('      {\n')
-    c_file.append('        for (i = 0; i < len; i++)\n')
-    c_file.append('          {\n')
-    c_file.append('            char *str = ptr->keys[i] ? ptr->keys[i] : "";\n')
-    c_file.append('            stat = yajl_gen_string ((yajl_gen) g, \
-(const unsigned char *)str, strlen (str));\n')
+
+    emit(c_file, f'''
+        if (len || (ptr != NULL && ptr->keys != NULL && ptr->{child.fixname} != NULL))
+          {{
+            for (i = 0; i < len; i++)
+              {{
+                char *str = ptr->keys[i] ? ptr->keys[i] : "";
+                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen (str));
+    ''', indent=1)
+
     check_gen_status(c_file, indent=3)
-    c_file.append(f'            stat = gen_{childname} (g, ptr->{child.fixname}[i], ctx, err);\n')
+
+    emit(c_file, f'''
+                stat = gen_{childname} (g, ptr->{child.fixname}[i], ctx, err);
+    ''', indent=3)
+
     check_gen_status(c_file, indent=3)
-    c_file.append('          }\n')
-    c_file.append('      }\n')
-    c_file.append("    stat = yajl_gen_map_close ((yajl_gen) g);\n")
+
+    emit(c_file, '''
+              }
+          }
+        stat = yajl_gen_map_close ((yajl_gen) g);
+    ''', indent=2)
+
     check_gen_status(c_file, indent=1)
-    c_file.append("    if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))\n")
-    c_file.append('        yajl_gen_config (g, yajl_gen_beautify, 1);\n')
+
+    emit(c_file, '''
+        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))
+            yajl_gen_config (g, yajl_gen_beautify, 1);
+    ''', indent=1)
 
 def get_obj_arr_obj_array(obj, c_file, prefix):
     if obj.subtypobj or obj.subtyp == 'object':
