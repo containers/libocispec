@@ -170,98 +170,154 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
             typename = obj.subtypname
         else:
             typename = helpers.get_name_substr(obj.name, prefix)
-        c_file.append('    do\n')
-        c_file.append('      {\n')
-        c_file.append(f'        yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);\n')
-        c_file.append('        if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)\n')
-        c_file.append('          {\n')
-        c_file.append('            size_t i;\n')
-        c_file.append('            size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;\n')
-        c_file.append('            yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;\n')
-        c_file.append(f'            ret->{obj.fixname}_len = len;\n')
+
+        emit(c_file, f'''
+            do
+              {{
+                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
+                if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
+                  {{
+                    size_t i;
+                    size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
+                    yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
+                    ret->{obj.fixname}_len = len;
+        ''', indent=1)
+
         calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
         if obj.doublearray:
             calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
-        c_file.append('            for (i = 0; i < len; i++)\n')
-        c_file.append('              {\n')
-        c_file.append('                yajl_val val = values[i];\n')
+
+        emit(c_file, '''
+                    for (i = 0; i < len; i++)
+                      {
+                        yajl_val val = values[i];
+        ''', indent=3)
+
         if obj.doublearray:
-            c_file.append('                size_t j;\n')
-            c_file.append(f'                ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(val)->len + 1, sizeof (**ret->{obj.fixname}));\n')
+            emit(c_file, f'''
+                        size_t j;
+                        ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(val)->len + 1, sizeof (**ret->{obj.fixname}));
+            ''', indent=4)
             null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
-            c_file.append('                yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(val)->values;\n')
-            c_file.append('                for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(val)->len; j++)\n')
-            c_file.append('                  {\n')
-            c_file.append(f'                    ret->{obj.fixname}[i][j] = make_{typename} (items[j], ctx, err);\n')
+            emit(c_file, '''
+                        yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(val)->values;
+                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(val)->len; j++)
+                          {
+            ''', indent=4)
+            emit(c_file, f'''
+                            ret->{obj.fixname}[i][j] = make_{typename} (items[j], ctx, err);
+            ''', indent=5)
             null_check_return(c_file, f'ret->{obj.fixname}[i][j]', indent=5)
-            c_file.append(f'                    ret->{obj.fixname}_item_lens[i] += 1;\n')
-            c_file.append('                  };\n')
+            emit(c_file, f'''
+                            ret->{obj.fixname}_item_lens[i] += 1;
+                          }};
+            ''', indent=5)
         else:
-            c_file.append(f'                ret->{obj.fixname}[i] = make_{typename} (val, ctx, err);\n')
+            emit(c_file, f'''
+                        ret->{obj.fixname}[i] = make_{typename} (val, ctx, err);
+            ''', indent=4)
             null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
-        c_file.append('              }\n')
-        c_file.append('          }\n')
-        c_file.append('      }\n')
-        c_file.append('    while (0);\n')
+
+        emit(c_file, '''
+                          }
+                    }
+                  }
+                while (0);
+        ''', indent=1)
     elif obj.subtyp == 'byte':
-        c_file.append('    do\n')
-        c_file.append('      {\n')
-        c_file.append(f'        yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_string);\n')
-        c_file.append('        if (tmp != NULL)\n')
-        c_file.append('          {\n')
+        emit(c_file, f'''
+            do
+              {{
+                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_string);
+                if (tmp != NULL)
+                  {{
+        ''', indent=1)
+
         if obj.doublearray:
-            c_file.append('                yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(tmp)->values;\n')
-            c_file.append(f'                ret->{obj.fixname} = calloc ( YAJL_GET_ARRAY_NO_CHECK(tmp)->len + 1, sizeof (*ret->{obj.fixname}));\n')
+            emit(c_file, f'''
+                    yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(tmp)->values;
+                    ret->{obj.fixname} = calloc ( YAJL_GET_ARRAY_NO_CHECK(tmp)->len + 1, sizeof (*ret->{obj.fixname}));
+            ''', indent=4)
             null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
-            c_file.append('                size_t j;\n')
-            c_file.append('                for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(tmp)->len; j++)\n')
-            c_file.append('                  {\n')
-            c_file.append('                    char *str = YAJL_GET_STRING (itmes[j]);\n')
-            c_file.append(f'                    ret->{obj.fixname}[j] = (uint8_t *)strdup (str ? str : "");\n')
+            emit(c_file, '''
+                    size_t j;
+                    for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(tmp)->len; j++)
+                      {
+                        char *str = YAJL_GET_STRING (itmes[j]);
+            ''', indent=4)
+            emit(c_file, f'''
+                        ret->{obj.fixname}[j] = (uint8_t *)strdup (str ? str : "");
+            ''', indent=5)
             null_check_return(c_file, f'ret->{obj.fixname}[j]', indent=5)
-            c_file.append('                  };\n')
+            emit(c_file, '''
+                      };
+            ''', indent=5)
         else:
-            c_file.append('            char *str = YAJL_GET_STRING (tmp);\n')
-            c_file.append(f'            ret->{obj.fixname} = (uint8_t *)strdup (str ? str : "");\n')
+            emit(c_file, '''
+                    char *str = YAJL_GET_STRING (tmp);
+            ''', indent=3)
+            emit(c_file, f'''
+                    ret->{obj.fixname} = (uint8_t *)strdup (str ? str : "");
+            ''', indent=3)
             null_check_return(c_file, f'ret->{obj.fixname}', indent=3)
-            c_file.append(f'            ret->{obj.fixname}_len = str != NULL ? strlen (str) : 0;\n')
-        c_file.append('        }\n')
-        c_file.append('      }\n')
-        c_file.append('    while (0);\n')
+            emit(c_file, f'''
+                    ret->{obj.fixname}_len = str != NULL ? strlen (str) : 0;
+            ''', indent=3)
+
+        emit(c_file, '''
+                    }
+                  }
+                while (0);
+        ''', indent=1)
     else:
-        c_file.append('    do\n')
-        c_file.append('      {\n')
-        c_file.append(f'        yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);\n')
-        c_file.append('        if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)\n')
-        c_file.append('          {\n')
-        c_file.append('            size_t i;\n')
-        c_file.append('            size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;\n')
-        c_file.append('            yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;\n')
-        c_file.append(f'            ret->{obj.fixname}_len = len;\n')
+        emit(c_file, f'''
+            do
+              {{
+                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
+                if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
+                  {{
+                    size_t i;
+                    size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
+                    yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
+                    ret->{obj.fixname}_len = len;
+        ''', indent=1)
+
         calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
         if obj.doublearray:
             calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
-        c_file.append('            for (i = 0; i < len; i++)\n')
-        c_file.append('              {\n')
+
+        emit(c_file, '''
+                    for (i = 0; i < len; i++)
+                      {
+        ''', indent=3)
+
         if obj.doublearray:
-            c_file.append('                    yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(values[i])->values;\n')
-            c_file.append(f'                    ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(values[i])->len + 1, sizeof (**ret->{obj.fixname}));\n')
-            c_file.append(f'                    if (ret->{obj.fixname}[i] == NULL)\n')
-            c_file.append('                        return NULL;\n')
-            c_file.append('                    size_t j;\n')
-            c_file.append('                    for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(values[i])->len; j++)\n')
-            c_file.append('                      {\n')
+            emit(c_file, f'''
+                        yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(values[i])->values;
+                        ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(values[i])->len + 1, sizeof (**ret->{obj.fixname}));
+            ''', indent=4)
+            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=5)
+            emit(c_file, '''
+                        size_t j;
+                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(values[i])->len; j++)
+                          {
+            ''', indent=4)
             read_val_generator(c_file, 5, 'items[j]', \
                                 f"ret->{obj.fixname}[i][j]", obj.subtyp, obj.origname, obj_typename)
-            c_file.append(f'                        ret->{obj.fixname}_item_lens[i] += 1;\n')
-            c_file.append('                    };\n')
+            emit(c_file, f'''
+                            ret->{obj.fixname}_item_lens[i] += 1;
+                        }};
+            ''', indent=5)
         else:
             read_val_generator(c_file, 4, 'values[i]', \
                                 f"ret->{obj.fixname}[i]", obj.subtyp, obj.origname, obj_typename)
-        c_file.append('              }\n')
-        c_file.append('        }\n')
-        c_file.append('      }\n')
-        c_file.append('    while (0);\n')
+
+        emit(c_file, '''
+                          }
+                    }
+                  }
+                while (0);
+        ''', indent=1)
 
 def parse_obj_type(obj, c_file, prefix, obj_typename):
     """
