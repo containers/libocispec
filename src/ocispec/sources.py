@@ -678,15 +678,13 @@ def get_map_string_obj(obj, c_file, prefix):
         else:
             childname = helpers.get_prefixed_name(child.name, prefix)
 
-    emit(c_file, f'''
+    emit(c_file, '''
         size_t len = 0, i;
         if (ptr != NULL)
             len = ptr->len;
-        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))
-            yajl_gen_config (g, yajl_gen_beautify, 0);
-        stat = yajl_gen_map_open ((yajl_gen) g);
     ''', indent=1)
-
+    emit_beautify_off(c_file, '!len', indent=1)
+    emit_gen_map_open(c_file, indent=1)
     check_gen_status(c_file, indent=1)
 
     emit(c_file, f'''
@@ -709,15 +707,10 @@ def get_map_string_obj(obj, c_file, prefix):
     emit(c_file, '''
               }
           }
-        stat = yajl_gen_map_close ((yajl_gen) g);
     ''', indent=2)
-
+    emit_gen_map_close(c_file, indent=1)
     check_gen_status(c_file, indent=1)
-
-    emit(c_file, '''
-        if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))
-            yajl_gen_config (g, yajl_gen_beautify, 1);
-    ''', indent=1)
+    emit_beautify_on(c_file, '!len', indent=1)
 
 def get_obj_arr_obj_array(obj, c_file, prefix):
     if obj.subtypobj or obj.subtyp == 'object':
