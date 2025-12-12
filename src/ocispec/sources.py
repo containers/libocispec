@@ -868,13 +868,12 @@ def get_obj_arr_obj(obj, c_file, prefix):
     History: 2019-06-17
     """
     if obj.typ == 'string':
-        l = len(obj.origname)
         emit(c_file, f'''
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
               {{
                 char *str = "";
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
         ''', indent=1)
+        emit_gen_key(c_file, obj.origname, indent=2)
         check_gen_status(c_file, indent=2)
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname} != NULL)
@@ -891,13 +890,12 @@ def get_obj_arr_obj(obj, c_file, prefix):
             numtyp = 'long long unsigned int'
         else:
             numtyp = 'long long int'
-        l = len(obj.origname)
         emit(c_file, f'''
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))
               {{
                 {numtyp} num = 0;
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
         ''', indent=1)
+        emit_gen_key(c_file, obj.origname, indent=2)
         check_gen_status(c_file, indent=2)
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname})
@@ -911,13 +909,12 @@ def get_obj_arr_obj(obj, c_file, prefix):
         numtyp = helpers.obtain_data_pointer_type(obj.typ)
         if numtyp == "":
             return
-        l = len(obj.origname)
         emit(c_file, f'''
             if ((ptr != NULL && ptr->{obj.fixname} != NULL))
               {{
                 {helpers.get_map_c_types(numtyp)} num = 0;
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
         ''', indent=1)
+        emit_gen_key(c_file, obj.origname, indent=2)
         check_gen_status(c_file, indent=2)
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname} != NULL)
@@ -930,13 +927,12 @@ def get_obj_arr_obj(obj, c_file, prefix):
               }
         ''', indent=1)
     elif obj.typ == 'boolean':
-        l = len(obj.origname)
         emit(c_file, f'''
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))
               {{
                 bool b = false;
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
         ''', indent=1)
+        emit_gen_key(c_file, obj.origname, indent=2)
         check_gen_status(c_file, indent=2)
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname})
@@ -948,7 +944,6 @@ def get_obj_arr_obj(obj, c_file, prefix):
               }
         ''', indent=1)
     elif obj.typ == 'object' or obj.typ == 'mapStringObject':
-        l = len(obj.origname)
         if obj.subtypname:
             typename = obj.subtypname
         else:
@@ -956,8 +951,8 @@ def get_obj_arr_obj(obj, c_file, prefix):
         emit(c_file, f'''
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
               {{
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
         ''', indent=1)
+        emit_gen_key(c_file, obj.origname, indent=2)
         check_gen_status(c_file, indent=2)
         emit(c_file, f'''
                 stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);
@@ -969,12 +964,11 @@ def get_obj_arr_obj(obj, c_file, prefix):
     elif obj.typ == 'array':
         get_obj_arr_obj_array(obj, c_file, prefix)
     elif helpers.valid_basic_map_name(obj.typ):
-        l = len(obj.origname)
         emit(c_file, f'''
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
               {{
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.fixname}"), {l} /* strlen ("{obj.fixname}") */);
         ''', indent=1)
+        emit_gen_key(c_file, obj.fixname, indent=2)
         check_gen_status(c_file, indent=2)
         emit(c_file, f'''
                 stat = gen_{helpers.make_basic_map_name(obj.typ)} (g, ptr ? ptr->{obj.fixname} : NULL, ctx, err);
