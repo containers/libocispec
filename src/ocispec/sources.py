@@ -143,6 +143,27 @@ def emit_asprintf_error(c_file, err_var, format_str, format_args, indent=0):
     ''', indent=indent)
 
 
+def emit_value_error(c_file, keyname, indent=0):
+    """Emit value error handling with error message wrapping.
+
+    Generates code to wrap an existing error message with additional context
+    about which key failed to parse.
+
+    Args:
+        c_file: List to append code lines to
+        keyname: The key name to include in the error message
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, f'''
+        char *new_error = NULL;
+        if (asprintf (&new_error, "Value error for key '{keyname}': %s", *err ? *err : "null") < 0)
+            new_error = strdup ("error allocating memory");
+        free (*err);
+        *err = new_error;
+        return NULL;
+    ''', indent=indent)
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
@@ -401,15 +422,12 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
                     ret->{obj.fixname} = make_{helpers.make_basic_map_name(obj.typ)} (tmp, ctx, err);
                     if (ret->{obj.fixname} == NULL)
                       {{
-                        char *new_error = NULL;
-                        if (asprintf (&new_error, "Value error for key '{obj.origname}': %s", *err ? *err : "null") < 0)
-                          new_error = strdup ("error allocating memory");
-                        free (*err);
-                        *err = new_error;
-                        return NULL;
-                      }}
-                  }}
-              }}
+        ''', indent=1)
+        emit_value_error(c_file, obj.origname, indent=4)
+        emit(c_file, '''
+                      }
+                  }
+              }
             while (0);
         ''', indent=1)
 
@@ -963,14 +981,11 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
                 {dest} = make_{helpers.make_basic_map_name(typ)} (val, ctx, err);
                 if ({dest} == NULL)
                   {{
-                    char *new_error = NULL;
-                    if (asprintf (&new_error, "Value error for key '{keyname}': %s", *err ? *err : "null") < 0)
-                        new_error = strdup ("error allocating memory");
-                    free (*err);
-                    *err = new_error;
-                    return NULL;
-                  }}
-              }}
+        ''', indent=level)
+        emit_value_error(c_file, keyname, indent=level + 2)
+        emit(c_file, '''
+                  }
+              }
         ''', indent=level)
     elif typ == 'string':
         emit(c_file, f'''
