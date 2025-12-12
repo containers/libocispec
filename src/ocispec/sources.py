@@ -129,24 +129,37 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
             childname = child.subtypname
         else:
             childname = helpers.get_prefixed_name(child.name, prefix)
-    c_file.append('    if (YAJL_GET_OBJECT (tree) != NULL)\n')
-    c_file.append('      {\n')
-    c_file.append('        size_t i;\n')
-    c_file.append('        size_t len = YAJL_GET_OBJECT_NO_CHECK (tree)->len;\n')
-    c_file.append('        const char **keys = YAJL_GET_OBJECT_NO_CHECK (tree)->keys;\n')
-    c_file.append('        yajl_val *values = YAJL_GET_OBJECT_NO_CHECK (tree)->values;\n')
-    c_file.append('        ret->len = len;\n')
+
+    emit(c_file, f'''
+        if (YAJL_GET_OBJECT (tree) != NULL)
+          {{
+            size_t i;
+            size_t len = YAJL_GET_OBJECT_NO_CHECK (tree)->len;
+            const char **keys = YAJL_GET_OBJECT_NO_CHECK (tree)->keys;
+            yajl_val *values = YAJL_GET_OBJECT_NO_CHECK (tree)->values;
+            ret->len = len;
+    ''', indent=1)
+
     calloc_with_check(c_file, 'ret->keys', 'len + 1', '*ret->keys', indent=2)
     calloc_with_check(c_file, f'ret->{child.fixname}', 'len + 1', f'*ret->{child.fixname}', indent=2)
-    c_file.append('        for (i = 0; i < len; i++)\n')
-    c_file.append('          {\n')
-    c_file.append('            yajl_val val;\n')
-    c_file.append('            const char *tmpkey = keys[i];\n')
-    c_file.append('            ret->keys[i] = strdup (tmpkey ? tmpkey : "");\n')
+
+    emit(c_file, f'''
+            for (i = 0; i < len; i++)
+              {{
+                yajl_val val;
+                const char *tmpkey = keys[i];
+                ret->keys[i] = strdup (tmpkey ? tmpkey : "");
+    ''', indent=2)
+
     null_check_return(c_file, 'ret->keys[i]', indent=3)
-    c_file.append('            val = values[i];\n')
-    c_file.append(f'            ret->{child.fixname}[i] = make_{childname} (val, ctx, err);\n')
+
+    emit(c_file, f'''
+                val = values[i];
+                ret->{child.fixname}[i] = make_{childname} (val, ctx, err);
+    ''', indent=3)
+
     null_check_return(c_file, f'ret->{child.fixname}[i]', indent=3)
+
     c_file.append('          }\n')
     c_file.append('      }\n')
 
