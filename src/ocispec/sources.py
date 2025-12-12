@@ -127,6 +127,22 @@ def do_read_value(c_file, src_expr, dest_expr, typ, origname, obj_typename, inde
     ''', indent=indent)
 
 
+def emit_asprintf_error(c_file, err_var, format_str, format_args, indent=0):
+    """Emit asprintf error with strdup fallback.
+
+    Args:
+        c_file: List to append code lines to
+        err_var: Error variable (e.g., 'err' or '&new_error')
+        format_str: Format string for asprintf
+        format_args: Arguments for format string
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, f'''
+        if (asprintf ({err_var}, "{format_str}", {format_args}) < 0)
+            *err = strdup ("error allocating memory");
+    ''', indent=indent)
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
@@ -415,10 +431,11 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
         emit(c_file, f'''
             if (ret->{i.fixname} == NULL)
               {{
-                if (asprintf (err, "Required field '%s' not present",  "{i.origname}") < 0)
-                    *err = strdup ("error allocating memory");
+        ''', indent=1)
+        emit_asprintf_error(c_file, 'err', "Required field '%s' not present", f'"{i.origname}"', indent=2)
+        emit(c_file, '''
                 return NULL;
-              }}
+              }
         ''', indent=1)
 
     if obj.typ == 'object' and obj.children is not None:
