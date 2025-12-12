@@ -1370,26 +1370,45 @@ def c_file_str(c_file, i):
     Interface: None
     History: 2019-10-31
     """
-    c_file.append(f"    if (ptr->{i.fixname} != NULL)\n")
-    c_file.append("      {\n")
-    c_file.append("        size_t i;\n")
-    c_file.append(f"        for (i = 0; i < ptr->{i.fixname}_len; i++)\n")
-    c_file.append("          {\n")
+    emit(c_file, f'''
+        if (ptr->{i.fixname} != NULL)
+          {{
+            size_t i;
+            for (i = 0; i < ptr->{i.fixname}_len; i++)
+              {{
+    ''', indent=1)
+
     if i.doublearray:
-        c_file.append("            size_t j;\n")
-        c_file.append(f"            for (j = 0; j < ptr->{i.fixname}_item_lens[i]; j++)\n")
-        c_file.append("              {\n")
+        emit(c_file, f'''
+                size_t j;
+                for (j = 0; j < ptr->{i.fixname}_item_lens[i]; j++)
+                  {{
+        ''', indent=3)
         free_and_null(c_file, "ptr", f"{i.fixname}[i][j]", indent=4)
-        c_file.append("            }\n")
-    c_file.append(f"            if (ptr->{i.fixname}[i] != NULL)\n")
-    c_file.append("              {\n")
+        emit(c_file, '''
+                  }
+        ''', indent=3)
+
+    emit(c_file, f'''
+                if (ptr->{i.fixname}[i] != NULL)
+                  {{
+    ''', indent=3)
+
     free_and_null(c_file, "ptr", f"{i.fixname}[i]", indent=4)
-    c_file.append("              }\n")
-    c_file.append("          }\n")
+
+    emit(c_file, '''
+                  }
+              }
+    ''', indent=3)
+
     if i.doublearray:
         free_and_null(c_file, "ptr", f"{i.fixname}_item_lens", indent=2)
+
     free_and_null(c_file, "ptr", i.fixname, indent=2)
-    c_file.append("    }\n")
+
+    emit(c_file, '''
+          }
+    ''', indent=1)
 
 
 def src_reflect(structs, schema_info, c_file, root_typ):
