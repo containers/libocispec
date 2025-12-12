@@ -1200,69 +1200,101 @@ def json_value_generator(c_file, level, src, dst, ptx, typ):
 def make_c_array_free (i, c_file, prefix):
     if helpers.valid_basic_map_name(i.subtyp):
         free_func = helpers.make_basic_map_name(i.subtyp)
-        c_file.append(f"    if (ptr->{i.fixname} != NULL)\n")
-        c_file.append("      {\n")
-        c_file.append("        size_t i;\n")
-        c_file.append(f"        for (i = 0; i < ptr->{i.fixname}_len; i++)\n")
-        c_file.append("          {\n")
-        c_file.append(f"            if (ptr->{i.fixname}[i] != NULL)\n")
-        c_file.append("              {\n")
-        c_file.append(f"                free_{free_func} (ptr->{i.fixname}[i]);\n")
-        c_file.append(f"                ptr->{i.fixname}[i] = NULL;\n")
-        c_file.append("              }\n")
-        c_file.append("          }\n")
+        emit(c_file, f'''
+            if (ptr->{i.fixname} != NULL)
+              {{
+                size_t i;
+                for (i = 0; i < ptr->{i.fixname}_len; i++)
+                  {{
+                    if (ptr->{i.fixname}[i] != NULL)
+                      {{
+                        free_{free_func} (ptr->{i.fixname}[i]);
+                        ptr->{i.fixname}[i] = NULL;
+                      }}
+                  }}
+        ''', indent=1)
         free_and_null(c_file, "ptr", i.fixname, indent=2)
-        c_file.append("      }\n")
+        emit(c_file, '''
+              }
+        ''', indent=1)
     elif i.subtyp == 'string':
         c_file_str(c_file, i)
     elif not helpers.is_compound_type(i.subtyp):
-        c_file.append("   {\n")
+        emit(c_file, '''
+           {
+        ''', indent=0)
         if i.doublearray:
-            c_file.append("            size_t i;\n")
-            c_file.append(f"            for (i = 0; i < ptr->{i.fixname}_len; i++)\n")
-            c_file.append("              {\n")
+            emit(c_file, f'''
+                    size_t i;
+                    for (i = 0; i < ptr->{i.fixname}_len; i++)
+                      {{
+            ''', indent=3)
             free_and_null(c_file, "ptr", f"{i.fixname}[i]", indent=4)
-            c_file.append("              }\n")
+            emit(c_file, '''
+                      }
+            ''', indent=3)
             free_and_null(c_file, "ptr", f"{i.fixname}_item_lens", indent=3)
         free_and_null(c_file, "ptr", i.fixname, indent=2)
-        c_file.append("    }\n")
+        emit(c_file, '''
+            }
+        ''', indent=1)
     elif i.subtyp == 'object' or i.subtypobj is not None:
         if i.subtypname is not None:
             free_func = i.subtypname
         else:
             free_func = helpers.get_name_substr(i.name, prefix)
-        c_file.append(f"    if (ptr->{i.fixname} != NULL)")
-        c_file.append("      {\n")
-        c_file.append("        size_t i;\n")
-        c_file.append(f"        for (i = 0; i < ptr->{i.fixname}_len; i++)\n")
-        c_file.append("          {\n")
+
+        emit(c_file, f'''
+            if (ptr->{i.fixname} != NULL)
+              {{
+                size_t i;
+                for (i = 0; i < ptr->{i.fixname}_len; i++)
+                  {{
+        ''', indent=1)
+
         if i.doublearray:
-            c_file.append("          size_t j;\n")
-            c_file.append(f"          for (j = 0; j < ptr->{i.fixname}_item_lens[i]; j++)\n")
-            c_file.append("            {\n")
-            c_file.append(f"              free_{free_func} (ptr->{i.fixname}[i][j]);\n")
-            c_file.append(f"              ptr->{i.fixname}[i][j] = NULL;\n")
-            c_file.append("          }\n")
+            emit(c_file, f'''
+                  size_t j;
+                  for (j = 0; j < ptr->{i.fixname}_item_lens[i]; j++)
+                    {{
+                      free_{free_func} (ptr->{i.fixname}[i][j]);
+                      ptr->{i.fixname}[i][j] = NULL;
+                  }}
+            ''', indent=2)
             free_and_null(c_file, "ptr", f"{i.fixname}[i]", indent=2)
         else:
-            c_file.append(f"          if (ptr->{i.fixname}[i] != NULL)\n")
-            c_file.append("            {\n")
-            c_file.append(f"              free_{free_func} (ptr->{i.fixname}[i]);\n")
-            c_file.append(f"              ptr->{i.fixname}[i] = NULL;\n")
-            c_file.append("            }\n")
-        c_file.append("          }\n")
+            emit(c_file, f'''
+                  if (ptr->{i.fixname}[i] != NULL)
+                    {{
+                      free_{free_func} (ptr->{i.fixname}[i]);
+                      ptr->{i.fixname}[i] = NULL;
+                    }}
+            ''', indent=2)
+
+        emit(c_file, '''
+                  }
+        ''', indent=2)
+
         if i.doublearray:
             free_and_null(c_file, "ptr", f"{i.fixname}_item_lens", indent=2)
 
         free_and_null(c_file, "ptr", i.fixname, indent=2)
-        c_file.append("      }\n")
+
+        emit(c_file, '''
+              }
+        ''', indent=1)
+
     c_typ = helpers.obtain_pointer(i.name, i.subtypobj, prefix)
     if c_typ == "":
         return True
     if i.subtypname is not None:
         c_typ = c_typ + "_element"
-    c_file.append(f"    free_{c_typ} (ptr->{i.fixname});\n")
-    c_file.append(f"    ptr->{i.fixname} = NULL;\n")
+
+    emit(c_file, f'''
+        free_{c_typ} (ptr->{i.fixname});
+        ptr->{i.fixname} = NULL;
+    ''', indent=1)
+
     return False
 
 def make_c_free (obj, c_file, prefix):
