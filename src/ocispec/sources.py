@@ -694,7 +694,8 @@ class ObjectType(TypeHandler):
         ''', indent=indent)
 
     def emit_clone(self, c_file, obj, prefix, indent=1):
-        # Object clone requires context (parent type) - handled in make_clone
+        # Object clone within mapStringObject requires special handling
+        # that needs parent context - handled in make_clone
         pass
 
 
@@ -1609,7 +1610,9 @@ def make_clone(obj, c_file, prefix):
     nodes = obj.children if obj.subtypobj is None else obj.subtypobj
     for i in nodes or []:
         handler = get_type_handler(i.typ)
-        if handler:
+        # Object type needs parent context (mapStringObject vs regular object)
+        # so we handle it explicitly below rather than via handler
+        if handler and i.typ != 'object':
             handler.emit_clone(c_file, i, prefix, indent=1)
         elif i.typ == 'object':
             node_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
