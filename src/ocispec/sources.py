@@ -705,8 +705,10 @@ class ObjectType(TypeHandler):
         ''', indent=indent)
 
     def emit_clone(self, c_file, obj, prefix, indent=1):
-        # Object clone within mapStringObject requires special handling
-        # that needs parent context - handled in make_clone
+        # Intentionally empty: object cloning is handled directly in make_clone()
+        # because it requires per-type context (typename resolution) that the
+        # handler dispatch pattern doesn't provide. The actual cloning logic
+        # for object fields is emitted by make_clone() at lines 1725-1745.
         pass
 
 
