@@ -1341,18 +1341,28 @@ def c_file_map_str(c_file, child, childname):
     Interface: None
     History: 2019-10-31
     """
-    c_file.append(f"    if (ptr->keys != NULL && ptr->{child.fixname} != NULL)\n")
-    c_file.append("      {\n")
-    c_file.append("        size_t i;\n")
-    c_file.append("        for (i = 0; i < ptr->len; i++)\n")
-    c_file.append("          {\n")
+    emit(c_file, f'''
+        if (ptr->keys != NULL && ptr->{child.fixname} != NULL)
+          {{
+            size_t i;
+            for (i = 0; i < ptr->len; i++)
+              {{
+    ''', indent=1)
+
     free_and_null(c_file, "ptr", "keys[i]", indent=3)
-    c_file.append(f"            free_{childname} (ptr->{child.fixname}[i]);\n")
-    c_file.append(f"            ptr->{child.fixname}[i] = NULL;\n")
-    c_file.append("          }\n")
+
+    emit(c_file, f'''
+                free_{childname} (ptr->{child.fixname}[i]);
+                ptr->{child.fixname}[i] = NULL;
+              }}
+    ''', indent=3)
+
     free_and_null(c_file, "ptr", "keys", indent=2)
     free_and_null(c_file, "ptr", child.fixname, indent=2)
-    c_file.append("      }\n")
+
+    emit(c_file, '''
+          }
+    ''', indent=1)
 
 def c_file_str(c_file, i):
     """
