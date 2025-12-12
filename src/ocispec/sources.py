@@ -104,6 +104,29 @@ def check_gen_status(c_file, indent=0):
     c_file.append(f"{prefix}    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
 
 
+def do_read_value(c_file, src_expr, dest_expr, typ, origname, obj_typename, indent=1):
+    """Wrap read_val_generator in a do-while(0) block.
+
+    Args:
+        c_file: Output file list
+        src_expr: Source expression (e.g., 'get_val (tree, "name", yajl_t_string)')
+        dest_expr: Destination expression (e.g., 'ret->field')
+        typ: Field type
+        origname: Original field name from schema
+        obj_typename: Object type name
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, f'''
+        do
+          {{
+    ''', indent=indent)
+    read_val_generator(c_file, indent + 1, src_expr, dest_expr, typ, origname, obj_typename)
+    emit(c_file, f'''
+          }}
+        while (0);
+    ''', indent=indent)
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
@@ -326,60 +349,20 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
     History: 2019-06-17
     """
     if obj.typ == 'string':
-        emit(c_file, f'''
-            do
-              {{
-        ''', indent=1)
-        read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_string)', \
-                             f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        emit(c_file, '''
-              }
-            while (0);
-        ''', indent=1)
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_string)',
+                      f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename, indent=1)
     elif helpers.judge_data_type(obj.typ):
-        emit(c_file, f'''
-            do
-              {{
-        ''', indent=1)
-        read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_number)', \
-                             f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        emit(c_file, '''
-              }
-            while (0);
-        ''', indent=1)
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_number)',
+                      f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename, indent=1)
     elif helpers.judge_data_pointer_type(obj.typ):
-        emit(c_file, f'''
-            do
-              {{
-        ''', indent=1)
-        read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_number)', \
-                             f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        emit(c_file, '''
-              }
-            while (0);
-        ''', indent=1)
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_number)',
+                      f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename, indent=1)
     if obj.typ == 'boolean':
-        emit(c_file, f'''
-            do
-              {{
-        ''', indent=1)
-        read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_true)', \
-                             f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        emit(c_file, '''
-              }
-            while (0);
-        ''', indent=1)
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_true)',
+                      f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename, indent=1)
     if obj.typ == 'booleanPointer':
-        emit(c_file, f'''
-            do
-              {{
-        ''', indent=1)
-        read_val_generator(c_file, 2, f'get_val (tree, "{obj.origname}", yajl_t_true)', \
-                             f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename)
-        emit(c_file, '''
-              }
-            while (0);
-        ''', indent=1)
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_true)',
+                      f"ret->{obj.fixname}", obj.typ, obj.origname, obj_typename, indent=1)
     elif obj.typ == 'object' or obj.typ == 'mapStringObject':
         if obj.subtypname is not None:
             typename = obj.subtypname
@@ -531,11 +514,9 @@ def parse_json_to_c(obj, c_file, prefix):
 
     if obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
         parse_obj_arr_obj(obj, c_file, prefix, obj_typename)
-    emit(c_file, '''
-            return move_ptr (ret);
-        }
-
-    ''', indent=1)
+    c_file.append("    return move_ptr (ret);\n")
+    c_file.append("}\n")
+    c_file.append("\n")
 
 
 def get_map_string_obj(obj, c_file, prefix):
@@ -1304,11 +1285,9 @@ def make_clone(obj, c_file, prefix):
         else:
             raise Exception("Unimplemented type for clone: %s" % i.typ)
 
-    emit(c_file, '''
-            return move_ptr (ret);
-        }
-
-    ''', indent=1)
+    c_file.append("    return move_ptr (ret);\n")
+    c_file.append("}\n")
+    c_file.append("\n")
 
 
 def json_value_generator(c_file, level, src, dst, ptx, typ):
@@ -1756,10 +1735,11 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
 
     emit(c_file, '''
 
-              }
-            return move_ptr(ptr);
-        }
+      }
     ''', indent=1)
+    c_file.append("    return move_ptr(ptr);\n")
+    c_file.append("}\n")
+    c_file.append("\n")
 
 def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
     c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
