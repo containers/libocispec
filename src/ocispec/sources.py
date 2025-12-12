@@ -63,6 +63,19 @@ def free_and_null(c_file, ptr, field, indent=0):
     c_file.append(f"{prefix}{ptr}->{field} = NULL;\n")
 
 
+def null_check_return(c_file, var, indent=0):
+    """Generate NULL check with return NULL.
+
+    Args:
+        c_file: List to append code lines to
+        var: Variable to check (can be expression like 'ret->field' or 'ret->field[i]')
+        indent: Number of 4-space indentation levels
+    """
+    prefix = '    ' * indent
+    c_file.append(f"{prefix}if ({var} == NULL)\n")
+    c_file.append(f"{prefix}  return NULL;\n")
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
@@ -96,22 +109,18 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     c_file.append('        yajl_val *values = YAJL_GET_OBJECT_NO_CHECK (tree)->values;\n')
     c_file.append('        ret->len = len;\n')
     c_file.append('        ret->keys = calloc (len + 1, sizeof (*ret->keys));\n')
-    c_file.append('        if (ret->keys == NULL)\n')
-    c_file.append('          return NULL;\n')
+    null_check_return(c_file, 'ret->keys', indent=2)
     c_file.append(f'        ret->{child.fixname} = calloc (len + 1, sizeof (*ret->{child.fixname}));\n')
-    c_file.append(f'        if (ret->{child.fixname} == NULL)\n')
-    c_file.append('          return NULL;\n')
+    null_check_return(c_file, f'ret->{child.fixname}', indent=2)
     c_file.append('        for (i = 0; i < len; i++)\n')
     c_file.append('          {\n')
     c_file.append('            yajl_val val;\n')
     c_file.append('            const char *tmpkey = keys[i];\n')
     c_file.append('            ret->keys[i] = strdup (tmpkey ? tmpkey : "");\n')
-    c_file.append('            if (ret->keys[i] == NULL)\n')
-    c_file.append("              return NULL;\n")
+    null_check_return(c_file, 'ret->keys[i]', indent=3)
     c_file.append('            val = values[i];\n')
     c_file.append(f'            ret->{child.fixname}[i] = make_{childname} (val, ctx, err);\n')
-    c_file.append(f'            if (ret->{child.fixname}[i] == NULL)\n')
-    c_file.append("              return NULL;\n")
+    null_check_return(c_file, f'ret->{child.fixname}[i]', indent=3)
     c_file.append('          }\n')
     c_file.append('      }\n')
 
@@ -132,32 +141,27 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.append('            yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;\n')
         c_file.append(f'            ret->{obj.fixname}_len = len;\n')
         c_file.append(f'            ret->{obj.fixname} = calloc (len + 1, sizeof (*ret->{obj.fixname}));\n')
-        c_file.append(f'            if (ret->{obj.fixname} == NULL)\n')
-        c_file.append('              return NULL;\n')
+        null_check_return(c_file, f'ret->{obj.fixname}', indent=3)
         if obj.doublearray:
             c_file.append(f'            ret->{obj.fixname}_item_lens = calloc ( len + 1, sizeof (size_t));\n')
-            c_file.append(f'            if (ret->{obj.fixname}_item_lens == NULL)\n')
-            c_file.append('                return NULL;\n')
+            null_check_return(c_file, f'ret->{obj.fixname}_item_lens', indent=4)
         c_file.append('            for (i = 0; i < len; i++)\n')
         c_file.append('              {\n')
         c_file.append('                yajl_val val = values[i];\n')
         if obj.doublearray:
             c_file.append('                size_t j;\n')
             c_file.append(f'                ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(val)->len + 1, sizeof (**ret->{obj.fixname}));\n')
-            c_file.append(f'                if (ret->{obj.fixname}[i] == NULL)\n')
-            c_file.append('                    return NULL;\n')
+            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
             c_file.append('                yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(val)->values;\n')
             c_file.append('                for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(val)->len; j++)\n')
             c_file.append('                  {\n')
             c_file.append(f'                    ret->{obj.fixname}[i][j] = make_{typename} (items[j], ctx, err);\n')
-            c_file.append(f'                    if (ret->{obj.fixname}[i][j] == NULL)\n')
-            c_file.append("                        return NULL;\n")
+            null_check_return(c_file, f'ret->{obj.fixname}[i][j]', indent=5)
             c_file.append(f'                    ret->{obj.fixname}_item_lens[i] += 1;\n')
             c_file.append('                  };\n')
         else:
             c_file.append(f'                ret->{obj.fixname}[i] = make_{typename} (val, ctx, err);\n')
-            c_file.append(f'                if (ret->{obj.fixname}[i] == NULL)\n')
-            c_file.append("                  return NULL;\n")
+            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
         c_file.append('              }\n')
         c_file.append('          }\n')
         c_file.append('      }\n')
@@ -201,12 +205,10 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.append('            yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;\n')
         c_file.append(f'            ret->{obj.fixname}_len = len;\n')
         c_file.append(f'            ret->{obj.fixname} = calloc (len + 1, sizeof (*ret->{obj.fixname}));\n')
-        c_file.append(f'            if (ret->{obj.fixname} == NULL)\n')
-        c_file.append('              return NULL;\n')
+        null_check_return(c_file, f'ret->{obj.fixname}', indent=3)
         if obj.doublearray:
             c_file.append(f'            ret->{obj.fixname}_item_lens = calloc ( len + 1, sizeof (size_t));\n')
-            c_file.append(f'            if (ret->{obj.fixname}_item_lens == NULL)\n')
-            c_file.append('                return NULL;\n')
+            null_check_return(c_file, f'ret->{obj.fixname}_item_lens', indent=4)
         c_file.append('            for (i = 0; i < len; i++)\n')
         c_file.append('              {\n')
         if obj.doublearray:
