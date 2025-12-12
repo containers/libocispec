@@ -803,6 +803,96 @@ class BasicMapType(TypeHandler):
         ''', indent=level)
 
 
+class ArrayType(TypeHandler):
+    """Handler for array type.
+
+    Arrays are complex and delegate to specialized functions for each operation.
+    """
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        # Delegate to existing function - will be defined later
+        parse_obj_type_array(obj, c_file, prefix, obj_typename)
+
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        # Delegate to existing function - will be defined later
+        get_obj_arr_obj_array(obj, c_file, prefix)
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        # Delegate to existing function - will be defined later
+        make_c_array_free(obj, c_file, prefix)
+
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        """Generate clone code for array fields."""
+        emit(c_file, f'''
+            if (src->{obj.fixname})
+              {{
+                ret->{obj.fixname}_len = src->{obj.fixname}_len;
+                ret->{obj.fixname} = calloc (src->{obj.fixname}_len + 1, sizeof (*ret->{obj.fixname}));
+                if (ret->{obj.fixname} == NULL)
+                  return NULL;
+                for (size_t i = 0; i < src->{obj.fixname}_len; i++)
+                  {{
+        ''', indent=indent)
+
+        if helpers.judge_data_type(obj.subtyp) or obj.subtyp == 'boolean':
+            emit(c_file, f'''
+                        ret->{obj.fixname}[i] = src->{obj.fixname}[i];
+            ''', indent=indent+2)
+        elif obj.subtyp == 'object':
+            typename = helpers.get_prefixed_name(obj.name, prefix)
+            if obj.subtypname is not None:
+                typename = obj.subtypname
+            maybe_element = "_element" if obj.subtypname is None else ""
+            if obj.doublearray:
+                emit(c_file, f'''
+                            ret->{obj.fixname}_item_lens[i] = src->{obj.fixname}_item_lens[i];
+                            ret->{obj.fixname}[i] = calloc (ret->{obj.fixname}_item_lens[i] + 1, sizeof (**ret->{obj.fixname}[i]));
+                            if (ret->{obj.fixname}[i] == NULL)
+                                return NULL;
+                            for (size_t j = 0; j < src->{obj.fixname}_item_lens[i]; j++)
+                              {{
+                                ret->{obj.fixname}[i][j] = clone_{typename}{maybe_element} (src->{obj.fixname}[i][j]);
+                                if (ret->{obj.fixname}[i][j] == NULL)
+                                    return NULL;
+                              }}
+                ''', indent=indent+2)
+            else:
+                emit(c_file, f'''
+                            ret->{obj.fixname}[i] = clone_{typename}{maybe_element} (src->{obj.fixname}[i]);
+                            if (ret->{obj.fixname}[i] == NULL)
+                                return NULL;
+                ''', indent=indent+2)
+        elif obj.subtyp == 'string':
+            if obj.doublearray:
+                emit(c_file, f'''
+                            ret->{obj.fixname}[i] = calloc (ret->{obj.fixname}_item_lens[i] + 1, sizeof (**ret->{obj.fixname}[i]));
+                            if (ret->{obj.fixname}[i] == NULL)
+                                return NULL;
+                            for (size_t j = 0; j < src->{obj.fixname}_item_lens[i]; j++)
+                              {{
+                                ret->{obj.fixname}[i][j] = strdup (src->{obj.fixname}[i][j]);
+                                if (ret->{obj.fixname}[i][j] == NULL)
+                                    return NULL;
+                              }}
+                ''', indent=indent+2)
+            else:
+                emit(c_file, f'''
+                            if (src->{obj.fixname}[i])
+                              {{
+                                ret->{obj.fixname}[i] = strdup (src->{obj.fixname}[i]);
+                                if (ret->{obj.fixname}[i] == NULL)
+                                  return NULL;
+                              }}
+                ''', indent=indent+2)
+        else:
+            raise Exception("Unimplemented type for array clone: %s (%s)" % (obj.subtyp, obj.subtypname))
+
+        emit(c_file, f'''
+                      }}
+                  }}
+        ''', indent=indent+1)
+
+
 # Type handler registry
 _TYPE_HANDLERS = {
     'string': StringType(),
@@ -810,6 +900,7 @@ _TYPE_HANDLERS = {
     'booleanPointer': BooleanPointerType(),
     'object': ObjectType(),
     'mapStringObject': MapStringObjectType(),
+    'array': ArrayType(),
 }
 
 
@@ -1053,8 +1144,6 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
     handler = get_type_handler(obj.typ)
     if handler:
         handler.emit_parse(c_file, obj, prefix, obj_typename, indent=1)
-    elif obj.typ == 'array':
-        parse_obj_type_array(obj, c_file, prefix, obj_typename)
 
 def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
     """
@@ -1382,8 +1471,6 @@ def get_obj_arr_obj(obj, c_file, prefix):
     handler = get_type_handler(obj.typ)
     if handler:
         handler.emit_generate(c_file, obj, prefix, indent=1)
-    elif obj.typ == 'array':
-        get_obj_arr_obj_array(obj, c_file, prefix)
 
 
 def get_c_json(obj, c_file, prefix):
@@ -1522,74 +1609,6 @@ def make_clone(obj, c_file, prefix):
                           }}
                       }}
                 ''', indent=1)
-        elif i.typ == 'array':
-            emit(c_file, f'''
-                if (src->{i.fixname})
-                  {{
-                    ret->{i.fixname}_len = src->{i.fixname}_len;
-                    ret->{i.fixname} = calloc (src->{i.fixname}_len + 1, sizeof (*ret->{i.fixname}));
-                    if (ret->{i.fixname} == NULL)
-                      return NULL;
-                    for (size_t i = 0; i < src->{i.fixname}_len; i++)
-                      {{
-            ''', indent=1)
-            if helpers.judge_data_type(i.subtyp) or i.subtyp == 'boolean':
-               emit(c_file, f'''
-                           ret->{i.fixname}[i] = src->{i.fixname}[i];
-               ''', indent=3)
-            elif i.subtyp == 'object':
-                typename = helpers.get_prefixed_name(i.name, prefix)
-                if i.subtypname is not None:
-                    typename = i.subtypname
-                maybe_element = "_element" if i.subtypname is None else ""
-                if i.doublearray:
-                    emit(c_file, f'''
-                                ret->{i.fixname}_item_lens[i] = src->{i.fixname}_item_lens[i];
-                                ret->{i.fixname}[i] = calloc (ret->{i.fixname}_item_lens[i] + 1, sizeof (**ret->{i.fixname}[i]));
-                                if (ret->{i.fixname}[i] == NULL)
-                                    return NULL;
-                                for (size_t j = 0; j < src->{i.fixname}_item_lens[i]; j++)
-                                  {{
-                                    ret->{i.fixname}[i][j] = clone_{typename}{maybe_element} (src->{i.fixname}[i][j]);
-                                    if (ret->{i.fixname}[i][j] == NULL)
-                                        return NULL;
-                                  }}
-                    ''', indent=3)
-                else:
-                    emit(c_file, f'''
-                                ret->{i.fixname}[i] = clone_{typename}{maybe_element} (src->{i.fixname}[i]);
-                                if (ret->{i.fixname}[i] == NULL)
-                                    return NULL;
-                    ''', indent=3)
-
-            elif i.subtyp == 'string':
-                if i.doublearray:
-                    emit(c_file, f'''
-                                ret->{i.fixname}[i] = calloc (ret->{i.fixname}_item_lens[i] + 1, sizeof (**ret->{i.fixname}[i]));
-                                if (ret->{i.fixname}[i] == NULL)
-                                    return NULL;
-                                for (size_t j = 0; j < src->{i.fixname}_item_lens[i]; j++)
-                                  {{
-                                    ret->{i.fixname}[i][j] = strdup (src->{i.fixname}[i][j]);
-                                    if (ret->{i.fixname}[i][j] == NULL)
-                                        return NULL;
-                                  }}
-                    ''', indent=3)
-                else:
-                    emit(c_file, f'''
-                                if (src->{i.fixname}[i])
-                                  {{
-                                    ret->{i.fixname}[i] = strdup (src->{i.fixname}[i]);
-                                    if (ret->{i.fixname}[i] == NULL)
-                                      return NULL;
-                                  }}
-                    ''', indent=3)
-            else:
-                raise Exception("Unimplemented type for array clone: %s (%s)" % (i.subtyp, i.subtypname))
-            emit(c_file, f'''
-                          }}
-                      }}
-            ''', indent=2)
         elif i.typ == 'mapStringString':
             emit(c_file, f'''
                 ret->{i.fixname} = clone_map_string_string (src->{i.fixname});
@@ -1794,8 +1813,6 @@ def make_c_free (obj, c_file, prefix):
                 free_{free_func} (ptr->{i.fixname});
                 ptr->{i.fixname} = NULL;
             ''', indent=1)
-        elif i.typ == 'array':
-            make_c_array_free(i, c_file, prefix)
         elif i.typ == 'object':
             typename = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
             emit(c_file, f'''
