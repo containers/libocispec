@@ -714,7 +714,6 @@ def get_map_string_obj(obj, c_file, prefix):
 
 def get_obj_arr_obj_array(obj, c_file, prefix):
     if obj.subtypobj or obj.subtyp == 'object':
-        l = len(obj.origname)
         if obj.subtypname:
             typename = obj.subtypname
         else:
@@ -724,19 +723,16 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
               {{
                 size_t len = 0, i;
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {int(l)} /* strlen ("{obj.origname}") */);
         ''', indent=1)
-
+        emit_gen_key(c_file, obj.origname, indent=2)
         check_gen_status(c_file, indent=2)
 
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname} != NULL)
                     len = ptr->{obj.fixname}_len;
-                if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))
-                    yajl_gen_config (g, yajl_gen_beautify, 0);
-                stat = yajl_gen_array_open ((yajl_gen) g);
         ''', indent=2)
-
+        emit_beautify_off(c_file, '!len', indent=2)
+        emit_gen_array_open(c_file, indent=2)
         check_gen_status(c_file, indent=2)
 
         emit(c_file, '''
@@ -745,9 +741,7 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
         ''', indent=2)
 
         if obj.doublearray:
-            emit(c_file, '''
-                    stat = yajl_gen_array_open ((yajl_gen) g);
-            ''', indent=3)
+            emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, f'''
                     size_t j;
@@ -758,8 +752,8 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
             check_gen_status(c_file, indent=4)
             emit(c_file, '''
                       }
-                    stat = yajl_gen_array_close ((yajl_gen) g);
             ''', indent=4)
+            emit_gen_array_close(c_file, indent=3)
         else:
             emit(c_file, f'''
                     stat = gen_{typename} (g, ptr->{obj.fixname}[i], ctx, err);
@@ -768,32 +762,26 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
 
         emit(c_file, '''
                   }
-                stat = yajl_gen_array_close ((yajl_gen) g);
-                if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))
-                    yajl_gen_config (g, yajl_gen_beautify, 1);
         ''', indent=2)
-
+        emit_gen_array_close(c_file, indent=2)
+        emit_beautify_on(c_file, '!len', indent=2)
         check_gen_status(c_file, indent=2)
 
         emit(c_file, '''
               }
         ''', indent=1)
     elif obj.subtyp == 'byte':
-        l = len(obj.origname)
         emit(c_file, f'''
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL && ptr->{obj.fixname}_len))
               {{
                 const char *str = "";
                 size_t len = 0;
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
         ''', indent=1)
-
+        emit_gen_key(c_file, obj.origname, indent=2)
         check_gen_status(c_file, indent=2)
 
         if obj.doublearray:
-            emit(c_file, '''
-                    stat = yajl_gen_array_open ((yajl_gen) g);
-            ''', indent=3)
+            emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, f'''
                 {{
@@ -807,8 +795,8 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
                         stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
                       }}
                 }}
-                    stat = yajl_gen_array_close ((yajl_gen) g);
             ''', indent=2)
+            emit_gen_array_close(c_file, indent=2)
         else:
             emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname} != NULL)
@@ -825,24 +813,20 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
               }
         ''', indent=1)
     else:
-        l = len(obj.origname)
         emit(c_file, f'''
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
               {{
                 size_t len = 0, i;
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{obj.origname}"), {l} /* strlen ("{obj.origname}") */);
         ''', indent=1)
-
+        emit_gen_key(c_file, obj.origname, indent=2)
         check_gen_status(c_file, indent=2)
 
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname} != NULL)
                   len = ptr->{obj.fixname}_len;
-                if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))
-                    yajl_gen_config (g, yajl_gen_beautify, 0);
-                stat = yajl_gen_array_open ((yajl_gen) g);
         ''', indent=2)
-
+        emit_beautify_off(c_file, '!len', indent=2)
+        emit_gen_array_open(c_file, indent=2)
         check_gen_status(c_file, indent=2)
 
         emit(c_file, '''
@@ -852,9 +836,7 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
 
         if obj.doublearray:
             typename = helpers.get_map_c_types(obj.subtyp)
-            emit(c_file, '''
-                    stat = yajl_gen_array_open ((yajl_gen) g);
-            ''', indent=3)
+            emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
             emit(c_file, f'''
                     size_t j;
@@ -864,21 +846,18 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
             json_value_generator(c_file, 4, f"ptr->{obj.fixname}[i][j]", 'g', 'ctx', obj.subtyp)
             emit(c_file, '''
                       }
-                    stat = yajl_gen_array_close ((yajl_gen) g);
             ''', indent=4)
+            emit_gen_array_close(c_file, indent=3)
         else:
             json_value_generator(c_file, 3, f"ptr->{obj.fixname}[i]", 'g', 'ctx', obj.subtyp)
 
         emit(c_file, '''
                   }
-                stat = yajl_gen_array_close ((yajl_gen) g);
         ''', indent=2)
-
+        emit_gen_array_close(c_file, indent=2)
         check_gen_status(c_file, indent=2)
-
+        emit_beautify_on(c_file, '!len', indent=2)
         emit(c_file, '''
-                if (!len && !(ctx->options & OPT_GEN_SIMPLIFY))
-                    yajl_gen_config (g, yajl_gen_beautify, 1);
               }
         ''', indent=2)
 
