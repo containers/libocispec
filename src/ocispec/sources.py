@@ -852,16 +852,400 @@ class ArrayType(TypeHandler):
     """
 
     def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
-        # Delegate to existing function - will be defined later
-        parse_obj_type_array(obj, c_file, prefix, obj_typename)
+        """Generate C code to parse an array from JSON."""
+        if obj.subtypobj or obj.subtyp == 'object':
+            typename = obj.subtypname if obj.subtypname else helpers.get_name_substr(obj.name, prefix)
+
+            emit(c_file, f'''
+                do
+                  {{
+                    yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
+                    if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
+                      {{
+                        size_t i;
+                        size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
+                        yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
+                        ret->{obj.fixname}_len = len;
+            ''', indent=1)
+
+            calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
+            if obj.doublearray:
+                calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
+
+            emit(c_file, '''
+                        for (i = 0; i < len; i++)
+                          {
+                            yajl_val val = values[i];
+            ''', indent=3)
+
+            if obj.doublearray:
+                emit(c_file, f'''
+                            size_t j;
+                            ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(val)->len + 1, sizeof (**ret->{obj.fixname}));
+                ''', indent=4)
+                null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
+                emit(c_file, '''
+                            yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(val)->values;
+                            for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(val)->len; j++)
+                              {
+                ''', indent=4)
+                emit(c_file, f'''
+                                ret->{obj.fixname}[i][j] = make_{typename} (items[j], ctx, err);
+                ''', indent=5)
+                null_check_return(c_file, f'ret->{obj.fixname}[i][j]', indent=5)
+                emit(c_file, f'''
+                                ret->{obj.fixname}_item_lens[i] += 1;
+                              }};
+                ''', indent=5)
+            else:
+                emit(c_file, f'''
+                            ret->{obj.fixname}[i] = make_{typename} (val, ctx, err);
+                ''', indent=4)
+                null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
+
+            emit(c_file, '''
+                              }
+                        }
+                      }
+                    while (0);
+            ''', indent=1)
+        elif obj.subtyp == 'byte':
+            emit(c_file, f'''
+                do
+                  {{
+                    yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_string);
+                    if (tmp != NULL)
+                      {{
+            ''', indent=1)
+
+            if obj.doublearray:
+                emit(c_file, f'''
+                        yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(tmp)->values;
+                        ret->{obj.fixname} = calloc ( YAJL_GET_ARRAY_NO_CHECK(tmp)->len + 1, sizeof (*ret->{obj.fixname}));
+                ''', indent=4)
+                null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
+                emit(c_file, '''
+                        size_t j;
+                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(tmp)->len; j++)
+                          {
+                            char *str = YAJL_GET_STRING (itmes[j]);
+                ''', indent=4)
+                emit(c_file, f'''
+                            ret->{obj.fixname}[j] = (uint8_t *)strdup (str ? str : "");
+                ''', indent=5)
+                null_check_return(c_file, f'ret->{obj.fixname}[j]', indent=5)
+                emit(c_file, '''
+                          };
+                ''', indent=5)
+            else:
+                emit(c_file, '''
+                        char *str = YAJL_GET_STRING (tmp);
+                ''', indent=3)
+                emit(c_file, f'''
+                        ret->{obj.fixname} = (uint8_t *)strdup (str ? str : "");
+                ''', indent=3)
+                null_check_return(c_file, f'ret->{obj.fixname}', indent=3)
+                emit(c_file, f'''
+                        ret->{obj.fixname}_len = str != NULL ? strlen (str) : 0;
+                ''', indent=3)
+
+            emit(c_file, '''
+                        }
+                      }
+                    while (0);
+            ''', indent=1)
+        else:
+            emit(c_file, f'''
+                do
+                  {{
+                    yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
+                    if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
+                      {{
+                        size_t i;
+                        size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
+                        yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
+                        ret->{obj.fixname}_len = len;
+            ''', indent=1)
+
+            calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
+            if obj.doublearray:
+                calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
+
+            emit(c_file, '''
+                        for (i = 0; i < len; i++)
+                          {
+            ''', indent=3)
+
+            if obj.doublearray:
+                emit(c_file, f'''
+                            yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(values[i])->values;
+                            ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(values[i])->len + 1, sizeof (**ret->{obj.fixname}));
+                ''', indent=4)
+                null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=5)
+                emit(c_file, '''
+                            size_t j;
+                            for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(values[i])->len; j++)
+                              {
+                ''', indent=4)
+                read_val_generator(c_file, 5, 'items[j]', \
+                                    f"ret->{obj.fixname}[i][j]", obj.subtyp, obj.origname, obj_typename)
+                emit(c_file, f'''
+                                ret->{obj.fixname}_item_lens[i] += 1;
+                            }};
+                ''', indent=5)
+            else:
+                read_val_generator(c_file, 4, 'values[i]', \
+                                    f"ret->{obj.fixname}[i]", obj.subtyp, obj.origname, obj_typename)
+
+            emit(c_file, '''
+                              }
+                        }
+                      }
+                    while (0);
+            ''', indent=1)
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
-        # Delegate to existing function - will be defined later
-        get_obj_arr_obj_array(obj, c_file, prefix)
+        """Generate C code to serialize an array to JSON."""
+        if obj.subtypobj or obj.subtyp == 'object':
+            typename = obj.subtypname if obj.subtypname else helpers.get_name_substr(obj.name, prefix)
+
+            emit(c_file, f'''
+                if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+                  {{
+                    size_t len = 0, i;
+            ''', indent=1)
+            emit_gen_key(c_file, obj.origname, indent=2)
+            check_gen_status(c_file, indent=2)
+
+            emit(c_file, f'''
+                    if (ptr != NULL && ptr->{obj.fixname} != NULL)
+                        len = ptr->{obj.fixname}_len;
+            ''', indent=2)
+            emit_beautify_off(c_file, '!len', indent=2)
+            emit_gen_array_open(c_file, indent=2)
+            check_gen_status(c_file, indent=2)
+
+            emit(c_file, '''
+                    for (i = 0; i < len; i++)
+                      {
+            ''', indent=2)
+
+            if obj.doublearray:
+                emit_gen_array_open(c_file, indent=3)
+                check_gen_status(c_file, indent=3)
+                emit(c_file, f'''
+                        size_t j;
+                        for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)
+                          {{
+                            stat = gen_{typename} (g, ptr->{obj.fixname}[i][j], ctx, err);
+                ''', indent=3)
+                check_gen_status(c_file, indent=4)
+                emit(c_file, '''
+                          }
+                ''', indent=4)
+                emit_gen_array_close(c_file, indent=3)
+            else:
+                emit(c_file, f'''
+                        stat = gen_{typename} (g, ptr->{obj.fixname}[i], ctx, err);
+                ''', indent=3)
+                check_gen_status(c_file, indent=3)
+
+            emit(c_file, '''
+                      }
+            ''', indent=2)
+            emit_gen_array_close(c_file, indent=2)
+            emit_beautify_on(c_file, '!len', indent=2)
+            check_gen_status(c_file, indent=2)
+
+            emit(c_file, '''
+                  }
+            ''', indent=1)
+        elif obj.subtyp == 'byte':
+            emit(c_file, f'''
+                if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL && ptr->{obj.fixname}_len))
+                  {{
+                    const char *str = "";
+                    size_t len = 0;
+            ''', indent=1)
+            emit_gen_key(c_file, obj.origname, indent=2)
+            check_gen_status(c_file, indent=2)
+
+            if obj.doublearray:
+                emit_gen_array_open(c_file, indent=3)
+                check_gen_status(c_file, indent=3)
+                emit(c_file, f'''
+                    {{
+                        size_t i;
+                        for (i = 0; i < ptr->{obj.fixname}_len; i++)
+                          {{
+                            if (ptr->{obj.fixname}[i] != NULL)
+                                str = (const char *)ptr->{obj.fixname}[i];
+                            else ()
+                                str = "";
+                            stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
+                          }}
+                    }}
+                ''', indent=2)
+                emit_gen_array_close(c_file, indent=2)
+            else:
+                emit(c_file, f'''
+                    if (ptr != NULL && ptr->{obj.fixname} != NULL)
+                      {{
+                        str = (const char *)ptr->{obj.fixname};
+                        len = ptr->{obj.fixname}_len;
+                      }}
+                    stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, len);
+                ''', indent=2)
+
+            check_gen_status(c_file, indent=2)
+
+            emit(c_file, '''
+                  }
+            ''', indent=1)
+        else:
+            emit(c_file, f'''
+                if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+                  {{
+                    size_t len = 0, i;
+            ''', indent=1)
+            emit_gen_key(c_file, obj.origname, indent=2)
+            check_gen_status(c_file, indent=2)
+
+            emit(c_file, f'''
+                    if (ptr != NULL && ptr->{obj.fixname} != NULL)
+                      len = ptr->{obj.fixname}_len;
+            ''', indent=2)
+            emit_beautify_off(c_file, '!len', indent=2)
+            emit_gen_array_open(c_file, indent=2)
+            check_gen_status(c_file, indent=2)
+
+            emit(c_file, '''
+                    for (i = 0; i < len; i++)
+                      {
+            ''', indent=2)
+
+            if obj.doublearray:
+                typename = helpers.get_map_c_types(obj.subtyp)
+                emit_gen_array_open(c_file, indent=3)
+                check_gen_status(c_file, indent=3)
+                emit(c_file, f'''
+                        size_t j;
+                        for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)
+                          {{
+                ''', indent=3)
+                json_value_generator(c_file, 4, f"ptr->{obj.fixname}[i][j]", 'g', 'ctx', obj.subtyp)
+                emit(c_file, '''
+                          }
+                ''', indent=4)
+                emit_gen_array_close(c_file, indent=3)
+            else:
+                json_value_generator(c_file, 3, f"ptr->{obj.fixname}[i]", 'g', 'ctx', obj.subtyp)
+
+            emit(c_file, '''
+                      }
+            ''', indent=2)
+            emit_gen_array_close(c_file, indent=2)
+            check_gen_status(c_file, indent=2)
+            emit_beautify_on(c_file, '!len', indent=2)
+            emit(c_file, '''
+                  }
+            ''', indent=2)
 
     def emit_free(self, c_file, obj, prefix, indent=1):
-        # Delegate to existing function - will be defined later
-        make_c_array_free(obj, c_file, prefix)
+        """Generate C code to free an array."""
+        if helpers.valid_basic_map_name(obj.subtyp):
+            free_func = helpers.make_basic_map_name(obj.subtyp)
+            emit(c_file, f'''
+                if (ptr->{obj.fixname} != NULL)
+                  {{
+                    size_t i;
+                    for (i = 0; i < ptr->{obj.fixname}_len; i++)
+                      {{
+                        if (ptr->{obj.fixname}[i] != NULL)
+                          {{
+                            free_{free_func} (ptr->{obj.fixname}[i]);
+                            ptr->{obj.fixname}[i] = NULL;
+                          }}
+                      }}
+            ''', indent=1)
+            free_and_null(c_file, "ptr", obj.fixname, indent=2)
+            emit(c_file, '''
+                  }
+            ''', indent=1)
+        elif obj.subtyp == 'string':
+            c_file_str(c_file, obj)
+        elif not helpers.is_compound_type(obj.subtyp):
+            emit(c_file, '''
+               {
+            ''', indent=0)
+            if obj.doublearray:
+                emit(c_file, f'''
+                        size_t i;
+                        for (i = 0; i < ptr->{obj.fixname}_len; i++)
+                          {{
+                ''', indent=3)
+                free_and_null(c_file, "ptr", f"{obj.fixname}[i]", indent=4)
+                emit(c_file, '''
+                          }
+                ''', indent=3)
+                free_and_null(c_file, "ptr", f"{obj.fixname}_item_lens", indent=3)
+            free_and_null(c_file, "ptr", obj.fixname, indent=2)
+            emit(c_file, '''
+                }
+            ''', indent=1)
+        elif obj.subtyp == 'object' or obj.subtypobj is not None:
+            free_func = obj.subtypname if obj.subtypname is not None else helpers.get_name_substr(obj.name, prefix)
+
+            emit(c_file, f'''
+                if (ptr->{obj.fixname} != NULL)
+                  {{
+                    size_t i;
+                    for (i = 0; i < ptr->{obj.fixname}_len; i++)
+                      {{
+            ''', indent=1)
+
+            if obj.doublearray:
+                emit(c_file, f'''
+                      size_t j;
+                      for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)
+                        {{
+                          free_{free_func} (ptr->{obj.fixname}[i][j]);
+                          ptr->{obj.fixname}[i][j] = NULL;
+                      }}
+                ''', indent=2)
+                free_and_null(c_file, "ptr", f"{obj.fixname}[i]", indent=2)
+            else:
+                emit(c_file, f'''
+                      if (ptr->{obj.fixname}[i] != NULL)
+                        {{
+                          free_{free_func} (ptr->{obj.fixname}[i]);
+                          ptr->{obj.fixname}[i] = NULL;
+                        }}
+                ''', indent=2)
+
+            emit(c_file, '''
+                      }
+            ''', indent=2)
+
+            if obj.doublearray:
+                free_and_null(c_file, "ptr", f"{obj.fixname}_item_lens", indent=2)
+
+            free_and_null(c_file, "ptr", obj.fixname, indent=2)
+
+            emit(c_file, '''
+                  }
+            ''', indent=1)
+
+        c_typ = helpers.obtain_pointer(obj.name, obj.subtypobj, prefix)
+        if c_typ == "":
+            return
+        if obj.subtypname is not None:
+            c_typ = c_typ + "_element"
+
+        emit(c_file, f'''
+            free_{c_typ} (ptr->{obj.fixname});
+            ptr->{obj.fixname} = NULL;
+        ''', indent=1)
 
     def emit_clone(self, c_file, obj, prefix, indent=1):
         """Generate clone code for array fields."""
@@ -1025,161 +1409,6 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     c_file.append('          }\n')
     c_file.append('      }\n')
 
-
-def parse_obj_type_array(obj, c_file, prefix, obj_typename):
-    if obj.subtypobj or obj.subtyp == 'object':
-        if obj.subtypname:
-            typename = obj.subtypname
-        else:
-            typename = helpers.get_name_substr(obj.name, prefix)
-
-        emit(c_file, f'''
-            do
-              {{
-                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
-                if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
-                  {{
-                    size_t i;
-                    size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
-                    yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
-                    ret->{obj.fixname}_len = len;
-        ''', indent=1)
-
-        calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
-        if obj.doublearray:
-            calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
-
-        emit(c_file, '''
-                    for (i = 0; i < len; i++)
-                      {
-                        yajl_val val = values[i];
-        ''', indent=3)
-
-        if obj.doublearray:
-            emit(c_file, f'''
-                        size_t j;
-                        ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(val)->len + 1, sizeof (**ret->{obj.fixname}));
-            ''', indent=4)
-            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
-            emit(c_file, '''
-                        yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(val)->values;
-                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(val)->len; j++)
-                          {
-            ''', indent=4)
-            emit(c_file, f'''
-                            ret->{obj.fixname}[i][j] = make_{typename} (items[j], ctx, err);
-            ''', indent=5)
-            null_check_return(c_file, f'ret->{obj.fixname}[i][j]', indent=5)
-            emit(c_file, f'''
-                            ret->{obj.fixname}_item_lens[i] += 1;
-                          }};
-            ''', indent=5)
-        else:
-            emit(c_file, f'''
-                        ret->{obj.fixname}[i] = make_{typename} (val, ctx, err);
-            ''', indent=4)
-            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
-
-        emit(c_file, '''
-                          }
-                    }
-                  }
-                while (0);
-        ''', indent=1)
-    elif obj.subtyp == 'byte':
-        emit(c_file, f'''
-            do
-              {{
-                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_string);
-                if (tmp != NULL)
-                  {{
-        ''', indent=1)
-
-        if obj.doublearray:
-            emit(c_file, f'''
-                    yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(tmp)->values;
-                    ret->{obj.fixname} = calloc ( YAJL_GET_ARRAY_NO_CHECK(tmp)->len + 1, sizeof (*ret->{obj.fixname}));
-            ''', indent=4)
-            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
-            emit(c_file, '''
-                    size_t j;
-                    for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(tmp)->len; j++)
-                      {
-                        char *str = YAJL_GET_STRING (itmes[j]);
-            ''', indent=4)
-            emit(c_file, f'''
-                        ret->{obj.fixname}[j] = (uint8_t *)strdup (str ? str : "");
-            ''', indent=5)
-            null_check_return(c_file, f'ret->{obj.fixname}[j]', indent=5)
-            emit(c_file, '''
-                      };
-            ''', indent=5)
-        else:
-            emit(c_file, '''
-                    char *str = YAJL_GET_STRING (tmp);
-            ''', indent=3)
-            emit(c_file, f'''
-                    ret->{obj.fixname} = (uint8_t *)strdup (str ? str : "");
-            ''', indent=3)
-            null_check_return(c_file, f'ret->{obj.fixname}', indent=3)
-            emit(c_file, f'''
-                    ret->{obj.fixname}_len = str != NULL ? strlen (str) : 0;
-            ''', indent=3)
-
-        emit(c_file, '''
-                    }
-                  }
-                while (0);
-        ''', indent=1)
-    else:
-        emit(c_file, f'''
-            do
-              {{
-                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
-                if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
-                  {{
-                    size_t i;
-                    size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
-                    yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
-                    ret->{obj.fixname}_len = len;
-        ''', indent=1)
-
-        calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
-        if obj.doublearray:
-            calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
-
-        emit(c_file, '''
-                    for (i = 0; i < len; i++)
-                      {
-        ''', indent=3)
-
-        if obj.doublearray:
-            emit(c_file, f'''
-                        yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(values[i])->values;
-                        ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(values[i])->len + 1, sizeof (**ret->{obj.fixname}));
-            ''', indent=4)
-            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=5)
-            emit(c_file, '''
-                        size_t j;
-                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(values[i])->len; j++)
-                          {
-            ''', indent=4)
-            read_val_generator(c_file, 5, 'items[j]', \
-                                f"ret->{obj.fixname}[i][j]", obj.subtyp, obj.origname, obj_typename)
-            emit(c_file, f'''
-                            ret->{obj.fixname}_item_lens[i] += 1;
-                        }};
-            ''', indent=5)
-        else:
-            read_val_generator(c_file, 4, 'values[i]', \
-                                f"ret->{obj.fixname}[i]", obj.subtyp, obj.origname, obj_typename)
-
-        emit(c_file, '''
-                          }
-                    }
-                  }
-                while (0);
-        ''', indent=1)
 
 def parse_obj_type(obj, c_file, prefix, obj_typename):
     """Generate C code to parse a single JSON field into a struct member."""
@@ -1359,154 +1588,6 @@ def get_map_string_obj(obj, c_file, prefix):
     check_gen_status(c_file, indent=1)
     emit_beautify_on(c_file, '!len', indent=1)
 
-def get_obj_arr_obj_array(obj, c_file, prefix):
-    if obj.subtypobj or obj.subtyp == 'object':
-        if obj.subtypname:
-            typename = obj.subtypname
-        else:
-            typename = helpers.get_name_substr(obj.name, prefix)
-
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-                size_t len = 0, i;
-        ''', indent=1)
-        emit_gen_key(c_file, obj.origname, indent=2)
-        check_gen_status(c_file, indent=2)
-
-        emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname} != NULL)
-                    len = ptr->{obj.fixname}_len;
-        ''', indent=2)
-        emit_beautify_off(c_file, '!len', indent=2)
-        emit_gen_array_open(c_file, indent=2)
-        check_gen_status(c_file, indent=2)
-
-        emit(c_file, '''
-                for (i = 0; i < len; i++)
-                  {
-        ''', indent=2)
-
-        if obj.doublearray:
-            emit_gen_array_open(c_file, indent=3)
-            check_gen_status(c_file, indent=3)
-            emit(c_file, f'''
-                    size_t j;
-                    for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)
-                      {{
-                        stat = gen_{typename} (g, ptr->{obj.fixname}[i][j], ctx, err);
-            ''', indent=3)
-            check_gen_status(c_file, indent=4)
-            emit(c_file, '''
-                      }
-            ''', indent=4)
-            emit_gen_array_close(c_file, indent=3)
-        else:
-            emit(c_file, f'''
-                    stat = gen_{typename} (g, ptr->{obj.fixname}[i], ctx, err);
-            ''', indent=3)
-            check_gen_status(c_file, indent=3)
-
-        emit(c_file, '''
-                  }
-        ''', indent=2)
-        emit_gen_array_close(c_file, indent=2)
-        emit_beautify_on(c_file, '!len', indent=2)
-        check_gen_status(c_file, indent=2)
-
-        emit(c_file, '''
-              }
-        ''', indent=1)
-    elif obj.subtyp == 'byte':
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL && ptr->{obj.fixname}_len))
-              {{
-                const char *str = "";
-                size_t len = 0;
-        ''', indent=1)
-        emit_gen_key(c_file, obj.origname, indent=2)
-        check_gen_status(c_file, indent=2)
-
-        if obj.doublearray:
-            emit_gen_array_open(c_file, indent=3)
-            check_gen_status(c_file, indent=3)
-            emit(c_file, f'''
-                {{
-                    size_t i;
-                    for (i = 0; i < ptr->{obj.fixname}_len; i++)
-                      {{
-                        if (ptr->{obj.fixname}[i] != NULL)
-                            str = (const char *)ptr->{obj.fixname}[i];
-                        else ()
-                            str = "";
-                        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
-                      }}
-                }}
-            ''', indent=2)
-            emit_gen_array_close(c_file, indent=2)
-        else:
-            emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname} != NULL)
-                  {{
-                    str = (const char *)ptr->{obj.fixname};
-                    len = ptr->{obj.fixname}_len;
-                  }}
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, len);
-            ''', indent=2)
-
-        check_gen_status(c_file, indent=2)
-
-        emit(c_file, '''
-              }
-        ''', indent=1)
-    else:
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-                size_t len = 0, i;
-        ''', indent=1)
-        emit_gen_key(c_file, obj.origname, indent=2)
-        check_gen_status(c_file, indent=2)
-
-        emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname} != NULL)
-                  len = ptr->{obj.fixname}_len;
-        ''', indent=2)
-        emit_beautify_off(c_file, '!len', indent=2)
-        emit_gen_array_open(c_file, indent=2)
-        check_gen_status(c_file, indent=2)
-
-        emit(c_file, '''
-                for (i = 0; i < len; i++)
-                  {
-        ''', indent=2)
-
-        if obj.doublearray:
-            typename = helpers.get_map_c_types(obj.subtyp)
-            emit_gen_array_open(c_file, indent=3)
-            check_gen_status(c_file, indent=3)
-            emit(c_file, f'''
-                    size_t j;
-                    for (j = 0; j < ptr->{obj.fixname}_item_lens[i]; j++)
-                      {{
-            ''', indent=3)
-            json_value_generator(c_file, 4, f"ptr->{obj.fixname}[i][j]", 'g', 'ctx', obj.subtyp)
-            emit(c_file, '''
-                      }
-            ''', indent=4)
-            emit_gen_array_close(c_file, indent=3)
-        else:
-            json_value_generator(c_file, 3, f"ptr->{obj.fixname}[i]", 'g', 'ctx', obj.subtyp)
-
-        emit(c_file, '''
-                  }
-        ''', indent=2)
-        emit_gen_array_close(c_file, indent=2)
-        check_gen_status(c_file, indent=2)
-        emit_beautify_on(c_file, '!len', indent=2)
-        emit(c_file, '''
-              }
-        ''', indent=2)
 
 def get_obj_arr_obj(obj, c_file, prefix):
     """Generate C code to serialize a struct field to JSON."""
@@ -1653,105 +1734,6 @@ def json_value_generator(c_file, level, src, dst, ptx, typ):
     if handler:
         handler.emit_json_value(c_file, src, dst, ptx, level=level)
 
-def make_c_array_free (i, c_file, prefix):
-    if helpers.valid_basic_map_name(i.subtyp):
-        free_func = helpers.make_basic_map_name(i.subtyp)
-        emit(c_file, f'''
-            if (ptr->{i.fixname} != NULL)
-              {{
-                size_t i;
-                for (i = 0; i < ptr->{i.fixname}_len; i++)
-                  {{
-                    if (ptr->{i.fixname}[i] != NULL)
-                      {{
-                        free_{free_func} (ptr->{i.fixname}[i]);
-                        ptr->{i.fixname}[i] = NULL;
-                      }}
-                  }}
-        ''', indent=1)
-        free_and_null(c_file, "ptr", i.fixname, indent=2)
-        emit(c_file, '''
-              }
-        ''', indent=1)
-    elif i.subtyp == 'string':
-        c_file_str(c_file, i)
-    elif not helpers.is_compound_type(i.subtyp):
-        emit(c_file, '''
-           {
-        ''', indent=0)
-        if i.doublearray:
-            emit(c_file, f'''
-                    size_t i;
-                    for (i = 0; i < ptr->{i.fixname}_len; i++)
-                      {{
-            ''', indent=3)
-            free_and_null(c_file, "ptr", f"{i.fixname}[i]", indent=4)
-            emit(c_file, '''
-                      }
-            ''', indent=3)
-            free_and_null(c_file, "ptr", f"{i.fixname}_item_lens", indent=3)
-        free_and_null(c_file, "ptr", i.fixname, indent=2)
-        emit(c_file, '''
-            }
-        ''', indent=1)
-    elif i.subtyp == 'object' or i.subtypobj is not None:
-        if i.subtypname is not None:
-            free_func = i.subtypname
-        else:
-            free_func = helpers.get_name_substr(i.name, prefix)
-
-        emit(c_file, f'''
-            if (ptr->{i.fixname} != NULL)
-              {{
-                size_t i;
-                for (i = 0; i < ptr->{i.fixname}_len; i++)
-                  {{
-        ''', indent=1)
-
-        if i.doublearray:
-            emit(c_file, f'''
-                  size_t j;
-                  for (j = 0; j < ptr->{i.fixname}_item_lens[i]; j++)
-                    {{
-                      free_{free_func} (ptr->{i.fixname}[i][j]);
-                      ptr->{i.fixname}[i][j] = NULL;
-                  }}
-            ''', indent=2)
-            free_and_null(c_file, "ptr", f"{i.fixname}[i]", indent=2)
-        else:
-            emit(c_file, f'''
-                  if (ptr->{i.fixname}[i] != NULL)
-                    {{
-                      free_{free_func} (ptr->{i.fixname}[i]);
-                      ptr->{i.fixname}[i] = NULL;
-                    }}
-            ''', indent=2)
-
-        emit(c_file, '''
-                  }
-        ''', indent=2)
-
-        if i.doublearray:
-            free_and_null(c_file, "ptr", f"{i.fixname}_item_lens", indent=2)
-
-        free_and_null(c_file, "ptr", i.fixname, indent=2)
-
-        emit(c_file, '''
-              }
-        ''', indent=1)
-
-    c_typ = helpers.obtain_pointer(i.name, i.subtypobj, prefix)
-    if c_typ == "":
-        return True
-    if i.subtypname is not None:
-        c_typ = c_typ + "_element"
-
-    emit(c_file, f'''
-        free_{c_typ} (ptr->{i.fixname});
-        ptr->{i.fixname} = NULL;
-    ''', indent=1)
-
-    return False
 
 def make_c_free (obj, c_file, prefix):
     """
