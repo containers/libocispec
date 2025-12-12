@@ -164,6 +164,23 @@ def emit_value_error(c_file, keyname, indent=0):
     ''', indent=indent)
 
 
+def emit_invalid_type_check(c_file, yajl_check='YAJL_IS_NUMBER', indent=0):
+    """Emit YAJL type validation with error return.
+
+    Args:
+        c_file: List to append code lines to
+        yajl_check: YAJL type check macro (e.g., 'YAJL_IS_NUMBER')
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, f'''
+        if (! {yajl_check} (val))
+          {{
+            *err = strdup ("invalid type");
+            return NULL;
+          }}
+    ''', indent=indent)
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
@@ -1003,36 +1020,20 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
             yajl_val val = {src};
             if (val != NULL)
               {{
+                int invalid;
         ''', indent=level)
+        emit_invalid_type_check(c_file, 'YAJL_IS_NUMBER', indent=level + 1)
         if typ.startswith("uint") or \
                 (typ.startswith("int") and typ != "integer") or typ == "double":
             emit(c_file, f'''
-                    int invalid;
-                    if (! YAJL_IS_NUMBER (val))
-                      {{
-                        *err = strdup ("invalid type");
-                        return NULL;
-                      }}
                     invalid = common_safe_{typ} (YAJL_GET_NUMBER (val), &{dest});
             ''', indent=level + 1)
         elif typ == "integer":
             emit(c_file, f'''
-                    int invalid;
-                    if (! YAJL_IS_NUMBER (val))
-                      {{
-                        *err = strdup ("invalid type");
-                        return NULL;
-                      }}
                     invalid = common_safe_int (YAJL_GET_NUMBER (val), (int *)&{dest});
             ''', indent=level + 1)
         elif typ == "UID" or typ == "GID":
             emit(c_file, f'''
-                    int invalid;
-                    if (! YAJL_IS_NUMBER (val))
-                      {{
-                        *err = strdup ("invalid type");
-                        return NULL;
-                      }}
                     invalid = common_safe_uint (YAJL_GET_NUMBER (val), (unsigned int *)&{dest});
             ''', indent=level + 1)
         emit(c_file, f'''
@@ -1062,11 +1063,9 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
                 if ({dest} == NULL)
                     return NULL;
                 int invalid;
-                if (! YAJL_IS_NUMBER (val))
-                  {{
-                    *err = strdup ("invalid type");
-                    return NULL;
-                  }}
+        ''', indent=level)
+        emit_invalid_type_check(c_file, 'YAJL_IS_NUMBER', indent=level + 1)
+        emit(c_file, f'''
                 invalid = common_safe_{num_type} (YAJL_GET_NUMBER (val), {dest});
                 if (invalid)
                   {{
