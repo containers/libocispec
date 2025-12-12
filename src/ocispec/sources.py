@@ -1269,21 +1269,12 @@ def make_clone(obj, c_file, prefix):
                            ret->{i.fixname}[i] = src->{i.fixname}[i];
                ''', indent=3)
             elif i.subtyp == 'object':
-                subnode_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
-                if False: # i.subtypname is not None:
+                typename = helpers.get_prefixed_name(i.name, prefix)
+                if i.subtypname is not None:
                     typename = i.subtypname
+                maybe_element = "_element" if i.subtypname is None else ""
+                if i.doublearray:
                     emit(c_file, f'''
-                                ret->{i.fixname}[i] = clone_{typename} (src->{i.fixname}[i]);
-                                if (ret->{i.fixname}[i] == NULL)
-                                    return NULL;
-                    ''', indent=3)
-                else:
-                    typename = helpers.get_prefixed_name(i.name, prefix)
-                    if i.subtypname is not None:
-                        typename = i.subtypname
-                    maybe_element = "_element" if i.subtypname is None else ""
-                    if i.doublearray:
-                        emit(c_file, f'''
                                 ret->{i.fixname}_item_lens[i] = src->{i.fixname}_item_lens[i];
                                 ret->{i.fixname}[i] = calloc (ret->{i.fixname}_item_lens[i] + 1, sizeof (**ret->{i.fixname}[i]));
                                 if (ret->{i.fixname}[i] == NULL)
@@ -1294,13 +1285,13 @@ def make_clone(obj, c_file, prefix):
                                     if (ret->{i.fixname}[i][j] == NULL)
                                         return NULL;
                                   }}
-                        ''', indent=3)
-                    else:
-                        emit(c_file, f'''
+                    ''', indent=3)
+                else:
+                    emit(c_file, f'''
                                 ret->{i.fixname}[i] = clone_{typename}{maybe_element} (src->{i.fixname}[i]);
                                 if (ret->{i.fixname}[i] == NULL)
                                     return NULL;
-                        ''', indent=3)
+                    ''', indent=3)
 
             elif i.subtyp == 'string':
                 if i.doublearray:
