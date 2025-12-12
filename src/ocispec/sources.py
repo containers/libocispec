@@ -1316,10 +1316,14 @@ def make_c_free (obj, c_file, prefix):
             return
         else:
             typename = helpers.get_name_substr(obj.name, prefix)
-    c_file.append(f"void\nfree_{typename} ({typename} *ptr)\n")
-    c_file.append("{\n")
-    c_file.append("    if (ptr == NULL)\n")
-    c_file.append("        return;\n")
+
+    emit(c_file, f'''
+        void
+        free_{typename} ({typename} *ptr)
+        {{
+            if (ptr == NULL)
+                return;
+    ''', indent=0)
     if obj.typ == 'mapStringObject':
         child = obj.children[0]
         if helpers.valid_basic_map_name(child.typ):
@@ -1333,15 +1337,19 @@ def make_c_free (obj, c_file, prefix):
     for i in objs or []:
         if helpers.valid_basic_map_name(i.typ):
             free_func = helpers.make_basic_map_name(i.typ)
-            c_file.append(f"    free_{free_func} (ptr->{i.fixname});\n")
-            c_file.append(f"    ptr->{i.fixname} = NULL;\n")
+            emit(c_file, f'''
+                free_{free_func} (ptr->{i.fixname});
+                ptr->{i.fixname} = NULL;
+            ''', indent=1)
         if i.typ == 'mapStringObject':
             if i.subtypname:
                 free_func = i.subtypname
             else:
                 free_func = helpers.get_prefixed_name(i.name, prefix)
-            c_file.append(f"    free_{free_func} (ptr->{i.fixname});\n")
-            c_file.append(f"    ptr->{i.fixname} = NULL;\n")
+            emit(c_file, f'''
+                free_{free_func} (ptr->{i.fixname});
+                ptr->{i.fixname} = NULL;
+            ''', indent=1)
         elif i.typ == 'array':
             if make_c_array_free (i, c_file, prefix):
                 continue
@@ -1349,22 +1357,33 @@ def make_c_free (obj, c_file, prefix):
             typename = helpers.get_prefixed_name(i.name, prefix)
             if i.typ == 'string' or i.typ == 'booleanPointer' or \
                     helpers.judge_data_pointer_type(i.typ):
-                c_file.append(f"    free (ptr->{i.fixname});\n")
-                c_file.append(f"    ptr->{i.fixname} = NULL;\n")
+                emit(c_file, f'''
+                    free (ptr->{i.fixname});
+                    ptr->{i.fixname} = NULL;
+                ''', indent=1)
             elif i.typ == 'object':
                 if i.subtypname is not None:
                     typename = i.subtypname
-                c_file.append(f"    if (ptr->{i.fixname} != NULL)\n")
-                c_file.append("      {\n")
-                c_file.append(f"        free_{typename} (ptr->{i.fixname});\n")
-                c_file.append(f"        ptr->{i.fixname} = NULL;\n")
-                c_file.append("      }\n")
+                emit(c_file, f'''
+                    if (ptr->{i.fixname} != NULL)
+                      {{
+                        free_{typename} (ptr->{i.fixname});
+                        ptr->{i.fixname} = NULL;
+                      }}
+                ''', indent=1)
+
     if obj.typ == 'object':
         if obj.children is not None:
-            c_file.append("    yajl_tree_free (ptr->_residual);\n")
-            c_file.append("    ptr->_residual = NULL;\n")
-    c_file.append("    free (ptr);\n")
-    c_file.append("}\n\n")
+            emit(c_file, '''
+                yajl_tree_free (ptr->_residual);
+                ptr->_residual = NULL;
+            ''', indent=1)
+
+    emit(c_file, '''
+            free (ptr);
+        }
+
+    ''', indent=1)
 
 
 def c_file_map_str(c_file, child, childname):
