@@ -1410,12 +1410,6 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     c_file.append('      }\n')
 
 
-def parse_obj_type(obj, c_file, prefix, obj_typename):
-    """Generate C code to parse a single JSON field into a struct member."""
-    handler = get_type_handler(obj.typ)
-    if handler:
-        handler.emit_parse(c_file, obj, prefix, obj_typename, indent=1)
-
 def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
     """
     Description: generate c language for parse object or array object
@@ -1428,7 +1422,9 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
         if obj.required and i.origname in obj.required and \
                 not helpers.is_numeric_type(i.typ) and i.typ != 'boolean':
             required_to_check.append(i)
-        parse_obj_type(i, c_file, prefix, obj_typename)
+        handler = get_type_handler(i.typ)
+        if handler:
+            handler.emit_parse(c_file, i, prefix, obj_typename, indent=1)
 
     for i in required_to_check:
         emit(c_file, f'''
@@ -1589,13 +1585,6 @@ def get_map_string_obj(obj, c_file, prefix):
     emit_beautify_on(c_file, '!len', indent=1)
 
 
-def get_obj_arr_obj(obj, c_file, prefix):
-    """Generate C code to serialize a struct field to JSON."""
-    handler = get_type_handler(obj.typ)
-    if handler:
-        handler.emit_generate(c_file, obj, prefix, indent=1)
-
-
 def get_c_json(obj, c_file, prefix):
     """
     Description: c language generate json file
@@ -1629,7 +1618,9 @@ def get_c_json(obj, c_file, prefix):
         emit_gen_map_open(c_file, indent=1)
         check_gen_status(c_file, indent=1)
         for i in nodes or []:
-            get_obj_arr_obj(i, c_file, prefix)
+            handler = get_type_handler(i.typ)
+            if handler:
+                handler.emit_generate(c_file, i, prefix, indent=1)
         if obj.typ == 'object':
             if obj.children is not None:
                 emit(c_file, '''
