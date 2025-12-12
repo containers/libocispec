@@ -730,11 +730,152 @@ class ObjectType(TypeHandler):
         ''', indent=indent)
 
     def emit_clone(self, c_file, obj, prefix, indent=1):
-        # Intentionally empty: object cloning is handled directly in make_clone()
-        # because it requires per-type context (typename resolution) that the
-        # handler dispatch pattern doesn't provide. The actual cloning logic
-        # for object fields is emitted by make_clone() at lines 1725-1745.
+        # Intentionally empty: object field cloning is handled explicitly in
+        # emit_clone_body() because it requires typename resolution that the
+        # simple handler dispatch pattern doesn't provide.
         pass
+
+    def emit_make_body(self, c_file, obj, prefix):
+        """Generate the body of make_typename() for objects."""
+        obj_typename = helpers.get_prefixed_name(obj.name, prefix)
+        nodes = obj.children
+        required_to_check = []
+        for i in nodes or []:
+            if obj.required and i.origname in obj.required and \
+                    not helpers.is_numeric_type(i.typ) and i.typ != 'boolean':
+                required_to_check.append(i)
+            handler = get_type_handler(i.typ)
+            if handler:
+                handler.emit_parse(c_file, i, prefix, obj_typename, indent=1)
+
+        for i in required_to_check:
+            emit(c_file, f'''
+                if (ret->{i.fixname} == NULL)
+                  {{
+            ''', indent=1)
+            emit_asprintf_error(c_file, 'err', "Required field '%s' not present", f'"{i.origname}"', indent=2)
+            emit(c_file, '''
+                    return NULL;
+                  }
+            ''', indent=1)
+
+        if obj.children is not None:
+            # O(n^2) complexity, but the objects should not really be big...
+            condition = "\n                && ".join( \
+                [f'strcmp (tree->u.object.keys[i], "{i.origname}")' for i in obj.children])
+            emit(c_file, f'''
+                if (tree->type == yajl_t_object)
+                  {{
+                    size_t i;
+                    size_t j = 0;
+                    size_t cnt = tree->u.object.len;
+                    yajl_val resi = NULL;
+
+                    if (ctx->options & OPT_PARSE_FULLKEY)
+                      {{
+                        resi = calloc (1, sizeof(*tree));
+                        if (resi == NULL)
+                          return NULL;
+
+                        resi->type = yajl_t_object;
+                        resi->u.object.keys = calloc (cnt, sizeof (const char *));
+                        if (resi->u.object.keys == NULL)
+                          {{
+                            yajl_tree_free (resi);
+                            return NULL;
+                          }}
+                        resi->u.object.values = calloc (cnt, sizeof (yajl_val));
+                        if (resi->u.object.values == NULL)
+                          {{
+                            yajl_tree_free (resi);
+                            return NULL;
+                          }}
+                      }}
+
+                    for (i = 0; i < tree->u.object.len; i++)
+                      {{
+                        if ({condition}){{
+                            if (ctx->options & OPT_PARSE_FULLKEY)
+                              {{
+                                resi->u.object.keys[j] = tree->u.object.keys[i];
+                                tree->u.object.keys[i] = NULL;
+                                resi->u.object.values[j] = tree->u.object.values[i];
+                                tree->u.object.values[i] = NULL;
+                                resi->u.object.len++;
+                              }}
+                            j++;
+                          }}
+                      }}
+
+                    if ((ctx->options & OPT_PARSE_STRICT) && j > 0 && ctx->errfile != NULL)
+                      (void) fprintf (ctx->errfile, "WARNING: unknown key found\\n");
+
+                    if (ctx->options & OPT_PARSE_FULLKEY)
+                      ret->_residual = resi;
+                  }}
+            ''', indent=1)
+
+    def emit_gen_body(self, c_file, obj, prefix):
+        """Generate the body of gen_typename() for objects."""
+        nodes = obj.children
+        if nodes is None:
+            emit_beautify_off(c_file, 'true', indent=1)
+
+        emit_gen_map_open(c_file, indent=1)
+        check_gen_status(c_file, indent=1)
+        for i in nodes or []:
+            handler = get_type_handler(i.typ)
+            if handler:
+                handler.emit_generate(c_file, i, prefix, indent=1)
+        if obj.children is not None:
+            emit(c_file, '''
+                if (ptr != NULL && ptr->_residual != NULL)
+                  {
+                    stat = gen_yajl_object_residual (ptr->_residual, g, err);
+                    if (yajl_gen_status_ok != stat)
+                        GEN_SET_ERROR_AND_RETURN (stat, err);
+                  }
+            ''', indent=1)
+        emit_gen_map_close(c_file, indent=1)
+        check_gen_status(c_file, indent=1)
+        if nodes is None:
+            emit_beautify_on(c_file, 'true', indent=1)
+
+    def emit_free_body(self, c_file, obj, prefix):
+        """Generate the body of free_typename() for objects."""
+        objs = obj.children
+        for i in objs or []:
+            handler = get_type_handler(i.typ)
+            if handler:
+                handler.emit_free(c_file, i, prefix, indent=1)
+
+        if obj.children is not None:
+            emit(c_file, '''
+                yajl_tree_free (ptr->_residual);
+                ptr->_residual = NULL;
+            ''', indent=1)
+
+    def emit_clone_body(self, c_file, obj, prefix):
+        """Generate the body of clone_typename() for objects."""
+        nodes = obj.children
+        for i in nodes or []:
+            handler = get_type_handler(i.typ)
+            # Object type needs parent context (mapStringObject vs regular object)
+            # so we handle it explicitly below rather than via handler
+            if handler and i.typ != 'object':
+                handler.emit_clone(c_file, i, prefix, indent=1)
+            elif i.typ == 'object':
+                node_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
+                emit(c_file, f'''
+                    if (src->{i.fixname})
+                      {{
+                        ret->{i.fixname} = clone_{node_name} (src->{i.fixname});
+                        if (ret->{i.fixname} == NULL)
+                          return NULL;
+                      }}
+                ''', indent=1)
+            else:
+                raise Exception("Unimplemented type for clone: %s" % i.typ)
 
 
 class MapStringObjectType(TypeHandler):
@@ -801,6 +942,154 @@ class MapStringObjectType(TypeHandler):
                   }}
               }}
         ''', indent=indent)
+
+    def emit_make_body(self, c_file, obj, prefix):
+        """Generate the body of make_typename() for mapStringObject."""
+        child = obj.children[0]
+        if helpers.valid_basic_map_name(child.typ):
+            childname = helpers.make_basic_map_name(child.typ)
+        else:
+            if child.subtypname:
+                childname = child.subtypname
+            else:
+                childname = helpers.get_prefixed_name(child.name, prefix)
+
+        emit(c_file, f'''
+            if (YAJL_GET_OBJECT (tree) != NULL)
+              {{
+                size_t i;
+                size_t len = YAJL_GET_OBJECT_NO_CHECK (tree)->len;
+                const char **keys = YAJL_GET_OBJECT_NO_CHECK (tree)->keys;
+                yajl_val *values = YAJL_GET_OBJECT_NO_CHECK (tree)->values;
+                ret->len = len;
+        ''', indent=1)
+
+        calloc_with_check(c_file, 'ret->keys', 'len + 1', '*ret->keys', indent=2)
+        calloc_with_check(c_file, f'ret->{child.fixname}', 'len + 1', f'*ret->{child.fixname}', indent=2)
+
+        emit(c_file, f'''
+                for (i = 0; i < len; i++)
+                  {{
+                    yajl_val val;
+                    const char *tmpkey = keys[i];
+                    ret->keys[i] = strdup (tmpkey ? tmpkey : "");
+        ''', indent=2)
+
+        null_check_return(c_file, 'ret->keys[i]', indent=3)
+
+        emit(c_file, f'''
+                    val = values[i];
+                    ret->{child.fixname}[i] = make_{childname} (val, ctx, err);
+        ''', indent=3)
+
+        null_check_return(c_file, f'ret->{child.fixname}[i]', indent=3)
+
+        c_file.append('          }\n')
+        c_file.append('      }\n')
+
+    def emit_gen_body(self, c_file, obj, prefix):
+        """Generate the body of gen_typename() for mapStringObject."""
+        child = obj.children[0]
+        if helpers.valid_basic_map_name(child.typ):
+            childname = helpers.make_basic_map_name(child.typ)
+        else:
+            if child.subtypname:
+                childname = child.subtypname
+            else:
+                childname = helpers.get_prefixed_name(child.name, prefix)
+
+        emit(c_file, '''
+            size_t len = 0, i;
+            if (ptr != NULL)
+                len = ptr->len;
+        ''', indent=1)
+        emit_beautify_off(c_file, '!len', indent=1)
+        emit_gen_map_open(c_file, indent=1)
+        check_gen_status(c_file, indent=1)
+
+        emit(c_file, f'''
+            if (len || (ptr != NULL && ptr->keys != NULL && ptr->{child.fixname} != NULL))
+              {{
+                for (i = 0; i < len; i++)
+                  {{
+                    char *str = ptr->keys[i] ? ptr->keys[i] : "";
+                    stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen (str));
+        ''', indent=1)
+
+        check_gen_status(c_file, indent=3)
+
+        emit(c_file, f'''
+                    stat = gen_{childname} (g, ptr->{child.fixname}[i], ctx, err);
+        ''', indent=3)
+
+        check_gen_status(c_file, indent=3)
+
+        emit(c_file, '''
+              }
+          }
+        ''', indent=2)
+        emit_gen_map_close(c_file, indent=1)
+        check_gen_status(c_file, indent=1)
+        emit_beautify_on(c_file, '!len', indent=1)
+
+    def emit_free_body(self, c_file, obj, prefix):
+        """Generate the body of free_typename() for mapStringObject."""
+        child = obj.children[0]
+        if helpers.valid_basic_map_name(child.typ):
+            childname = helpers.make_basic_map_name(child.typ)
+        else:
+            if child.subtypname:
+                childname = child.subtypname
+            else:
+                childname = helpers.get_prefixed_name(child.name, prefix)
+        emit(c_file, f'''
+            if (ptr->keys != NULL && ptr->{child.fixname} != NULL)
+              {{
+                size_t i;
+                for (i = 0; i < ptr->len; i++)
+                  {{
+        ''', indent=1)
+
+        free_and_null(c_file, "ptr", "keys[i]", indent=3)
+
+        emit(c_file, f'''
+                    free_{childname} (ptr->{child.fixname}[i]);
+                    ptr->{child.fixname}[i] = NULL;
+                  }}
+        ''', indent=3)
+
+        free_and_null(c_file, "ptr", "keys", indent=2)
+        free_and_null(c_file, "ptr", child.fixname, indent=2)
+
+        emit(c_file, '''
+              }
+        ''', indent=1)
+
+    def emit_clone_body(self, c_file, obj, prefix):
+        """Generate the body of clone_typename() for mapStringObject."""
+        nodes = obj.children
+        for i in nodes or []:
+            handler = get_type_handler(i.typ)
+            # Object type needs parent context for mapStringObject
+            if handler and i.typ != 'object':
+                handler.emit_clone(c_file, i, prefix, indent=1)
+            elif i.typ == 'object':
+                node_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
+                emit(c_file, f'''
+                    if (src->{i.fixname})
+                      {{
+                        size_t i;
+                        ret->{i.fixname} = calloc (src->len + 1, sizeof (*ret->{i.fixname}));
+                        for (i = 0; i < src->len; i++)
+                          {{
+                             ret->{i.fixname}[i] = clone_{node_name} (src->{i.fixname}[i]);
+                             if (ret->{i.fixname}[i] == NULL)
+                               return NULL;
+                          }}
+                      }}
+                ''', indent=1)
+            else:
+                raise Exception("Unimplemented type for clone: %s" % i.typ)
 
 
 class BasicMapType(TypeHandler):
@@ -1483,6 +1772,76 @@ class ArrayType(TypeHandler):
               }}
         ''', indent=indent+1)
 
+    def emit_make_body(self, c_file, obj, prefix):
+        """Generate the body of make_typename() for array subtypes (element structs)."""
+        obj_typename = helpers.get_name_substr(obj.name, prefix)
+        nodes = obj.subtypobj
+        required_to_check = []
+        for i in nodes or []:
+            if obj.required and i.origname in obj.required and \
+                    not helpers.is_numeric_type(i.typ) and i.typ != 'boolean':
+                required_to_check.append(i)
+            handler = get_type_handler(i.typ)
+            if handler:
+                handler.emit_parse(c_file, i, prefix, obj_typename, indent=1)
+
+        for i in required_to_check:
+            emit(c_file, f'''
+                if (ret->{i.fixname} == NULL)
+                  {{
+            ''', indent=1)
+            emit_asprintf_error(c_file, 'err', "Required field '%s' not present", f'"{i.origname}"', indent=2)
+            emit(c_file, '''
+                    return NULL;
+                  }
+            ''', indent=1)
+
+    def emit_gen_body(self, c_file, obj, prefix):
+        """Generate the body of gen_typename() for array subtypes."""
+        nodes = obj.subtypobj
+        if nodes is None:
+            emit_beautify_off(c_file, 'true', indent=1)
+
+        emit_gen_map_open(c_file, indent=1)
+        check_gen_status(c_file, indent=1)
+        for i in nodes or []:
+            handler = get_type_handler(i.typ)
+            if handler:
+                handler.emit_generate(c_file, i, prefix, indent=1)
+        emit_gen_map_close(c_file, indent=1)
+        check_gen_status(c_file, indent=1)
+        if nodes is None:
+            emit_beautify_on(c_file, 'true', indent=1)
+
+    def emit_free_body(self, c_file, obj, prefix):
+        """Generate the body of free_typename() for array subtypes."""
+        objs = obj.subtypobj
+        for i in objs or []:
+            handler = get_type_handler(i.typ)
+            if handler:
+                handler.emit_free(c_file, i, prefix, indent=1)
+
+    def emit_clone_body(self, c_file, obj, prefix):
+        """Generate the body of clone_typename() for array subtypes."""
+        nodes = obj.subtypobj
+        for i in nodes or []:
+            handler = get_type_handler(i.typ)
+            # Object type needs parent context
+            if handler and i.typ != 'object':
+                handler.emit_clone(c_file, i, prefix, indent=1)
+            elif i.typ == 'object':
+                node_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
+                emit(c_file, f'''
+                    if (src->{i.fixname})
+                      {{
+                        ret->{i.fixname} = clone_{node_name} (src->{i.fixname});
+                        if (ret->{i.fixname} == NULL)
+                          return NULL;
+                      }}
+                ''', indent=1)
+            else:
+                raise Exception("Unimplemented type for clone: %s" % i.typ)
+
 
 # Type handler registry
 _TYPE_HANDLERS = {
@@ -1525,138 +1884,6 @@ def append_c_code(obj, c_file, prefix):
     get_c_json(obj, c_file, prefix)
     make_clone(obj, c_file, prefix)
 
-def parse_map_string_obj(obj, c_file, prefix, obj_typename):
-    """
-    Description: generate c language for parse json map string object
-    Interface: None
-    History: 2019-06-17
-    """
-    child = obj.children[0]
-    if helpers.valid_basic_map_name(child.typ):
-        childname = helpers.make_basic_map_name(child.typ)
-    else:
-        if child.subtypname:
-            childname = child.subtypname
-        else:
-            childname = helpers.get_prefixed_name(child.name, prefix)
-
-    emit(c_file, f'''
-        if (YAJL_GET_OBJECT (tree) != NULL)
-          {{
-            size_t i;
-            size_t len = YAJL_GET_OBJECT_NO_CHECK (tree)->len;
-            const char **keys = YAJL_GET_OBJECT_NO_CHECK (tree)->keys;
-            yajl_val *values = YAJL_GET_OBJECT_NO_CHECK (tree)->values;
-            ret->len = len;
-    ''', indent=1)
-
-    calloc_with_check(c_file, 'ret->keys', 'len + 1', '*ret->keys', indent=2)
-    calloc_with_check(c_file, f'ret->{child.fixname}', 'len + 1', f'*ret->{child.fixname}', indent=2)
-
-    emit(c_file, f'''
-            for (i = 0; i < len; i++)
-              {{
-                yajl_val val;
-                const char *tmpkey = keys[i];
-                ret->keys[i] = strdup (tmpkey ? tmpkey : "");
-    ''', indent=2)
-
-    null_check_return(c_file, 'ret->keys[i]', indent=3)
-
-    emit(c_file, f'''
-                val = values[i];
-                ret->{child.fixname}[i] = make_{childname} (val, ctx, err);
-    ''', indent=3)
-
-    null_check_return(c_file, f'ret->{child.fixname}[i]', indent=3)
-
-    c_file.append('          }\n')
-    c_file.append('      }\n')
-
-
-def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
-    """
-    Description: generate c language for parse object or array object
-    Interface: None
-    History: 2019-06-17
-    """
-    nodes = obj.children if obj.typ == 'object' else obj.subtypobj
-    required_to_check = []
-    for i in nodes or []:
-        if obj.required and i.origname in obj.required and \
-                not helpers.is_numeric_type(i.typ) and i.typ != 'boolean':
-            required_to_check.append(i)
-        handler = get_type_handler(i.typ)
-        if handler:
-            handler.emit_parse(c_file, i, prefix, obj_typename, indent=1)
-
-    for i in required_to_check:
-        emit(c_file, f'''
-            if (ret->{i.fixname} == NULL)
-              {{
-        ''', indent=1)
-        emit_asprintf_error(c_file, 'err', "Required field '%s' not present", f'"{i.origname}"', indent=2)
-        emit(c_file, '''
-                return NULL;
-              }
-        ''', indent=1)
-
-    if obj.typ == 'object' and obj.children is not None:
-        # O(n^2) complexity, but the objects should not really be big...
-        condition = "\n                && ".join( \
-            [f'strcmp (tree->u.object.keys[i], "{i.origname}")' for i in obj.children])
-        emit(c_file, f'''
-            if (tree->type == yajl_t_object)
-              {{
-                size_t i;
-                size_t j = 0;
-                size_t cnt = tree->u.object.len;
-                yajl_val resi = NULL;
-
-                if (ctx->options & OPT_PARSE_FULLKEY)
-                  {{
-                    resi = calloc (1, sizeof(*tree));
-                    if (resi == NULL)
-                      return NULL;
-
-                    resi->type = yajl_t_object;
-                    resi->u.object.keys = calloc (cnt, sizeof (const char *));
-                    if (resi->u.object.keys == NULL)
-                      {{
-                        yajl_tree_free (resi);
-                        return NULL;
-                      }}
-                    resi->u.object.values = calloc (cnt, sizeof (yajl_val));
-                    if (resi->u.object.values == NULL)
-                      {{
-                        yajl_tree_free (resi);
-                        return NULL;
-                      }}
-                  }}
-
-                for (i = 0; i < tree->u.object.len; i++)
-                  {{
-                    if ({condition}){{
-                        if (ctx->options & OPT_PARSE_FULLKEY)
-                          {{
-                            resi->u.object.keys[j] = tree->u.object.keys[i];
-                            tree->u.object.keys[i] = NULL;
-                            resi->u.object.values[j] = tree->u.object.values[i];
-                            tree->u.object.values[i] = NULL;
-                            resi->u.object.len++;
-                          }}
-                        j++;
-                      }}
-                  }}
-
-                if ((ctx->options & OPT_PARSE_STRICT) && j > 0 && ctx->errfile != NULL)
-                  (void) fprintf (ctx->errfile, "WARNING: unknown key found\\n");
-
-                if (ctx->options & OPT_PARSE_FULLKEY)
-                  ret->_residual = resi;
-              }}
-        ''', indent=1)
-
 
 def parse_json_to_c(obj, c_file, prefix):
     """
@@ -1669,11 +1896,10 @@ def parse_json_to_c(obj, c_file, prefix):
     if obj.typ == 'object' or obj.typ == 'mapStringObject':
         if obj.subtypname:
             return
-        obj_typename = typename = helpers.get_prefixed_name(obj.name, prefix)
+        typename = helpers.get_prefixed_name(obj.name, prefix)
     if obj.typ == 'array':
-        obj_typename = typename = helpers.get_name_substr(obj.name, prefix)
-        objs = obj.subtypobj
-        if objs is None or obj.subtypname:
+        typename = helpers.get_name_substr(obj.name, prefix)
+        if obj.subtypobj is None or obj.subtypname:
             return
     emit(c_file, f'''
         define_cleaner_function ({typename} *, free_{typename})
@@ -1689,64 +1915,14 @@ def parse_json_to_c(obj, c_file, prefix):
             if (ret == NULL)
               return NULL;
     ''', indent=0)
-    if obj.typ == 'mapStringObject':
-        parse_map_string_obj(obj, c_file, prefix, obj_typename)
 
-    if obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
-        parse_obj_arr_obj(obj, c_file, prefix, obj_typename)
+    handler = get_type_handler(obj.typ)
+    if handler and hasattr(handler, 'emit_make_body'):
+        handler.emit_make_body(c_file, obj, prefix)
+
     c_file.append("    return move_ptr (ret);\n")
     c_file.append("}\n")
     c_file.append("\n")
-
-
-def get_map_string_obj(obj, c_file, prefix):
-    """
-    Description: c language generate map string object
-    Interface: None
-    History: 2019-06-17
-    """
-    child = obj.children[0]
-    if helpers.valid_basic_map_name(child.typ):
-        childname = helpers.make_basic_map_name(child.typ)
-    else:
-        if child.subtypname:
-            childname = child.subtypname
-        else:
-            childname = helpers.get_prefixed_name(child.name, prefix)
-
-    emit(c_file, '''
-        size_t len = 0, i;
-        if (ptr != NULL)
-            len = ptr->len;
-    ''', indent=1)
-    emit_beautify_off(c_file, '!len', indent=1)
-    emit_gen_map_open(c_file, indent=1)
-    check_gen_status(c_file, indent=1)
-
-    emit(c_file, f'''
-        if (len || (ptr != NULL && ptr->keys != NULL && ptr->{child.fixname} != NULL))
-          {{
-            for (i = 0; i < len; i++)
-              {{
-                char *str = ptr->keys[i] ? ptr->keys[i] : "";
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen (str));
-    ''', indent=1)
-
-    check_gen_status(c_file, indent=3)
-
-    emit(c_file, f'''
-                stat = gen_{childname} (g, ptr->{child.fixname}[i], ctx, err);
-    ''', indent=3)
-
-    check_gen_status(c_file, indent=3)
-
-    emit(c_file, '''
-              }
-          }
-    ''', indent=2)
-    emit_gen_map_close(c_file, indent=1)
-    check_gen_status(c_file, indent=1)
-    emit_beautify_on(c_file, '!len', indent=1)
 
 
 def get_c_json(obj, c_file, prefix):
@@ -1761,8 +1937,7 @@ def get_c_json(obj, c_file, prefix):
         typename = helpers.get_prefixed_name(obj.name, prefix)
     elif obj.typ == 'array':
         typename = helpers.get_name_substr(obj.name, prefix)
-        objs = obj.subtypobj
-        if objs is None:
+        if obj.subtypobj is None:
             return
     emit(c_file, f'''
         yajl_gen_status
@@ -1772,33 +1947,11 @@ def get_c_json(obj, c_file, prefix):
             *err = NULL;
             (void) ptr;  /* Silence compiler warning.  */
     ''', indent=0)
-    if obj.typ == 'mapStringObject':
-        get_map_string_obj(obj, c_file, prefix)
-    elif obj.typ == 'object' or (obj.typ == 'array' and obj.subtypobj):
-        nodes = obj.children if obj.typ == 'object' else obj.subtypobj
-        if nodes is None:
-            emit_beautify_off(c_file, 'true', indent=1)
 
-        emit_gen_map_open(c_file, indent=1)
-        check_gen_status(c_file, indent=1)
-        for i in nodes or []:
-            handler = get_type_handler(i.typ)
-            if handler:
-                handler.emit_generate(c_file, i, prefix, indent=1)
-        if obj.typ == 'object':
-            if obj.children is not None:
-                emit(c_file, '''
-                    if (ptr != NULL && ptr->_residual != NULL)
-                      {
-                        stat = gen_yajl_object_residual (ptr->_residual, g, err);
-                        if (yajl_gen_status_ok != stat)
-                            GEN_SET_ERROR_AND_RETURN (stat, err);
-                      }
-                ''', indent=1)
-        emit_gen_map_close(c_file, indent=1)
-        check_gen_status(c_file, indent=1)
-        if nodes is None:
-            emit_beautify_on(c_file, 'true', indent=1)
+    handler = get_type_handler(obj.typ)
+    if handler and hasattr(handler, 'emit_gen_body'):
+        handler.emit_gen_body(c_file, obj, prefix)
+
     c_file.append("    return yajl_gen_status_ok;\n")
     c_file.append("}\n")
     c_file.append("\n")
@@ -1839,40 +1992,9 @@ def make_clone(obj, c_file, prefix):
               return NULL;
     ''', indent=0)
 
-    nodes = obj.children if obj.subtypobj is None else obj.subtypobj
-    for i in nodes or []:
-        handler = get_type_handler(i.typ)
-        # Object type needs parent context (mapStringObject vs regular object)
-        # so we handle it explicitly below rather than via handler
-        if handler and i.typ != 'object':
-            handler.emit_clone(c_file, i, prefix, indent=1)
-        elif i.typ == 'object':
-            node_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
-            if obj.typ != 'mapStringObject':
-                emit(c_file, f'''
-                    if (src->{i.fixname})
-                      {{
-                        ret->{i.fixname} = clone_{node_name} (src->{i.fixname});
-                        if (ret->{i.fixname} == NULL)
-                          return NULL;
-                      }}
-                ''', indent=1)
-            else:
-                emit(c_file, f'''
-                    if (src->{i.fixname})
-                      {{
-                        size_t i;
-                        ret->{i.fixname} = calloc (src->len + 1, sizeof (*ret->{i.fixname}));
-                        for (i = 0; i < src->len; i++)
-                          {{
-                             ret->{i.fixname}[i] = clone_{node_name} (src->{i.fixname}[i]);
-                             if (ret->{i.fixname}[i] == NULL)
-                               return NULL;
-                          }}
-                      }}
-                ''', indent=1)
-        else:
-            raise Exception("Unimplemented type for clone: %s" % i.typ)
+    handler = get_type_handler(obj.typ)
+    if handler and hasattr(handler, 'emit_clone_body'):
+        handler.emit_clone_body(c_file, obj, prefix)
 
     c_file.append("    return move_ptr (ret);\n")
     c_file.append("}\n")
@@ -1908,48 +2030,10 @@ def make_c_free (obj, c_file, prefix):
             if (ptr == NULL)
                 return;
     ''', indent=0)
-    if obj.typ == 'mapStringObject':
-        child = obj.children[0]
-        if helpers.valid_basic_map_name(child.typ):
-            childname = helpers.make_basic_map_name(child.typ)
-        else:
-            if child.subtypname:
-                childname = child.subtypname
-            else:
-                childname = helpers.get_prefixed_name(child.name, prefix)
-        emit(c_file, f'''
-            if (ptr->keys != NULL && ptr->{child.fixname} != NULL)
-              {{
-                size_t i;
-                for (i = 0; i < ptr->len; i++)
-                  {{
-        ''', indent=1)
 
-        free_and_null(c_file, "ptr", "keys[i]", indent=3)
-
-        emit(c_file, f'''
-                    free_{childname} (ptr->{child.fixname}[i]);
-                    ptr->{child.fixname}[i] = NULL;
-                  }}
-        ''', indent=3)
-
-        free_and_null(c_file, "ptr", "keys", indent=2)
-        free_and_null(c_file, "ptr", child.fixname, indent=2)
-
-        emit(c_file, '''
-              }
-        ''', indent=1)
-    for i in objs or []:
-        handler = get_type_handler(i.typ)
-        if handler:
-            handler.emit_free(c_file, i, prefix, indent=1)
-
-    if obj.typ == 'object':
-        if obj.children is not None:
-            emit(c_file, '''
-                yajl_tree_free (ptr->_residual);
-                ptr->_residual = NULL;
-            ''', indent=1)
+    handler = get_type_handler(obj.typ)
+    if handler and hasattr(handler, 'emit_free_body'):
+        handler.emit_free_body(c_file, obj, prefix)
 
     emit(c_file, '''
             free (ptr);
