@@ -291,6 +291,415 @@ def emit_beautify_on(c_file, condition='!len', indent=0):
     ''', indent=indent)
 
 
+# Type handler classes for C code generation
+# Each type has methods for: parsing JSON, generating JSON, freeing memory, cloning
+
+class TypeHandler:
+    """Base class for type-specific C code generation."""
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        """Generate C code to parse this type from JSON."""
+        pass
+
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        """Generate C code to serialize this type to JSON."""
+        pass
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        """Generate C code to free memory for this type."""
+        pass
+
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        """Generate C code to clone/deep-copy this type."""
+        pass
+
+    def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
+        """Generate C code to read a value of this type."""
+        pass
+
+    def emit_json_value(self, c_file, src, dst, ptx, level=1):
+        """Generate C code to write a JSON value of this type."""
+        pass
+
+
+class StringType(TypeHandler):
+    """Handler for string type."""
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_string)',
+                      f"ret->{obj.fixname}", 'string', obj.origname, obj_typename, indent=indent)
+
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+                char *str = "";
+        ''', indent=indent)
+        emit_gen_key(c_file, obj.origname, indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname} != NULL)
+                    str = ptr->{obj.fixname};
+        ''', indent=indent + 1)
+        self.emit_json_value(c_file, "str", 'g', 'ctx', level=indent + 1)
+        emit(c_file, '''
+              }
+        ''', indent=indent)
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            free (ptr->{obj.fixname});
+            ptr->{obj.fixname} = NULL;
+        ''', indent=indent)
+
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            if (src->{obj.fixname} != NULL)
+              {{
+                ret->{obj.fixname} = strdup (src->{obj.fixname});
+                if (ret->{obj.fixname} == NULL)
+                  return NULL;
+              }}
+        ''', indent=indent)
+
+    def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                char *str = YAJL_GET_STRING (val);
+                {dest} = strdup (str ? str : "");
+                if ({dest} == NULL)
+                  return NULL;
+              }}
+        ''', indent=level)
+
+    def emit_json_value(self, c_file, src, dst, ptx, level=1):
+        emit(c_file, f'''
+            stat = yajl_gen_string ((yajl_gen){dst}, (const unsigned char *)({src}), strlen ({src}));
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+        ''', indent=level)
+
+
+class BooleanType(TypeHandler):
+    """Handler for boolean type."""
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_true)',
+                      f"ret->{obj.fixname}", 'boolean', obj.origname, obj_typename, indent=indent)
+
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))
+              {{
+                bool b = false;
+        ''', indent=indent)
+        emit_gen_key(c_file, obj.origname, indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname})
+                    b = ptr->{obj.fixname};
+
+        ''', indent=indent + 1)
+        self.emit_json_value(c_file, "b", 'g', 'ctx', level=indent + 1)
+        emit(c_file, '''
+              }
+        ''', indent=indent)
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        pass  # Boolean doesn't need freeing
+
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            ret->{obj.fixname} = src->{obj.fixname};
+            ret->{obj.fixname}_present = src->{obj.fixname}_present;
+        ''', indent=indent)
+
+    def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                {dest} = YAJL_IS_TRUE(val);
+        ''', indent=level)
+        if '[' not in dest:
+            emit(c_file, f'''
+                    {dest}_present = 1;
+              }}
+            else
+              {{
+                val = {src.replace('yajl_t_true', 'yajl_t_false')};
+                if (val != NULL)
+                  {{
+                    {dest} = 0;
+                    {dest}_present = 1;
+                  }}
+              }}
+            ''', indent=level + 1)
+        else:
+            emit(c_file, f'''
+              }}
+            ''', indent=level)
+
+    def emit_json_value(self, c_file, src, dst, ptx, level=1):
+        emit(c_file, f'''
+            stat = yajl_gen_bool ((yajl_gen){dst}, (int)({src}));
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+        ''', indent=level)
+
+
+class BooleanPointerType(TypeHandler):
+    """Handler for booleanPointer type."""
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_true)',
+                      f"ret->{obj.fixname}", 'booleanPointer', obj.origname, obj_typename, indent=indent)
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            free (ptr->{obj.fixname});
+            ptr->{obj.fixname} = NULL;
+        ''', indent=indent)
+
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            if (src->{obj.fixname} != NULL)
+              {{
+                ret->{obj.fixname} = calloc (1, sizeof (bool));
+                if (ret->{obj.fixname} == NULL)
+                    return NULL;
+                *(ret->{obj.fixname}) = *(src->{obj.fixname});
+              }}
+        ''', indent=indent)
+
+    def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                {dest} = calloc (1, sizeof (bool));
+                if ({dest} == NULL)
+                    return NULL;
+                *({dest}) = YAJL_IS_TRUE(val);
+              }}
+            else
+             {{
+               val = get_val (tree, "{keyname}", yajl_t_false);
+               if (val != NULL)
+                 {{
+                   {dest} = calloc (1, sizeof (bool));
+                   if ({dest} == NULL)
+                     return NULL;
+                   *({dest}) = YAJL_IS_TRUE(val);
+                 }}
+             }}
+        ''', indent=level)
+
+
+class NumericType(TypeHandler):
+    """Handler for numeric types (integer, double, int8-int64, uint8-uint64, UID, GID)."""
+
+    def __init__(self, typ):
+        self.typ = typ
+
+    def _get_conversion_info(self):
+        """Get conversion function and cast for this numeric type."""
+        typ = self.typ
+        if typ.startswith("uint") or (typ.startswith("int") and typ != "integer") or typ == "double":
+            return f'common_safe_{typ}', '&'
+        elif typ == "integer":
+            return 'common_safe_int', '(int *)&'
+        elif typ == "UID" or typ == "GID":
+            return 'common_safe_uint', '(unsigned int *)&'
+        return None, None
+
+    def _get_c_numtype(self):
+        """Get C type for JSON generation."""
+        if self.typ == 'double':
+            return 'double'
+        elif self.typ.startswith("uint") or self.typ == 'GID' or self.typ == 'UID':
+            return 'long long unsigned int'
+        return 'long long int'
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_number)',
+                      f"ret->{obj.fixname}", self.typ, obj.origname, obj_typename, indent=indent)
+
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        numtyp = self._get_c_numtype()
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))
+              {{
+                {numtyp} num = 0;
+        ''', indent=indent)
+        emit_gen_key(c_file, obj.origname, indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname})
+                    num = ({numtyp})ptr->{obj.fixname};
+        ''', indent=indent + 1)
+        self.emit_json_value(c_file, "num", 'g', 'ctx', level=indent + 1)
+        emit(c_file, '''
+              }
+        ''', indent=indent)
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        pass  # Numeric types don't need freeing
+
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            ret->{obj.fixname} = src->{obj.fixname};
+            ret->{obj.fixname}_present = src->{obj.fixname}_present;
+        ''', indent=indent)
+
+    def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
+        conv_func, dest_cast = self._get_conversion_info()
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                int invalid;
+        ''', indent=level)
+        emit_invalid_type_check(c_file, 'YAJL_IS_NUMBER', indent=level + 1)
+        emit(c_file, f'''
+                    invalid = {conv_func} (YAJL_GET_NUMBER (val), {dest_cast}{dest});
+                if (invalid)
+                  {{
+                    if (asprintf (err, "Invalid value '%s' with type '{self.typ}' for key '{keyname}': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)
+                        *err = strdup ("error allocating memory");
+                    return NULL;
+                  }}
+        ''', indent=level + 1)
+        if '[' not in dest:
+            emit(c_file, f'''
+                    {dest}_present = 1;
+            ''', indent=level + 1)
+        emit(c_file, f'''
+              }}
+        ''', indent=level)
+
+    def emit_json_value(self, c_file, src, dst, ptx, level=1):
+        if self.typ == 'double':
+            emit(c_file, f'''
+                stat = yajl_gen_double ((yajl_gen){dst}, {src});
+            ''', indent=level)
+        elif self.typ.startswith("uint") or self.typ == 'GID' or self.typ == 'UID':
+            emit(c_file, f'''
+                stat = map_uint ({dst}, {src});
+            ''', indent=level)
+        else:
+            emit(c_file, f'''
+                stat = map_int ({dst}, {src});
+            ''', indent=level)
+        emit(c_file, f'''
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+        ''', indent=level)
+
+
+class NumericPointerType(TypeHandler):
+    """Handler for numeric pointer types (integerPointer, int8Pointer, etc.)."""
+
+    def __init__(self, typ):
+        self.typ = typ
+        self.base_typ = helpers.obtain_data_pointer_type(typ)
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_number)',
+                      f"ret->{obj.fixname}", self.typ, obj.origname, obj_typename, indent=indent)
+
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        if self.base_typ == "":
+            return
+        emit(c_file, f'''
+            if ((ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+                {helpers.get_map_c_types(self.base_typ)} num = 0;
+        ''', indent=indent)
+        emit_gen_key(c_file, obj.origname, indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname} != NULL)
+                  {{
+                    num = ({helpers.get_map_c_types(self.base_typ)})*(ptr->{obj.fixname});
+                  }}
+        ''', indent=indent + 1)
+        NumericType(self.base_typ).emit_json_value(c_file, "num", 'g', 'ctx', level=indent + 1)
+        emit(c_file, '''
+              }
+        ''', indent=indent)
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            free (ptr->{obj.fixname});
+            ptr->{obj.fixname} = NULL;
+        ''', indent=indent)
+
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        c_typ = helpers.get_map_c_types(self.base_typ)
+        emit(c_file, f'''
+            if (src->{obj.fixname} != NULL)
+              {{
+                ret->{obj.fixname} = calloc (1, sizeof ({c_typ}));
+                if (ret->{obj.fixname} == NULL)
+                    return NULL;
+                *(ret->{obj.fixname}) = *(src->{obj.fixname});
+              }}
+        ''', indent=indent)
+
+    def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
+        if self.base_typ == "":
+            return
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                {dest} = calloc (1, sizeof ({helpers.get_map_c_types(self.base_typ)}));
+                if ({dest} == NULL)
+                    return NULL;
+                int invalid;
+        ''', indent=level)
+        emit_invalid_type_check(c_file, 'YAJL_IS_NUMBER', indent=level + 1)
+        emit(c_file, f'''
+                invalid = common_safe_{self.base_typ} (YAJL_GET_NUMBER (val), {dest});
+                if (invalid)
+                  {{
+                    if (asprintf (err, "Invalid value '%s' with type '{self.typ}' for key '{keyname}': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)
+                        *err = strdup ("error allocating memory");
+                    return NULL;
+                  }}
+              }}
+        ''', indent=level)
+
+
+# Type handler registry
+_TYPE_HANDLERS = {
+    'string': StringType(),
+    'boolean': BooleanType(),
+    'booleanPointer': BooleanPointerType(),
+}
+
+
+def get_type_handler(typ):
+    """Get the appropriate TypeHandler for a given type.
+
+    Args:
+        typ: The type string (e.g., 'string', 'boolean', 'uint64')
+
+    Returns:
+        TypeHandler instance or None if no handler exists
+    """
+    if typ in _TYPE_HANDLERS:
+        return _TYPE_HANDLERS[typ]
+    if helpers.judge_data_type(typ):
+        return NumericType(typ)
+    if helpers.judge_data_pointer_type(typ):
+        return NumericPointerType(typ)
+    return None
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
@@ -880,87 +1289,10 @@ def get_obj_arr_obj_array(obj, c_file, prefix):
         ''', indent=2)
 
 def get_obj_arr_obj(obj, c_file, prefix):
-    """
-    Description: c language generate object or array object
-    Interface: None
-    History: 2019-06-17
-    """
-    if obj.typ == 'string':
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-                char *str = "";
-        ''', indent=1)
-        emit_gen_key(c_file, obj.origname, indent=2)
-        check_gen_status(c_file, indent=2)
-        emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname} != NULL)
-                    str = ptr->{obj.fixname};
-        ''', indent=2)
-        json_value_generator(c_file, 2, "str", 'g', 'ctx', obj.typ)
-        emit(c_file, '''
-              }
-        ''', indent=1)
-    elif helpers.judge_data_type(obj.typ):
-        if obj.typ == 'double':
-            numtyp = 'double'
-        elif obj.typ.startswith("uint") or obj.typ == 'GID' or obj.typ == 'UID':
-            numtyp = 'long long unsigned int'
-        else:
-            numtyp = 'long long int'
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))
-              {{
-                {numtyp} num = 0;
-        ''', indent=1)
-        emit_gen_key(c_file, obj.origname, indent=2)
-        check_gen_status(c_file, indent=2)
-        emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname})
-                    num = ({numtyp})ptr->{obj.fixname};
-        ''', indent=2)
-        json_value_generator(c_file, 2, "num", 'g', 'ctx', obj.typ)
-        emit(c_file, '''
-              }
-        ''', indent=1)
-    elif helpers.judge_data_pointer_type(obj.typ):
-        numtyp = helpers.obtain_data_pointer_type(obj.typ)
-        if numtyp == "":
-            return
-        emit(c_file, f'''
-            if ((ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-                {helpers.get_map_c_types(numtyp)} num = 0;
-        ''', indent=1)
-        emit_gen_key(c_file, obj.origname, indent=2)
-        check_gen_status(c_file, indent=2)
-        emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname} != NULL)
-                  {{
-                    num = ({helpers.get_map_c_types(numtyp)})*(ptr->{obj.fixname});
-                  }}
-        ''', indent=2)
-        json_value_generator(c_file, 2, "num", 'g', 'ctx', numtyp)
-        emit(c_file, '''
-              }
-        ''', indent=1)
-    elif obj.typ == 'boolean':
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname}_present))
-              {{
-                bool b = false;
-        ''', indent=1)
-        emit_gen_key(c_file, obj.origname, indent=2)
-        check_gen_status(c_file, indent=2)
-        emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname})
-                    b = ptr->{obj.fixname};
-
-        ''', indent=2)
-        json_value_generator(c_file, 2, "b", 'g', 'ctx', obj.typ)
-        emit(c_file, '''
-              }
-        ''', indent=1)
+    """Generate C code to serialize a struct field to JSON."""
+    handler = get_type_handler(obj.typ)
+    if handler:
+        handler.emit_generate(c_file, obj, prefix, indent=1)
     elif obj.typ == 'object' or obj.typ == 'mapStringObject':
         if obj.subtypname:
             typename = obj.subtypname
@@ -1051,12 +1383,11 @@ def get_c_json(obj, c_file, prefix):
 
 
 def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
-    """
-    Description: read value generateor
-    Interface: None
-    History: 2019-06-17
-    """
-    if helpers.valid_basic_map_name(typ):
+    """Generate C code to read a JSON value into a C variable."""
+    handler = get_type_handler(typ)
+    if handler:
+        handler.emit_read_value(c_file, src, dest, keyname, obj_typename, level=level)
+    elif helpers.valid_basic_map_name(typ):
         emit(c_file, f'''
             yajl_val val = {src};
             if (val != NULL)
@@ -1069,113 +1400,6 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
         emit(c_file, '''
                   }
               }
-        ''', indent=level)
-    elif typ == 'string':
-        emit(c_file, f'''
-            yajl_val val = {src};
-            if (val != NULL)
-              {{
-                char *str = YAJL_GET_STRING (val);
-                {dest} = strdup (str ? str : "");
-                if ({dest} == NULL)
-                  return NULL;
-              }}
-        ''', indent=level)
-    elif helpers.judge_data_type(typ):
-        conv_func, dest_cast = get_numeric_conversion_info(typ)
-        emit(c_file, f'''
-            yajl_val val = {src};
-            if (val != NULL)
-              {{
-                int invalid;
-        ''', indent=level)
-        emit_invalid_type_check(c_file, 'YAJL_IS_NUMBER', indent=level + 1)
-        emit(c_file, f'''
-                    invalid = {conv_func} (YAJL_GET_NUMBER (val), {dest_cast}{dest});
-                if (invalid)
-                  {{
-                    if (asprintf (err, "Invalid value '%s' with type '{typ}' for key '{keyname}': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)
-                        *err = strdup ("error allocating memory");
-                    return NULL;
-                  }}
-        ''', indent=level + 1)
-        if '[' not in dest:
-            emit(c_file, f'''
-                    {dest}_present = 1;
-            ''', indent=level + 1)
-        emit(c_file, f'''
-              }}
-        ''', indent=level)
-    elif helpers.judge_data_pointer_type(typ):
-        num_type = helpers.obtain_data_pointer_type(typ)
-        if num_type == "":
-            return
-        emit(c_file, f'''
-            yajl_val val = {src};
-            if (val != NULL)
-              {{
-                {dest} = calloc (1, sizeof ({helpers.get_map_c_types(num_type)}));
-                if ({dest} == NULL)
-                    return NULL;
-                int invalid;
-        ''', indent=level)
-        emit_invalid_type_check(c_file, 'YAJL_IS_NUMBER', indent=level + 1)
-        emit(c_file, f'''
-                invalid = common_safe_{num_type} (YAJL_GET_NUMBER (val), {dest});
-                if (invalid)
-                  {{
-                    if (asprintf (err, "Invalid value '%s' with type '{typ}' for key '{keyname}': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)
-                        *err = strdup ("error allocating memory");
-                    return NULL;
-                  }}
-              }}
-        ''', indent=level)
-    elif typ == 'boolean':
-        emit(c_file, f'''
-            yajl_val val = {src};
-            if (val != NULL)
-              {{
-                {dest} = YAJL_IS_TRUE(val);
-        ''', indent=level)
-        if '[' not in dest:
-            emit(c_file, f'''
-                    {dest}_present = 1;
-              }}
-            else
-              {{
-                val = {src.replace('yajl_t_true', 'yajl_t_false')};
-                if (val != NULL)
-                  {{
-                    {dest} = 0;
-                    {dest}_present = 1;
-                  }}
-              }}
-            ''', indent=level + 1)
-        else:
-            emit(c_file, f'''
-              }}
-            ''', indent=level)
-    elif typ == 'booleanPointer':
-        emit(c_file, f'''
-            yajl_val val = {src};
-            if (val != NULL)
-              {{
-                {dest} = calloc (1, sizeof (bool));
-                if ({dest} == NULL)
-                    return NULL;
-                *({dest}) = YAJL_IS_TRUE(val);
-              }}
-            else
-             {{
-               val = get_val (tree, "{keyname}", yajl_t_false);
-               if (val != NULL)
-                 {{
-                   {dest} = calloc (1, sizeof (bool));
-                   if ({dest} == NULL)
-                     return NULL;
-                   *({dest}) = YAJL_IS_TRUE(val);
-                 }}
-             }}
         ''', indent=level)
 
 
@@ -1367,43 +1591,13 @@ def make_clone(obj, c_file, prefix):
 
 
 def json_value_generator(c_file, level, src, dst, ptx, typ):
-    """
-    Description: json value generateor
-    Interface: None
-    History: 2019-06-17
-    """
-    if helpers.valid_basic_map_name(typ):
+    """Generate C code to write a JSON value."""
+    handler = get_type_handler(typ)
+    if handler:
+        handler.emit_json_value(c_file, src, dst, ptx, level=level)
+    elif helpers.valid_basic_map_name(typ):
         emit(c_file, f'''
             stat = gen_{helpers.make_basic_map_name(typ)} ({dst}, {src}, {ptx}, err);
-            if (stat != yajl_gen_status_ok)
-                GEN_SET_ERROR_AND_RETURN (stat, err);
-        ''', indent=level)
-    elif typ == 'string':
-        emit(c_file, f'''
-            stat = yajl_gen_string ((yajl_gen){dst}, (const unsigned char *)({src}), strlen ({src}));
-            if (stat != yajl_gen_status_ok)
-                GEN_SET_ERROR_AND_RETURN (stat, err);
-        ''', indent=level)
-    elif helpers.judge_data_type(typ):
-        if typ == 'double':
-            emit(c_file, f'''
-                stat = yajl_gen_double ((yajl_gen){dst}, {src});
-            ''', indent=level)
-        elif typ.startswith("uint") or typ == 'GID' or typ == 'UID':
-            emit(c_file, f'''
-                stat = map_uint ({dst}, {src});
-            ''', indent=level)
-        else:
-            emit(c_file, f'''
-                stat = map_int ({dst}, {src});
-            ''', indent=level)
-        emit(c_file, f'''
-            if (stat != yajl_gen_status_ok)
-                GEN_SET_ERROR_AND_RETURN (stat, err);
-        ''', indent=level)
-    elif typ == 'boolean':
-        emit(c_file, f'''
-            stat = yajl_gen_bool ((yajl_gen){dst}, (int)({src}));
             if (stat != yajl_gen_status_ok)
                 GEN_SET_ERROR_AND_RETURN (stat, err);
         ''', indent=level)
