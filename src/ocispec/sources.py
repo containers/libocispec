@@ -181,6 +181,24 @@ def emit_invalid_type_check(c_file, yajl_check='YAJL_IS_NUMBER', indent=0):
     ''', indent=indent)
 
 
+def get_numeric_conversion_info(typ):
+    """Get conversion function and cast for a numeric type.
+
+    Args:
+        typ: The type string (e.g., 'integer', 'uint64', 'UID')
+
+    Returns:
+        Tuple of (conversion_function, dest_cast) or None if not a numeric type
+    """
+    if typ.startswith("uint") or (typ.startswith("int") and typ != "integer") or typ == "double":
+        return f'common_safe_{typ}', '&'
+    elif typ == "integer":
+        return 'common_safe_int', '(int *)&'
+    elif typ == "UID" or typ == "GID":
+        return 'common_safe_uint', '(unsigned int *)&'
+    return None
+
+
 # YAJL generation helpers
 
 def emit_gen_key(c_file, key, indent=0):
@@ -1064,6 +1082,7 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
               }}
         ''', indent=level)
     elif helpers.judge_data_type(typ):
+        conv_func, dest_cast = get_numeric_conversion_info(typ)
         emit(c_file, f'''
             yajl_val val = {src};
             if (val != NULL)
@@ -1071,20 +1090,8 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
                 int invalid;
         ''', indent=level)
         emit_invalid_type_check(c_file, 'YAJL_IS_NUMBER', indent=level + 1)
-        if typ.startswith("uint") or \
-                (typ.startswith("int") and typ != "integer") or typ == "double":
-            emit(c_file, f'''
-                    invalid = common_safe_{typ} (YAJL_GET_NUMBER (val), &{dest});
-            ''', indent=level + 1)
-        elif typ == "integer":
-            emit(c_file, f'''
-                    invalid = common_safe_int (YAJL_GET_NUMBER (val), (int *)&{dest});
-            ''', indent=level + 1)
-        elif typ == "UID" or typ == "GID":
-            emit(c_file, f'''
-                    invalid = common_safe_uint (YAJL_GET_NUMBER (val), (unsigned int *)&{dest});
-            ''', indent=level + 1)
         emit(c_file, f'''
+                    invalid = {conv_func} (YAJL_GET_NUMBER (val), {dest_cast}{dest});
                 if (invalid)
                   {{
                     if (asprintf (err, "Invalid value '%s' with type '{typ}' for key '{keyname}': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)
