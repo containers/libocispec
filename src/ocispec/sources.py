@@ -1403,11 +1403,9 @@ def make_clone(obj, c_file, prefix):
 
     nodes = obj.children if obj.subtypobj is None else obj.subtypobj
     for i in nodes or []:
-        if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
-            emit(c_file, f'''
-                ret->{i.fixname} = src->{i.fixname};
-                ret->{i.fixname}_present = src->{i.fixname}_present;
-            ''', indent=1)
+        handler = get_type_handler(i.typ)
+        if handler:
+            handler.emit_clone(c_file, i, prefix, indent=1)
         elif i.typ == 'object':
             node_name = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
             if obj.typ != 'mapStringObject':
@@ -1433,15 +1431,6 @@ def make_clone(obj, c_file, prefix):
                           }}
                       }}
                 ''', indent=1)
-        elif i.typ == 'string':
-            emit(c_file, f'''
-                if (src->{i.fixname})
-                  {{
-                    ret->{i.fixname} = strdup (src->{i.fixname});
-                    if (ret->{i.fixname} == NULL)
-                      return NULL;
-                  }}
-            ''', indent=1)
         elif i.typ == 'array':
             emit(c_file, f'''
                 if (src->{i.fixname})
@@ -1705,42 +1694,32 @@ def make_c_free (obj, c_file, prefix):
                 childname = helpers.get_prefixed_name(child.name, prefix)
         c_file_map_str(c_file, child, childname)
     for i in objs or []:
-        if helpers.valid_basic_map_name(i.typ):
+        handler = get_type_handler(i.typ)
+        if handler:
+            handler.emit_free(c_file, i, prefix, indent=1)
+        elif helpers.valid_basic_map_name(i.typ):
             free_func = helpers.make_basic_map_name(i.typ)
             emit(c_file, f'''
                 free_{free_func} (ptr->{i.fixname});
                 ptr->{i.fixname} = NULL;
             ''', indent=1)
-        if i.typ == 'mapStringObject':
-            if i.subtypname:
-                free_func = i.subtypname
-            else:
-                free_func = helpers.get_prefixed_name(i.name, prefix)
+        elif i.typ == 'mapStringObject':
+            free_func = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
             emit(c_file, f'''
                 free_{free_func} (ptr->{i.fixname});
                 ptr->{i.fixname} = NULL;
             ''', indent=1)
         elif i.typ == 'array':
-            if make_c_array_free (i, c_file, prefix):
-                continue
-        else:
-            typename = helpers.get_prefixed_name(i.name, prefix)
-            if i.typ == 'string' or i.typ == 'booleanPointer' or \
-                    helpers.judge_data_pointer_type(i.typ):
-                emit(c_file, f'''
-                    free (ptr->{i.fixname});
+            make_c_array_free(i, c_file, prefix)
+        elif i.typ == 'object':
+            typename = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
+            emit(c_file, f'''
+                if (ptr->{i.fixname} != NULL)
+                  {{
+                    free_{typename} (ptr->{i.fixname});
                     ptr->{i.fixname} = NULL;
-                ''', indent=1)
-            elif i.typ == 'object':
-                if i.subtypname is not None:
-                    typename = i.subtypname
-                emit(c_file, f'''
-                    if (ptr->{i.fixname} != NULL)
-                      {{
-                        free_{typename} (ptr->{i.fixname});
-                        ptr->{i.fixname} = NULL;
-                      }}
-                ''', indent=1)
+                  }}
+            ''', indent=1)
 
     if obj.typ == 'object':
         if obj.children is not None:
