@@ -1197,8 +1197,7 @@ def make_clone(obj, c_file, prefix):
     if obj.typ == 'array':
         if objs is None:
             return
-        else:
-            typename = helpers.get_name_substr(obj.name, prefix)
+        typename = helpers.get_name_substr(obj.name, prefix)
 
     emit(c_file, f'''
         {typename} *
@@ -1526,8 +1525,7 @@ def make_c_free (obj, c_file, prefix):
     if obj.typ == 'array':
         if objs is None:
             return
-        else:
-            typename = helpers.get_name_substr(obj.name, prefix)
+        typename = helpers.get_name_substr(obj.name, prefix)
 
     emit(c_file, f'''
         void
@@ -1914,13 +1912,10 @@ def get_c_epilog_for_array_make_free(c_file, prefix, typ, obj):
             ptr->items = NULL;
         ''', indent=1)
         return
-    else:
-        emit(c_file, '''
-            free (ptr->items);
-            ptr->items = NULL;
-        ''', indent=1)
 
     emit(c_file, '''
+            free (ptr->items);
+            ptr->items = NULL;
 
             free (ptr);
         }
