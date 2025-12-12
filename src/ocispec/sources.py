@@ -48,6 +48,21 @@ def emit(c_file, code, indent=0):
         else:
             c_file.append('\n')
 
+
+def free_and_null(c_file, ptr, field, indent=0):
+    """Generate code to free a pointer and set it to NULL.
+
+    Args:
+        c_file: List to append code lines to
+        ptr: Pointer variable name
+        field: Field name (can include array indexing like '[i]')
+        indent: Number of 4-space indentation levels
+    """
+    prefix = '    ' * indent
+    c_file.append(f"{prefix}free ({ptr}->{field});\n")
+    c_file.append(f"{prefix}{ptr}->{field} = NULL;\n")
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
@@ -1054,8 +1069,7 @@ def make_c_array_free (i, c_file, prefix):
         c_file.append(f"                ptr->{i.fixname}[i] = NULL;\n")
         c_file.append("              }\n")
         c_file.append("          }\n")
-        c_file.append(f"        free (ptr->{i.fixname});\n")
-        c_file.append(f"        ptr->{i.fixname} = NULL;\n")
+        free_and_null(c_file, "ptr", i.fixname, indent=2)
         c_file.append("      }\n")
     elif i.subtyp == 'string':
         c_file_str(c_file, i)
@@ -1065,13 +1079,10 @@ def make_c_array_free (i, c_file, prefix):
             c_file.append("            size_t i;\n")
             c_file.append(f"            for (i = 0; i < ptr->{i.fixname}_len; i++)\n")
             c_file.append("              {\n")
-            c_file.append(f"                free (ptr->{i.fixname}[i]);\n")
-            c_file.append(f"                ptr->{i.fixname}[i] = NULL;\n")
+            free_and_null(c_file, "ptr", f"{i.fixname}[i]", indent=4)
             c_file.append("              }\n")
-            c_file.append(f"            free (ptr->{i.fixname}_item_lens);\n")
-            c_file.append(f"            ptr->{i.fixname}_item_lens = NULL;\n")
-        c_file.append(f"        free (ptr->{i.fixname});\n")
-        c_file.append(f"        ptr->{i.fixname} = NULL;\n")
+            free_and_null(c_file, "ptr", f"{i.fixname}_item_lens", indent=3)
+        free_and_null(c_file, "ptr", i.fixname, indent=2)
         c_file.append("    }\n")
     elif i.subtyp == 'object' or i.subtypobj is not None:
         if i.subtypname is not None:
@@ -1090,8 +1101,7 @@ def make_c_array_free (i, c_file, prefix):
             c_file.append(f"              free_{free_func} (ptr->{i.fixname}[i][j]);\n")
             c_file.append(f"              ptr->{i.fixname}[i][j] = NULL;\n")
             c_file.append("          }\n")
-            c_file.append(f"        free (ptr->{i.fixname}[i]);\n")
-            c_file.append(f"        ptr->{i.fixname}[i] = NULL;\n")
+            free_and_null(c_file, "ptr", f"{i.fixname}[i]", indent=2)
         else:
             c_file.append(f"          if (ptr->{i.fixname}[i] != NULL)\n")
             c_file.append("            {\n")
@@ -1100,11 +1110,9 @@ def make_c_array_free (i, c_file, prefix):
             c_file.append("            }\n")
         c_file.append("          }\n")
         if i.doublearray:
-            c_file.append(f"        free (ptr->{i.fixname}_item_lens);\n")
-            c_file.append(f"        ptr->{i.fixname}_item_lens = NULL;\n")
+            free_and_null(c_file, "ptr", f"{i.fixname}_item_lens", indent=2)
 
-        c_file.append(f"        free (ptr->{i.fixname});\n")
-        c_file.append(f"        ptr->{i.fixname} = NULL;\n")
+        free_and_null(c_file, "ptr", i.fixname, indent=2)
         c_file.append("      }\n")
     c_typ = helpers.obtain_pointer(i.name, i.subtypobj, prefix)
     if c_typ == "":
@@ -1196,15 +1204,12 @@ def c_file_map_str(c_file, child, childname):
     c_file.append("        size_t i;\n")
     c_file.append("        for (i = 0; i < ptr->len; i++)\n")
     c_file.append("          {\n")
-    c_file.append("            free (ptr->keys[i]);\n")
-    c_file.append("            ptr->keys[i] = NULL;\n")
+    free_and_null(c_file, "ptr", "keys[i]", indent=3)
     c_file.append(f"            free_{childname} (ptr->{child.fixname}[i]);\n")
     c_file.append(f"            ptr->{child.fixname}[i] = NULL;\n")
     c_file.append("          }\n")
-    c_file.append("        free (ptr->keys);\n")
-    c_file.append("        ptr->keys = NULL;\n")
-    c_file.append(f"        free (ptr->{child.fixname});\n")
-    c_file.append(f"        ptr->{child.fixname} = NULL;\n")
+    free_and_null(c_file, "ptr", "keys", indent=2)
+    free_and_null(c_file, "ptr", child.fixname, indent=2)
     c_file.append("      }\n")
 
 def c_file_str(c_file, i):
@@ -1222,20 +1227,16 @@ def c_file_str(c_file, i):
         c_file.append("            size_t j;\n")
         c_file.append(f"            for (j = 0; j < ptr->{i.fixname}_item_lens[i]; j++)\n")
         c_file.append("              {\n")
-        c_file.append(f"                free (ptr->{i.fixname}[i][j]);\n")
-        c_file.append(f"                ptr->{i.fixname}[i][j] = NULL;\n")
+        free_and_null(c_file, "ptr", f"{i.fixname}[i][j]", indent=4)
         c_file.append("            }\n")
     c_file.append(f"            if (ptr->{i.fixname}[i] != NULL)\n")
     c_file.append("              {\n")
-    c_file.append(f"                free (ptr->{i.fixname}[i]);\n")
-    c_file.append(f"                ptr->{i.fixname}[i] = NULL;\n")
+    free_and_null(c_file, "ptr", f"{i.fixname}[i]", indent=4)
     c_file.append("              }\n")
     c_file.append("          }\n")
     if i.doublearray:
-        c_file.append(f"        free (ptr->{i.fixname}_item_lens);\n")
-        c_file.append(f"        ptr->{i.fixname}_item_lens = NULL;\n")
-    c_file.append(f"        free (ptr->{i.fixname});\n")
-    c_file.append(f"        ptr->{i.fixname} = NULL;\n")
+        free_and_null(c_file, "ptr", f"{i.fixname}_item_lens", indent=2)
+    free_and_null(c_file, "ptr", i.fixname, indent=2)
     c_file.append("    }\n")
 
 
