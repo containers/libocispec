@@ -1804,27 +1804,6 @@ def make_c_free (obj, c_file, prefix):
         handler = get_type_handler(i.typ)
         if handler:
             handler.emit_free(c_file, i, prefix, indent=1)
-        elif helpers.valid_basic_map_name(i.typ):
-            free_func = helpers.make_basic_map_name(i.typ)
-            emit(c_file, f'''
-                free_{free_func} (ptr->{i.fixname});
-                ptr->{i.fixname} = NULL;
-            ''', indent=1)
-        elif i.typ == 'mapStringObject':
-            free_func = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
-            emit(c_file, f'''
-                free_{free_func} (ptr->{i.fixname});
-                ptr->{i.fixname} = NULL;
-            ''', indent=1)
-        elif i.typ == 'object':
-            typename = i.subtypname or helpers.get_prefixed_name(i.name, prefix)
-            emit(c_file, f'''
-                if (ptr->{i.fixname} != NULL)
-                  {{
-                    free_{typename} (ptr->{i.fixname});
-                    ptr->{i.fixname} = NULL;
-                  }}
-            ''', indent=1)
 
     if obj.typ == 'object':
         if obj.children is not None:
