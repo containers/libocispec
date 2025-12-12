@@ -76,6 +76,22 @@ def null_check_return(c_file, var, indent=0):
     c_file.append(f"{prefix}  return NULL;\n")
 
 
+def calloc_with_check(c_file, dest, count, sizeof_expr, indent=0):
+    """Generate calloc call with NULL check.
+
+    Args:
+        c_file: List to append code lines to
+        dest: Destination variable
+        count: Count expression for calloc
+        sizeof_expr: sizeof expression (the content inside sizeof())
+        indent: Number of 4-space indentation levels
+    """
+    prefix = '    ' * indent
+    c_file.append(f"{prefix}{dest} = calloc ({count}, sizeof ({sizeof_expr}));\n")
+    c_file.append(f"{prefix}if ({dest} == NULL)\n")
+    c_file.append(f"{prefix}  return NULL;\n")
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
@@ -108,10 +124,8 @@ def parse_map_string_obj(obj, c_file, prefix, obj_typename):
     c_file.append('        const char **keys = YAJL_GET_OBJECT_NO_CHECK (tree)->keys;\n')
     c_file.append('        yajl_val *values = YAJL_GET_OBJECT_NO_CHECK (tree)->values;\n')
     c_file.append('        ret->len = len;\n')
-    c_file.append('        ret->keys = calloc (len + 1, sizeof (*ret->keys));\n')
-    null_check_return(c_file, 'ret->keys', indent=2)
-    c_file.append(f'        ret->{child.fixname} = calloc (len + 1, sizeof (*ret->{child.fixname}));\n')
-    null_check_return(c_file, f'ret->{child.fixname}', indent=2)
+    calloc_with_check(c_file, 'ret->keys', 'len + 1', '*ret->keys', indent=2)
+    calloc_with_check(c_file, f'ret->{child.fixname}', 'len + 1', f'*ret->{child.fixname}', indent=2)
     c_file.append('        for (i = 0; i < len; i++)\n')
     c_file.append('          {\n')
     c_file.append('            yajl_val val;\n')
@@ -140,11 +154,9 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.append('            size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;\n')
         c_file.append('            yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;\n')
         c_file.append(f'            ret->{obj.fixname}_len = len;\n')
-        c_file.append(f'            ret->{obj.fixname} = calloc (len + 1, sizeof (*ret->{obj.fixname}));\n')
-        null_check_return(c_file, f'ret->{obj.fixname}', indent=3)
+        calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
         if obj.doublearray:
-            c_file.append(f'            ret->{obj.fixname}_item_lens = calloc ( len + 1, sizeof (size_t));\n')
-            null_check_return(c_file, f'ret->{obj.fixname}_item_lens', indent=4)
+            calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
         c_file.append('            for (i = 0; i < len; i++)\n')
         c_file.append('              {\n')
         c_file.append('                yajl_val val = values[i];\n')
@@ -201,11 +213,9 @@ def parse_obj_type_array(obj, c_file, prefix, obj_typename):
         c_file.append('            size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;\n')
         c_file.append('            yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;\n')
         c_file.append(f'            ret->{obj.fixname}_len = len;\n')
-        c_file.append(f'            ret->{obj.fixname} = calloc (len + 1, sizeof (*ret->{obj.fixname}));\n')
-        null_check_return(c_file, f'ret->{obj.fixname}', indent=3)
+        calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
         if obj.doublearray:
-            c_file.append(f'            ret->{obj.fixname}_item_lens = calloc ( len + 1, sizeof (size_t));\n')
-            null_check_return(c_file, f'ret->{obj.fixname}_item_lens', indent=4)
+            calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
         c_file.append('            for (i = 0; i < len; i++)\n')
         c_file.append('              {\n')
         if obj.doublearray:
