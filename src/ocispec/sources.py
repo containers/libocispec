@@ -732,6 +732,38 @@ class MapStringObjectType(TypeHandler):
             ptr->{obj.fixname} = NULL;
         ''', indent=indent)
 
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        if obj.subtypname is not None:
+            subtypname = obj.subtypname
+            maybe_element = "_element"
+        else:
+            subtypname = obj.children[0].subtypname
+            maybe_element = ""
+        emit(c_file, f'''
+            if (src->{obj.fixname})
+              {{
+                ret->{obj.fixname} = calloc (1, sizeof (*ret->{obj.fixname}));
+                if (ret->{obj.fixname} == NULL)
+                    return NULL;
+                ret->{obj.fixname}->len = src->{obj.fixname}->len;
+                ret->{obj.fixname}->keys = calloc (src->{obj.fixname}->len + 1, sizeof (char *));
+                if (ret->{obj.fixname}->keys == NULL)
+                    return NULL;
+                ret->{obj.fixname}->values = calloc (src->{obj.fixname}->len + 1, sizeof (*ret->{obj.fixname}->values));
+                if (ret->{obj.fixname}->values == NULL)
+                    return NULL;
+                for (size_t i = 0; i < ret->{obj.fixname}->len; i++)
+                  {{
+                    ret->{obj.fixname}->keys[i] = strdup (src->{obj.fixname}->keys[i]);
+                    if (ret->{obj.fixname}->keys[i] == NULL)
+                      return NULL;
+                    ret->{obj.fixname}->values[i] = clone_{subtypname}{maybe_element} (src->{obj.fixname}->values[i]);
+                    if (ret->{obj.fixname}->values[i] == NULL)
+                      return NULL;
+                  }}
+              }}
+        ''', indent=indent)
+
 
 class BasicMapType(TypeHandler):
     """Handler for basic map types (mapStringString, mapStringInt, etc.)."""
@@ -801,6 +833,15 @@ class BasicMapType(TypeHandler):
             if (stat != yajl_gen_status_ok)
                 GEN_SET_ERROR_AND_RETURN (stat, err);
         ''', indent=level)
+
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        # Clone function doesn't use json_ prefix
+        clone_name = self.map_name.replace('json_', '', 1)
+        emit(c_file, f'''
+            ret->{obj.fixname} = clone_{clone_name} (src->{obj.fixname});
+            if (ret->{obj.fixname} == NULL)
+                return NULL;
+        ''', indent=indent)
 
 
 class ArrayType(TypeHandler):
@@ -1609,44 +1650,6 @@ def make_clone(obj, c_file, prefix):
                           }}
                       }}
                 ''', indent=1)
-        elif i.typ == 'mapStringString':
-            emit(c_file, f'''
-                ret->{i.fixname} = clone_map_string_string (src->{i.fixname});
-                if (ret->{i.fixname} == NULL)
-                    return NULL;
-            ''', indent=1)
-        elif i.typ == 'mapStringObject':
-            if i.subtypname is not None:
-                subtypname = i.subtypname
-                maybe_element = "_element"
-            else:
-                subtypname = i.children[0].subtypname
-                maybe_element = ""
-
-            emit(c_file, f'''
-                if (src->{i.fixname})
-                  {{
-                    ret->{i.fixname} = calloc (1, sizeof (*ret->{i.fixname}));
-                    if (ret->{i.fixname} == NULL)
-                        return NULL;
-                    ret->{i.fixname}->len = src->{i.fixname}->len;
-                    ret->{i.fixname}->keys = calloc (src->{i.fixname}->len + 1, sizeof (char *));
-                    if (ret->{i.fixname}->keys == NULL)
-                        return NULL;
-                    ret->{i.fixname}->values = calloc (src->{i.fixname}->len + 1, sizeof (*ret->{i.fixname}->values));
-                    if (ret->{i.fixname}->values == NULL)
-                        return NULL;
-                    for (size_t i = 0; i < ret->{i.fixname}->len; i++)
-                      {{
-                        ret->{i.fixname}->keys[i] = strdup (src->{i.fixname}->keys[i]);
-                        if (ret->{i.fixname}->keys[i] == NULL)
-                          return NULL;
-                        ret->{i.fixname}->values[i] = clone_{subtypname}{maybe_element} (src->{i.fixname}->values[i]);
-                        if (ret->{i.fixname}->values[i] == NULL)
-                          return NULL;
-                      }}
-                  }}
-            ''', indent=1)
         else:
             raise Exception("Unimplemented type for clone: %s" % i.typ)
 
