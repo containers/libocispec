@@ -197,6 +197,12 @@ def emit_gen_key(c_file, key, indent=0):
     ''', indent=indent)
 
 
+def emit_gen_key_with_check(c_file, key, indent=0):
+    """Emit yajl_gen_string for an object key and check status."""
+    emit_gen_key(c_file, key, indent=indent)
+    check_gen_status(c_file, indent=indent)
+
+
 def emit_gen_map_open(c_file, indent=0):
     """Emit yajl_gen_map_open call.
 
@@ -327,8 +333,7 @@ class StringType(TypeHandler):
               {{
                 char *str = "";
         ''', indent=indent)
-        emit_gen_key(c_file, obj.origname, indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
+        emit_gen_key_with_check(c_file, obj.origname, indent=indent + 1)
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname} != NULL)
                     str = ptr->{obj.fixname};
@@ -387,8 +392,7 @@ class BooleanType(TypeHandler):
               {{
                 bool b = false;
         ''', indent=indent)
-        emit_gen_key(c_file, obj.origname, indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
+        emit_gen_key_with_check(c_file, obj.origname, indent=indent + 1)
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname})
                     b = ptr->{obj.fixname};
@@ -526,8 +530,7 @@ class NumericType(TypeHandler):
               {{
                 {numtyp} num = 0;
         ''', indent=indent)
-        emit_gen_key(c_file, obj.origname, indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
+        emit_gen_key_with_check(c_file, obj.origname, indent=indent + 1)
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname})
                     num = ({numtyp})ptr->{obj.fixname};
@@ -610,8 +613,7 @@ class NumericPointerType(TypeHandler):
               {{
                 {helpers.get_map_c_types(self.base_typ)} num = 0;
         ''', indent=indent)
-        emit_gen_key(c_file, obj.origname, indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
+        emit_gen_key_with_check(c_file, obj.origname, indent=indent + 1)
         emit(c_file, f'''
                 if (ptr != NULL && ptr->{obj.fixname} != NULL)
                   {{
@@ -683,8 +685,7 @@ class ObjectType(TypeHandler):
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
               {{
         ''', indent=indent)
-        emit_gen_key(c_file, obj.origname, indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
+        emit_gen_key_with_check(c_file, obj.origname, indent=indent + 1)
         emit(c_file, f'''
                 stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);
         ''', indent=indent + 1)
@@ -726,8 +727,7 @@ class MapStringObjectType(TypeHandler):
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
               {{
         ''', indent=indent)
-        emit_gen_key(c_file, obj.origname, indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
+        emit_gen_key_with_check(c_file, obj.origname, indent=indent + 1)
         emit(c_file, f'''
                 stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);
         ''', indent=indent + 1)
@@ -807,8 +807,7 @@ class BasicMapType(TypeHandler):
             if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
               {{
         ''', indent=indent)
-        emit_gen_key(c_file, obj.fixname, indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
+        emit_gen_key_with_check(c_file, obj.fixname, indent=indent + 1)
         emit(c_file, f'''
                 stat = gen_{self.map_name} (g, ptr ? ptr->{obj.fixname} : NULL, ctx, err);
         ''', indent=indent + 1)
@@ -1024,8 +1023,7 @@ class ArrayType(TypeHandler):
                   {{
                     size_t len = 0, i;
             ''', indent=1)
-            emit_gen_key(c_file, obj.origname, indent=2)
-            check_gen_status(c_file, indent=2)
+            emit_gen_key_with_check(c_file, obj.origname, indent=2)
 
             emit(c_file, f'''
                     if (ptr != NULL && ptr->{obj.fixname} != NULL)
@@ -1077,8 +1075,7 @@ class ArrayType(TypeHandler):
                     const char *str = "";
                     size_t len = 0;
             ''', indent=1)
-            emit_gen_key(c_file, obj.origname, indent=2)
-            check_gen_status(c_file, indent=2)
+            emit_gen_key_with_check(c_file, obj.origname, indent=2)
 
             if obj.doublearray:
                 emit_gen_array_open(c_file, indent=3)
@@ -1118,8 +1115,7 @@ class ArrayType(TypeHandler):
                   {{
                     size_t len = 0, i;
             ''', indent=1)
-            emit_gen_key(c_file, obj.origname, indent=2)
-            check_gen_status(c_file, indent=2)
+            emit_gen_key_with_check(c_file, obj.origname, indent=2)
 
             emit(c_file, f'''
                     if (ptr != NULL && ptr->{obj.fixname} != NULL)
