@@ -273,6 +273,16 @@ def emit_beautify_on(c_file, condition='!len', indent=0):
     ''', indent=indent)
 
 
+def get_compound_children(obj):
+    """Get the children/subtypes for a compound type.
+
+    Returns [] for mapStringObject, obj.children for object, obj.subtypobj for array.
+    """
+    return {'mapStringObject': [],
+            'object': obj.children,
+            'array': obj.subtypobj}[obj.typ]
+
+
 # Type handler classes for C code generation
 # Each type has methods for: parsing JSON, generating JSON, freeing memory, cloning
 
@@ -1695,11 +1705,7 @@ def make_clone(obj, c_file, prefix):
     if not helpers.is_compound_type(obj.typ) or obj.subtypname:
         return
     typename = helpers.get_prefixed_name(obj.name, prefix)
-    case = obj.typ
-    result = {'mapStringObject': lambda x: [],
-              'object': lambda x: x.children,
-              'array': lambda x: x.subtypobj}[case](obj)
-    objs = result
+    objs = get_compound_children(obj)
     if obj.typ == 'array':
         if objs is None:
             return
@@ -1773,11 +1779,7 @@ def make_c_free (obj, c_file, prefix):
     if not helpers.is_compound_type(obj.typ) or obj.subtypname:
         return
     typename = helpers.get_prefixed_name(obj.name, prefix)
-    case = obj.typ
-    result = {'mapStringObject': lambda x: [],
-              'object': lambda x: x.children,
-              'array': lambda x: x.subtypobj}[case](obj)
-    objs = result
+    objs = get_compound_children(obj)
     if obj.typ == 'array':
         if objs is None:
             return
