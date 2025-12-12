@@ -656,11 +656,160 @@ class NumericPointerType(TypeHandler):
         ''', indent=level)
 
 
+class ObjectType(TypeHandler):
+    """Handler for object type."""
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
+        emit(c_file, f'''
+            ret->{obj.fixname} = make_{typename} (get_val (tree, "{obj.origname}", yajl_t_object), ctx, err);
+            if (ret->{obj.fixname} == NULL && *err != 0)
+              return NULL;
+        ''', indent=indent)
+
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+        ''', indent=indent)
+        emit_gen_key(c_file, obj.origname, indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, f'''
+                stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);
+        ''', indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, '''
+              }
+        ''', indent=indent)
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
+        emit(c_file, f'''
+            if (ptr->{obj.fixname} != NULL)
+              {{
+                free_{typename} (ptr->{obj.fixname});
+                ptr->{obj.fixname} = NULL;
+              }}
+        ''', indent=indent)
+
+    def emit_clone(self, c_file, obj, prefix, indent=1):
+        # Object clone requires context (parent type) - handled in make_clone
+        pass
+
+
+class MapStringObjectType(TypeHandler):
+    """Handler for mapStringObject type."""
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
+        emit(c_file, f'''
+            ret->{obj.fixname} = make_{typename} (get_val (tree, "{obj.origname}", yajl_t_object), ctx, err);
+            if (ret->{obj.fixname} == NULL && *err != 0)
+              return NULL;
+        ''', indent=indent)
+
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+        ''', indent=indent)
+        emit_gen_key(c_file, obj.origname, indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, f'''
+                stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);
+        ''', indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, '''
+              }
+        ''', indent=indent)
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        free_func = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
+        emit(c_file, f'''
+            free_{free_func} (ptr->{obj.fixname});
+            ptr->{obj.fixname} = NULL;
+        ''', indent=indent)
+
+
+class BasicMapType(TypeHandler):
+    """Handler for basic map types (mapStringString, mapStringInt, etc.)."""
+
+    def __init__(self, typ):
+        self.typ = typ
+        self.map_name = helpers.make_basic_map_name(typ)
+
+    def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
+        emit(c_file, f'''
+            do
+              {{
+                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_object);
+                if (tmp != NULL)
+                  {{
+                    ret->{obj.fixname} = make_{self.map_name} (tmp, ctx, err);
+                    if (ret->{obj.fixname} == NULL)
+                      {{
+        ''', indent=indent)
+        emit_value_error(c_file, obj.origname, indent=indent + 3)
+        emit(c_file, '''
+                      }
+                  }
+              }
+            while (0);
+        ''', indent=indent)
+
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+        ''', indent=indent)
+        emit_gen_key(c_file, obj.fixname, indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, f'''
+                stat = gen_{self.map_name} (g, ptr ? ptr->{obj.fixname} : NULL, ctx, err);
+        ''', indent=indent + 1)
+        check_gen_status(c_file, indent=indent + 1)
+        emit(c_file, '''
+              }
+        ''', indent=indent)
+
+    def emit_free(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            free_{self.map_name} (ptr->{obj.fixname});
+            ptr->{obj.fixname} = NULL;
+        ''', indent=indent)
+
+    def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
+        emit(c_file, f'''
+            yajl_val val = {src};
+            if (val != NULL)
+              {{
+                {dest} = make_{self.map_name} (val, ctx, err);
+                if ({dest} == NULL)
+                  {{
+        ''', indent=level)
+        emit_value_error(c_file, keyname, indent=level + 2)
+        emit(c_file, '''
+                  }
+              }
+        ''', indent=level)
+
+    def emit_json_value(self, c_file, src, dst, ptx, level=1):
+        emit(c_file, f'''
+            stat = gen_{self.map_name} ({dst}, {src}, {ptx}, err);
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
+        ''', indent=level)
+
+
 # Type handler registry
 _TYPE_HANDLERS = {
     'string': StringType(),
     'boolean': BooleanType(),
     'booleanPointer': BooleanPointerType(),
+    'object': ObjectType(),
+    'mapStringObject': MapStringObjectType(),
 }
 
 
@@ -679,6 +828,8 @@ def get_type_handler(typ):
         return NumericType(typ)
     if helpers.judge_data_pointer_type(typ):
         return NumericPointerType(typ)
+    if helpers.valid_basic_map_name(typ):
+        return BasicMapType(typ)
     return None
 
 
@@ -902,36 +1053,8 @@ def parse_obj_type(obj, c_file, prefix, obj_typename):
     handler = get_type_handler(obj.typ)
     if handler:
         handler.emit_parse(c_file, obj, prefix, obj_typename, indent=1)
-    elif obj.typ == 'object' or obj.typ == 'mapStringObject':
-        if obj.subtypname is not None:
-            typename = obj.subtypname
-        else:
-            typename = helpers.get_prefixed_name(obj.name, prefix)
-        emit(c_file, f'''
-            ret->{obj.fixname} = make_{typename} (get_val (tree, "{obj.origname}", yajl_t_object), ctx, err);
-            if (ret->{obj.fixname} == NULL && *err != 0)
-              return NULL;
-        ''', indent=1)
     elif obj.typ == 'array':
         parse_obj_type_array(obj, c_file, prefix, obj_typename)
-    elif helpers.valid_basic_map_name(obj.typ):
-        emit(c_file, f'''
-            do
-              {{
-                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_object);
-                if (tmp != NULL)
-                  {{
-                    ret->{obj.fixname} = make_{helpers.make_basic_map_name(obj.typ)} (tmp, ctx, err);
-                    if (ret->{obj.fixname} == NULL)
-                      {{
-        ''', indent=1)
-        emit_value_error(c_file, obj.origname, indent=4)
-        emit(c_file, '''
-                      }
-                  }
-              }
-            while (0);
-        ''', indent=1)
 
 def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
     """
@@ -1259,40 +1382,8 @@ def get_obj_arr_obj(obj, c_file, prefix):
     handler = get_type_handler(obj.typ)
     if handler:
         handler.emit_generate(c_file, obj, prefix, indent=1)
-    elif obj.typ == 'object' or obj.typ == 'mapStringObject':
-        if obj.subtypname:
-            typename = obj.subtypname
-        else:
-            typename = helpers.get_prefixed_name(obj.name, prefix)
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-        ''', indent=1)
-        emit_gen_key(c_file, obj.origname, indent=2)
-        check_gen_status(c_file, indent=2)
-        emit(c_file, f'''
-                stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);
-        ''', indent=2)
-        check_gen_status(c_file, indent=2)
-        emit(c_file, '''
-              }
-        ''', indent=1)
     elif obj.typ == 'array':
         get_obj_arr_obj_array(obj, c_file, prefix)
-    elif helpers.valid_basic_map_name(obj.typ):
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-        ''', indent=1)
-        emit_gen_key(c_file, obj.fixname, indent=2)
-        check_gen_status(c_file, indent=2)
-        emit(c_file, f'''
-                stat = gen_{helpers.make_basic_map_name(obj.typ)} (g, ptr ? ptr->{obj.fixname} : NULL, ctx, err);
-        ''', indent=2)
-        check_gen_status(c_file, indent=2)
-        emit(c_file, '''
-              }
-        ''', indent=1)
 
 
 def get_c_json(obj, c_file, prefix):
@@ -1550,12 +1641,6 @@ def json_value_generator(c_file, level, src, dst, ptx, typ):
     handler = get_type_handler(typ)
     if handler:
         handler.emit_json_value(c_file, src, dst, ptx, level=level)
-    elif helpers.valid_basic_map_name(typ):
-        emit(c_file, f'''
-            stat = gen_{helpers.make_basic_map_name(typ)} ({dst}, {src}, {ptx}, err);
-            if (stat != yajl_gen_status_ok)
-                GEN_SET_ERROR_AND_RETURN (stat, err);
-        ''', indent=level)
 
 def make_c_array_free (i, c_file, prefix):
     if helpers.valid_basic_map_name(i.subtyp):
