@@ -453,6 +453,24 @@ class BooleanPointerType(TypeHandler):
         do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_true)',
                       f"ret->{obj.fixname}", 'booleanPointer', obj.origname, obj_typename, indent=indent)
 
+    def emit_generate(self, c_file, obj, prefix, indent=1):
+        emit(c_file, f'''
+            if ((ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+                bool b = false;
+        ''', indent=indent)
+        emit_gen_key_with_check(c_file, obj.origname, indent=indent + 1)
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname} != NULL)
+                  {{
+                    b = *(ptr->{obj.fixname});
+                  }}
+        ''', indent=indent + 1)
+        self.emit_json_value(c_file, "b", 'g', 'ctx', level=indent + 1)
+        emit(c_file, '''
+              }
+        ''', indent=indent)
+
     def emit_free(self, c_file, obj, prefix, indent=1):
         emit(c_file, f'''
             free (ptr->{obj.fixname});
@@ -491,6 +509,13 @@ class BooleanPointerType(TypeHandler):
                    *({dest}) = YAJL_IS_TRUE(val);
                  }}
              }}
+        ''', indent=level)
+
+    def emit_json_value(self, c_file, src, dst, ptx, level=1):
+        emit(c_file, f'''
+            stat = yajl_gen_bool ((yajl_gen){dst}, (int)({src}));
+            if (stat != yajl_gen_status_ok)
+                GEN_SET_ERROR_AND_RETURN (stat, err);
         ''', indent=level)
 
 
