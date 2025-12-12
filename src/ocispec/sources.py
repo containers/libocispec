@@ -181,6 +181,98 @@ def emit_invalid_type_check(c_file, yajl_check='YAJL_IS_NUMBER', indent=0):
     ''', indent=indent)
 
 
+# YAJL generation helpers
+
+def emit_gen_key(c_file, key, indent=0):
+    """Emit yajl_gen_string for an object key.
+
+    Args:
+        c_file: List to append code lines to
+        key: Key string to generate
+        indent: Number of 4-space indentation levels
+    """
+    key_len = len(key)
+    emit(c_file, f'''
+        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{key}"), {key_len} /* strlen ("{key}") */);
+    ''', indent=indent)
+
+
+def emit_gen_map_open(c_file, indent=0):
+    """Emit yajl_gen_map_open call.
+
+    Args:
+        c_file: List to append code lines to
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, '''
+        stat = yajl_gen_map_open ((yajl_gen) g);
+    ''', indent=indent)
+
+
+def emit_gen_map_close(c_file, indent=0):
+    """Emit yajl_gen_map_close call.
+
+    Args:
+        c_file: List to append code lines to
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, '''
+        stat = yajl_gen_map_close ((yajl_gen) g);
+    ''', indent=indent)
+
+
+def emit_gen_array_open(c_file, indent=0):
+    """Emit yajl_gen_array_open call.
+
+    Args:
+        c_file: List to append code lines to
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, '''
+        stat = yajl_gen_array_open ((yajl_gen) g);
+    ''', indent=indent)
+
+
+def emit_gen_array_close(c_file, indent=0):
+    """Emit yajl_gen_array_close call.
+
+    Args:
+        c_file: List to append code lines to
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, '''
+        stat = yajl_gen_array_close ((yajl_gen) g);
+    ''', indent=indent)
+
+
+def emit_beautify_off(c_file, condition='!len', indent=0):
+    """Emit yajl_gen_beautify disable.
+
+    Args:
+        c_file: List to append code lines to
+        condition: Condition for disabling beautify
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, f'''
+        if ({condition} && !(ctx->options & OPT_GEN_SIMPLIFY))
+            yajl_gen_config (g, yajl_gen_beautify, 0);
+    ''', indent=indent)
+
+
+def emit_beautify_on(c_file, condition='!len', indent=0):
+    """Emit yajl_gen_beautify enable.
+
+    Args:
+        c_file: List to append code lines to
+        condition: Condition for enabling beautify
+        indent: Number of 4-space indentation levels
+    """
+    emit(c_file, f'''
+        if ({condition} && !(ctx->options & OPT_GEN_SIMPLIFY))
+            yajl_gen_config (g, yajl_gen_beautify, 1);
+    ''', indent=indent)
+
+
 def append_c_code(obj, c_file, prefix):
     """
     Description: append c language code to file
