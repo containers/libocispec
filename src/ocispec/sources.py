@@ -1572,20 +1572,6 @@ def read_val_generator(c_file, level, src, dest, typ, keyname, obj_typename):
     handler = get_type_handler(typ)
     if handler:
         handler.emit_read_value(c_file, src, dest, keyname, obj_typename, level=level)
-    elif helpers.valid_basic_map_name(typ):
-        emit(c_file, f'''
-            yajl_val val = {src};
-            if (val != NULL)
-              {{
-                {dest} = make_{helpers.make_basic_map_name(typ)} (val, ctx, err);
-                if ({dest} == NULL)
-                  {{
-        ''', indent=level)
-        emit_value_error(c_file, keyname, indent=level + 2)
-        emit(c_file, '''
-                  }
-              }
-        ''', indent=level)
 
 
 def make_clone(obj, c_file, prefix):
