@@ -55,7 +55,7 @@ def append_header_arr(obj, header, prefix):
                 helpers.get_map_c_types(i.typ)
             header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}{i.fixname};\n")
     for i in obj.subtypobj:
-        if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
+        if helpers.is_numeric_type(i.typ) or i.typ == 'boolean':
             header.append(f"    unsigned int {i.fixname}_present : 1;\n")
     typename = helpers.get_name_substr(obj.name, prefix)
     header.append(f"}}\n{typename};\n\n")
@@ -157,7 +157,7 @@ def append_type_c_header(obj, header, prefix):
             header.append("    char unuseful; // unuseful definition to avoid empty struct\n")
         present_tags = []
         for i in obj.children or []:
-            if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
+            if helpers.is_numeric_type(i.typ) or i.typ == 'boolean':
                 present_tags.append(f"    unsigned int {i.fixname}_present : 1;\n")
             if i.typ == 'array':
                 append_header_child_arr(i, header, prefix)

@@ -192,33 +192,21 @@ def is_compound_type(typ):
     '''
     return typ in ('object', 'array', 'mapStringObject')
 
-def judge_data_type(typ):
-    '''
-    Description: Check numeric type
-    Interface: None
-    History: 2019-06-17
-    '''
+def is_numeric_type(typ):
+    '''Check if typ is a numeric type (int, uint, double, etc.).'''
     if (typ.startswith("int") or typ.startswith("uint")) and \
             "Pointer" not in typ:
         return True
     return typ in ("integer", "UID", "GID", "double")
 
-def judge_data_pointer_type(typ):
-    '''
-    Description: Check numeric pointer type
-    Interface: None
-    History: 2019-06-17
-    '''
+def is_numeric_pointer_type(typ):
+    '''Check if typ is a pointer to a numeric type.'''
     if (typ.startswith("int") or typ.startswith("uint")) and "Pointer" in typ:
         return True
     return False
 
-def obtain_data_pointer_type(typ):
-    '''
-    Description: Get numeric pointer type
-    Interface: None
-    History: 2019-06-17
-    '''
+def get_pointer_base_type(typ):
+    '''Extract the base type from a pointer type (e.g., "int64Pointer" -> "int64").'''
     index = typ.find("Pointer")
     return typ[0:index] if index != -1 else ""
 

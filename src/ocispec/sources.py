@@ -586,7 +586,7 @@ class NumericPointerType(TypeHandler):
 
     def __init__(self, typ):
         self.typ = typ
-        self.base_typ = helpers.obtain_data_pointer_type(typ)
+        self.base_typ = helpers.get_pointer_base_type(typ)
 
     def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
         do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_number)',
@@ -876,7 +876,7 @@ class ArrayType(TypeHandler):
                   {{
         ''', indent=indent)
 
-        if helpers.judge_data_type(obj.subtyp) or obj.subtyp == 'boolean':
+        if helpers.is_numeric_type(obj.subtyp) or obj.subtyp == 'boolean':
             emit(c_file, f'''
                         ret->{obj.fixname}[i] = src->{obj.fixname}[i];
             ''', indent=indent+2)
@@ -957,9 +957,9 @@ def get_type_handler(typ):
     """
     if typ in _TYPE_HANDLERS:
         return _TYPE_HANDLERS[typ]
-    if helpers.judge_data_type(typ):
+    if helpers.is_numeric_type(typ):
         return NumericType(typ)
-    if helpers.judge_data_pointer_type(typ):
+    if helpers.is_numeric_pointer_type(typ):
         return NumericPointerType(typ)
     if helpers.valid_basic_map_name(typ):
         return BasicMapType(typ)
@@ -1197,7 +1197,7 @@ def parse_obj_arr_obj(obj, c_file, prefix, obj_typename):
     required_to_check = []
     for i in nodes or []:
         if obj.required and i.origname in obj.required and \
-                not helpers.judge_data_type(i.typ) and i.typ != 'boolean':
+                not helpers.is_numeric_type(i.typ) and i.typ != 'boolean':
             required_to_check.append(i)
         parse_obj_type(i, c_file, prefix, obj_typename)
 
