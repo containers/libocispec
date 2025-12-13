@@ -210,6 +210,12 @@ tests_test_10_LDADD = $(TESTS_LDADD)
 tests_test_11_SOURCES = tests/test-11.c
 tests_test_11_LDADD = $(TESTS_LDADD)
 
+tests_test_12_SOURCES = tests/test-12.c
+tests_test_12_LDADD = $(TESTS_LDADD)
+
+tests_test_13_SOURCES = tests/test-13.c
+tests_test_13_LDADD = $(TESTS_LDADD)
+
 src_ocispec_validate_SOURCES = src/ocispec/validate.c
 src_ocispec_validate_LDADD = $(TESTS_LDADD)
 
@@ -223,7 +229,9 @@ TESTS = tests/test-1 \
 	tests/test-8 \
 	tests/test-9 \
 	tests/test-10 \
-	tests/test-11
+	tests/test-11 \
+	tests/test-12 \
+	tests/test-13
 
 noinst_PROGRAMS = src/ocispec/validate $(TESTS)
 
