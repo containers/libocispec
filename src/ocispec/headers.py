@@ -55,7 +55,7 @@ def append_header_arr(obj, header, prefix):
                 helpers.get_map_c_types(i.typ)
             header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}{i.fixname};\n")
     for i in obj.subtypobj:
-        if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
+        if helpers.is_numeric_type(i.typ) or i.typ == 'boolean':
             header.append(f"    unsigned int {i.fixname}_present : 1;\n")
     typename = helpers.get_name_substr(obj.name, prefix)
     header.append(f"}}\n{typename};\n\n")
@@ -100,7 +100,7 @@ def append_header_child_arr(child, header, prefix):
         c_typ = helpers.get_prefixed_pointer(child.name, child.subtyp, prefix)
 
     dflag = ""
-    if child.doublearray:
+    if child.nested_array:
         dflag = "*"
 
     if helpers.valid_basic_map_name(child.subtyp):
@@ -110,7 +110,7 @@ def append_header_child_arr(child, header, prefix):
     else:
         header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}**{dflag}{child.fixname};\n")
 
-    if child.doublearray and not helpers.valid_basic_map_name(child.subtyp):
+    if child.nested_array and not helpers.valid_basic_map_name(child.subtyp):
         header.append(f"    size_t *{child.fixname + '_item_lens'};\n")
 
     header.append(f"    size_t {child.fixname + '_len'};\n\n")
@@ -157,7 +157,7 @@ def append_type_c_header(obj, header, prefix):
             header.append("    char unuseful; // unuseful definition to avoid empty struct\n")
         present_tags = []
         for i in obj.children or []:
-            if helpers.judge_data_type(i.typ) or i.typ == 'boolean':
+            if helpers.is_numeric_type(i.typ) or i.typ == 'boolean':
                 present_tags.append(f"    unsigned int {i.fixname}_present : 1;\n")
             if i.typ == 'array':
                 append_header_child_arr(i, header, prefix)
@@ -180,7 +180,7 @@ def header_reflect_top_array(obj, prefix, header):
     c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
         helpers.get_map_c_types(obj.subtyp)
     if obj.subtypobj is not None:
-        if obj.doublearray and obj.subtypname is not None:
+        if obj.nested_array and obj.subtypname is not None:
             c_typ = obj.subtypname + " *"
         else:
             c_typ = helpers.get_name_substr(obj.name, prefix) + " *"
@@ -189,7 +189,7 @@ def header_reflect_top_array(obj, prefix, header):
 
     typename = helpers.get_top_array_type_name(obj.name, prefix)
     header.append("typedef struct {\n")
-    if obj.doublearray:
+    if obj.nested_array:
         header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}**items;\n")
         header.append("    size_t *subitem_lens;\n\n")
     else:

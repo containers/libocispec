@@ -404,7 +404,7 @@ def gen_type_arr_typnode(node_info, src, typ, refname):
                         subtyp=item_type.subtyp,
                         subtypobj=item_type.subtypobj,
                         subtypname=item_type.subtypname,
-                        required=item_type.required, doublearray=True), src
+                        required=item_type.required, nested_array=True), src
     else:
         return helpers.SchemaNode(name,
                         typ,
@@ -650,7 +650,7 @@ def parse_schema(schema_info, schema, prefix):
         item_type, _ = resolve_type(schema_info, helpers.HierarchicalName(""), \
                                     schema['items'], schema['items'], schema_info.name.name)
         if item_type.typ == 'array' and not helpers.valid_basic_map_name(item_type.subtyp):
-            item_type.doublearray = True
+            item_type.nested_array = True
             return item_type
         else:
             return helpers.SchemaNode(helpers.HierarchicalName(prefix), 'array', None, item_type.typ, \
