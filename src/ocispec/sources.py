@@ -1164,9 +1164,12 @@ class BasicMapType(TypeHandler):
         # Clone function doesn't use json_ prefix
         clone_name = self.map_name.replace('json_', '', 1)
         emit(c_file, f'''
-            ret->{obj.fixname} = clone_{clone_name} (src->{obj.fixname});
-            if (ret->{obj.fixname} == NULL)
-                return NULL;
+            if (src->{obj.fixname} != NULL)
+              {{
+                ret->{obj.fixname} = clone_{clone_name} (src->{obj.fixname});
+                if (ret->{obj.fixname} == NULL)
+                    return NULL;
+              }}
         ''', indent=indent)
 
 
@@ -1984,8 +1987,10 @@ def make_clone(obj, c_file, prefix):
         {typename} *
         clone_{typename} ({typename} *src)
         {{
-            (void) src;  /* Silence compiler warning.  */
             __auto_cleanup(free_{typename}) {typename} *ret = NULL;
+
+            if (src == NULL)
+              return NULL;
 
             ret = calloc (1, sizeof (*ret));
             if (ret == NULL)

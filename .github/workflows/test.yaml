@@ -44,6 +44,10 @@ jobs:
             find $(pwd) -name '.git' -exec bash -c 'git config --global --add safe.directory ${0%/.git}' {} \;
             ./autogen.sh --enable-embedded-yajl
             ./configure --enable-embedded-yajl CFLAGS='-Wall -Wextra -Werror'
+            # Run make check first to catch test failures with accessible logs
+            make -j $(nproc)
+            make check || (cat test-suite.log 2>/dev/null; exit 1)
+            # Now run distcheck for distribution validation
             make -j $(nproc) distcheck DISTCHECK_CONFIGURE_FLAGS="--enable-embedded-yajl"
             # check that the working dir is clean
             git describe --broken --dirty --all | grep -qv dirty
