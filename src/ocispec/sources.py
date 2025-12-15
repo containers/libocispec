@@ -1987,8 +1987,10 @@ def make_clone(obj, c_file, prefix):
         {typename} *
         clone_{typename} ({typename} *src)
         {{
-            (void) src;  /* Silence compiler warning.  */
             __auto_cleanup(free_{typename}) {typename} *ret = NULL;
+
+            if (src == NULL)
+              return NULL;
 
             ret = calloc (1, sizeof (*ret));
             if (ret == NULL)
