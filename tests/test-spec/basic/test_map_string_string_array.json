@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "test array of mapStringString",
+  "type": "object",
+  "properties": {
+    "maps": {
+      "type": "array",
+      "items": {
+        "type": "mapStringString"
+      }
+    }
+  }
+}
