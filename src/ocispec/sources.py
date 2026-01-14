@@ -1405,13 +1405,14 @@ class ByteArrayHandler(ArraySubtypeHandler):
         if obj.nested_array:
             emit(c_file, f'''
                     yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(tmp)->values;
-                    ret->{obj.fixname} = calloc ( YAJL_GET_ARRAY_NO_CHECK(tmp)->len + 1, sizeof (*ret->{obj.fixname}));
+                    ret->{obj.fixname}_len = YAJL_GET_ARRAY_NO_CHECK(tmp)->len;
+                    ret->{obj.fixname} = calloc (ret->{obj.fixname}_len + 1, sizeof (*ret->{obj.fixname}));
             ''', indent=4)
-            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
-            emit(c_file, '''
+            null_check_return(c_file, f'ret->{obj.fixname}', indent=4)
+            emit(c_file, f'''
                     size_t j;
-                    for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(tmp)->len; j++)
-                      {
+                    for (j = 0; j < ret->{obj.fixname}_len; j++)
+                      {{
                         char *str = YAJL_GET_STRING (items[j]);
             ''', indent=4)
             emit(c_file, f'''
@@ -1419,7 +1420,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
             ''', indent=5)
             null_check_return(c_file, f'ret->{obj.fixname}[j]', indent=5)
             emit(c_file, '''
-                      };
+                      }
             ''', indent=5)
         else:
             emit(c_file, '''
