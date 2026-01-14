@@ -1458,7 +1458,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
                       {{
                         if (ptr->{obj.fixname}[i] != NULL)
                             str = (const char *)ptr->{obj.fixname}[i];
-                        else ()
+                        else
                             str = "";
                         stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
                       }}
@@ -2384,7 +2384,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
                               {
                                 if (ptr->items[i] != NULL)
                                     str = (const char *)ptr->items[i];
-                                else ()
+                                else
                                     str = "";
                                 stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
                               }
