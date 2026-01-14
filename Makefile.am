@@ -260,6 +260,7 @@ EXTRA_DIST = autogen.sh \
 	tests/data/top_double_array_obj.json \
 	tests/data/top_double_array_refobj.json \
 	tests/data/top_double_array_string.json \
+	tests/data/config-netdevices.json \
 	tests/test-spec \
 	src/ocispec/generate.py \
 	src/ocispec/headers.py \

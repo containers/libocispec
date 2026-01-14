@@ -1079,7 +1079,19 @@ class MapStringObjectType(TypeHandler):
                     if (src->{i.fixname})
                       {{
                         size_t i;
+                        ret->len = src->len;
+                        ret->keys = calloc (src->len + 1, sizeof (*ret->keys));
+                        if (ret->keys == NULL)
+                          return NULL;
+                        for (i = 0; i < src->len; i++)
+                          {{
+                            ret->keys[i] = strdup (src->keys[i]);
+                            if (ret->keys[i] == NULL)
+                              return NULL;
+                          }}
                         ret->{i.fixname} = calloc (src->len + 1, sizeof (*ret->{i.fixname}));
+                        if (ret->{i.fixname} == NULL)
+                          return NULL;
                         for (i = 0; i < src->len; i++)
                           {{
                              ret->{i.fixname}[i] = clone_{node_name} (src->{i.fixname}[i]);
