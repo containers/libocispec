@@ -1412,7 +1412,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
                     size_t j;
                     for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(tmp)->len; j++)
                       {
-                        char *str = YAJL_GET_STRING (itmes[j]);
+                        char *str = YAJL_GET_STRING (items[j]);
             ''', indent=4)
             emit(c_file, f'''
                         ret->{obj.fixname}[j] = (uint8_t *)strdup (str ? str : "");
