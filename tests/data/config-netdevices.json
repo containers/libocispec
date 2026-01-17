@@ -1,0 +1,17 @@
+{
+    "ociVersion": "1.0.0",
+    "root": {
+        "path": "rootfs"
+    },
+    "linux": {
+        "netDevices": {
+            "eth0": {
+                "name": "container_eth0"
+            },
+            "ens4": {
+                "name": "container_ens4"
+            },
+            "lo": {}
+        }
+    }
+}

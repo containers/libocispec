@@ -1079,7 +1079,19 @@ class MapStringObjectType(TypeHandler):
                     if (src->{i.fixname})
                       {{
                         size_t i;
+                        ret->len = src->len;
+                        ret->keys = calloc (src->len + 1, sizeof (*ret->keys));
+                        if (ret->keys == NULL)
+                          return NULL;
+                        for (i = 0; i < src->len; i++)
+                          {{
+                            ret->keys[i] = strdup (src->keys[i]);
+                            if (ret->keys[i] == NULL)
+                              return NULL;
+                          }}
                         ret->{i.fixname} = calloc (src->len + 1, sizeof (*ret->{i.fixname}));
+                        if (ret->{i.fixname} == NULL)
+                          return NULL;
                         for (i = 0; i < src->len; i++)
                           {{
                              ret->{i.fixname}[i] = clone_{node_name} (src->{i.fixname}[i]);
@@ -1393,21 +1405,22 @@ class ByteArrayHandler(ArraySubtypeHandler):
         if obj.nested_array:
             emit(c_file, f'''
                     yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(tmp)->values;
-                    ret->{obj.fixname} = calloc ( YAJL_GET_ARRAY_NO_CHECK(tmp)->len + 1, sizeof (*ret->{obj.fixname}));
+                    ret->{obj.fixname}_len = YAJL_GET_ARRAY_NO_CHECK(tmp)->len;
+                    ret->{obj.fixname} = calloc (ret->{obj.fixname}_len + 1, sizeof (*ret->{obj.fixname}));
             ''', indent=4)
-            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
-            emit(c_file, '''
+            null_check_return(c_file, f'ret->{obj.fixname}', indent=4)
+            emit(c_file, f'''
                     size_t j;
-                    for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(tmp)->len; j++)
-                      {
-                        char *str = YAJL_GET_STRING (itmes[j]);
+                    for (j = 0; j < ret->{obj.fixname}_len; j++)
+                      {{
+                        char *str = YAJL_GET_STRING (items[j]);
             ''', indent=4)
             emit(c_file, f'''
                         ret->{obj.fixname}[j] = (uint8_t *)strdup (str ? str : "");
             ''', indent=5)
             null_check_return(c_file, f'ret->{obj.fixname}[j]', indent=5)
             emit(c_file, '''
-                      };
+                      }
             ''', indent=5)
         else:
             emit(c_file, '''
@@ -1446,7 +1459,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
                       {{
                         if (ptr->{obj.fixname}[i] != NULL)
                             str = (const char *)ptr->{obj.fixname}[i];
-                        else ()
+                        else
                             str = "";
                         stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
                       }}
@@ -1683,6 +1696,62 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
 class BasicMapArrayHandler(ArraySubtypeHandler):
     """Handler for arrays of basic map types."""
 
+    def emit_parse(self, c_file, obj, prefix, obj_typename):
+        map_func = helpers.make_basic_map_name(obj.subtyp)
+        emit(c_file, f'''
+            do
+              {{
+                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
+                if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
+                  {{
+                    size_t i;
+                    size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
+                    yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
+                    ret->{obj.fixname}_len = len;
+        ''', indent=1)
+        calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
+        emit(c_file, f'''
+                    for (i = 0; i < len; i++)
+                      {{
+                        yajl_val val = values[i];
+                        ret->{obj.fixname}[i] = make_{map_func} (val, ctx, err);
+                        if (ret->{obj.fixname}[i] == NULL)
+                          return NULL;
+                      }}
+                  }}
+              }}
+            while (0);
+        ''', indent=1)
+
+    def emit_generate(self, c_file, obj, prefix):
+        map_func = helpers.make_basic_map_name(obj.subtyp)
+        emit(c_file, f'''
+            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+              {{
+                size_t len = 0, i;
+        ''', indent=1)
+        emit_gen_key_with_check(c_file, obj.origname, indent=2)
+        emit(c_file, f'''
+                if (ptr != NULL && ptr->{obj.fixname} != NULL)
+                    len = ptr->{obj.fixname}_len;
+        ''', indent=2)
+        emit_beautify_off(c_file, '!len', indent=2)
+        emit_gen_array_open(c_file, indent=2)
+        check_gen_status(c_file, indent=2)
+        emit(c_file, f'''
+                for (i = 0; i < len; i++)
+                  {{
+                    stat = gen_{map_func} (g, ptr->{obj.fixname}[i], ctx, err);
+                    if (stat != yajl_gen_status_ok)
+                        GEN_SET_ERROR_AND_RETURN (stat, err);
+                  }}
+        ''', indent=2)
+        emit_gen_array_close(c_file, indent=2)
+        emit_beautify_on(c_file, '!len', indent=2)
+        emit(c_file, '''
+              }
+        ''', indent=1)
+
     def emit_free(self, c_file, obj, prefix):
         free_func = helpers.make_basic_map_name(obj.subtyp)
         emit(c_file, f'''
@@ -1702,6 +1771,18 @@ class BasicMapArrayHandler(ArraySubtypeHandler):
         emit(c_file, '''
               }
         ''', indent=1)
+
+    def emit_clone(self, c_file, obj, prefix, indent):
+        # Clone function doesn't use json_ prefix
+        clone_func = helpers.make_basic_map_name(obj.subtyp).replace('json_', '', 1)
+        emit(c_file, f'''
+            if (src->{obj.fixname}[i] != NULL)
+              {{
+                ret->{obj.fixname}[i] = clone_{clone_func} (src->{obj.fixname}[i]);
+                if (ret->{obj.fixname}[i] == NULL)
+                  return NULL;
+              }}
+        ''', indent=indent)
 
 
 def _get_array_subtype_handler(obj):
@@ -2372,7 +2453,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
                               {
                                 if (ptr->items[i] != NULL)
                                     str = (const char *)ptr->items[i];
-                                else ()
+                                else
                                     str = "";
                                 stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
                               }
