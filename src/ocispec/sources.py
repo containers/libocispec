@@ -282,6 +282,28 @@ def emit_beautify_on(c_file, condition='!len', indent=0):
     ''', indent=indent)
 
 
+def emit_array_parse_preamble(c_file, obj):
+    """Emit the common preamble for array parsing.
+
+    Emits the do/get_val/array_check/len/values/calloc block shared by
+    ObjectArrayHandler, PrimitiveArrayHandler, and BasicMapArrayHandler.
+    """
+    emit(c_file, f'''
+        do
+          {{
+            {json_api.VAL_TYPE} tmp = get_val (tree, "{obj.origname}", {json_api.TYPE_ARRAY});
+            if (tmp != NULL && {json_api.array_check('tmp')})
+              {{
+                size_t i;
+                size_t len = {json_api.array_len('tmp')};
+                {json_api.VAL_TYPE} *values = {json_api.array_values('tmp')};
+                ret->{obj.fixname}_len = len;
+    ''', indent=1)
+    calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
+    if obj.nested_array:
+        calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
+
+
 def get_compound_children(obj):
     """Get the children/subtypes for a compound type.
 
@@ -1215,21 +1237,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
     def emit_parse(self, c_file, obj, prefix, obj_typename):
         typename = obj.subtypname if obj.subtypname else helpers.get_name_substr(obj.name, prefix)
 
-        emit(c_file, f'''
-            do
-              {{
-                {json_api.VAL_TYPE} tmp = get_val (tree, "{obj.origname}", {json_api.TYPE_ARRAY});
-                if (tmp != NULL && {json_api.array_check('tmp')})
-                  {{
-                    size_t i;
-                    size_t len = {json_api.array_len('tmp')};
-                    {json_api.VAL_TYPE} *values = {json_api.array_values('tmp')};
-                    ret->{obj.fixname}_len = len;
-        ''', indent=1)
-
-        calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
-        if obj.nested_array:
-            calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
+        emit_array_parse_preamble(c_file, obj)
 
         emit(c_file, f'''
                     for (i = 0; i < len; i++)
@@ -1500,21 +1508,7 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
     """Handler for arrays of primitive types (string, numeric, etc.)."""
 
     def emit_parse(self, c_file, obj, prefix, obj_typename):
-        emit(c_file, f'''
-            do
-              {{
-                {json_api.VAL_TYPE} tmp = get_val (tree, "{obj.origname}", {json_api.TYPE_ARRAY});
-                if (tmp != NULL && {json_api.array_check('tmp')})
-                  {{
-                    size_t i;
-                    size_t len = {json_api.array_len('tmp')};
-                    {json_api.VAL_TYPE} *values = {json_api.array_values('tmp')};
-                    ret->{obj.fixname}_len = len;
-        ''', indent=1)
-
-        calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
-        if obj.nested_array:
-            calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
+        emit_array_parse_preamble(c_file, obj)
 
         emit(c_file, '''
                     for (i = 0; i < len; i++)
@@ -1701,18 +1695,7 @@ class BasicMapArrayHandler(ArraySubtypeHandler):
 
     def emit_parse(self, c_file, obj, prefix, obj_typename):
         map_func = helpers.make_basic_map_name(obj.subtyp)
-        emit(c_file, f'''
-            do
-              {{
-                {json_api.VAL_TYPE} tmp = get_val (tree, "{obj.origname}", {json_api.TYPE_ARRAY});
-                if (tmp != NULL && {json_api.array_check('tmp')})
-                  {{
-                    size_t i;
-                    size_t len = {json_api.array_len('tmp')};
-                    {json_api.VAL_TYPE} *values = {json_api.array_values('tmp')};
-                    ret->{obj.fixname}_len = len;
-        ''', indent=1)
-        calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
+        emit_array_parse_preamble(c_file, obj)
         emit(c_file, f'''
                     for (i = 0; i < len; i++)
                       {{
