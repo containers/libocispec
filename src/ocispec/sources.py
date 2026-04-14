@@ -304,6 +304,31 @@ def emit_array_parse_preamble(c_file, obj):
         calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
 
 
+def emit_array_gen_preamble(c_file, obj, len_indent='    '):
+    """Emit the common preamble for array generation.
+
+    Emits the if-OPT_GEN + gen_key + len setup + beautify_off + array_open +
+    check_gen_status block shared by ObjectArrayHandler, PrimitiveArrayHandler,
+    and BasicMapArrayHandler.
+
+    len_indent controls indentation of the ``len = ...`` assignment:
+    callers at different nesting depths need different alignment.
+    """
+    emit(c_file, f'''
+        if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+          {{
+            size_t len = 0, i;
+    ''', indent=1)
+    emit_gen_key_with_check(c_file, obj.origname, indent=2)
+    emit(c_file, f'''
+        if (ptr != NULL && ptr->{obj.fixname} != NULL)
+        {len_indent}len = ptr->{obj.fixname}_len;
+    ''', indent=2)
+    emit_beautify_off(c_file, '!len', indent=2)
+    emit_gen_array_open(c_file, indent=2)
+    check_gen_status(c_file, indent=2)
+
+
 def get_compound_children(obj):
     """Get the children/subtypes for a compound type.
 
@@ -1280,20 +1305,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
     def emit_generate(self, c_file, obj, prefix):
         typename = obj.subtypname if obj.subtypname else helpers.get_name_substr(obj.name, prefix)
 
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-                size_t len = 0, i;
-        ''', indent=1)
-        emit_gen_key_with_check(c_file, obj.origname, indent=2)
-
-        emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname} != NULL)
-                    len = ptr->{obj.fixname}_len;
-        ''', indent=2)
-        emit_beautify_off(c_file, '!len', indent=2)
-        emit_gen_array_open(c_file, indent=2)
-        check_gen_status(c_file, indent=2)
+        emit_array_gen_preamble(c_file, obj)
 
         emit(c_file, '''
                 for (i = 0; i < len; i++)
@@ -1544,20 +1556,7 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
         ''', indent=1)
 
     def emit_generate(self, c_file, obj, prefix):
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-                size_t len = 0, i;
-        ''', indent=1)
-        emit_gen_key_with_check(c_file, obj.origname, indent=2)
-
-        emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname} != NULL)
-                  len = ptr->{obj.fixname}_len;
-        ''', indent=2)
-        emit_beautify_off(c_file, '!len', indent=2)
-        emit_gen_array_open(c_file, indent=2)
-        check_gen_status(c_file, indent=2)
+        emit_array_gen_preamble(c_file, obj, len_indent='  ')
 
         emit(c_file, '''
                 for (i = 0; i < len; i++)
@@ -1711,19 +1710,7 @@ class BasicMapArrayHandler(ArraySubtypeHandler):
 
     def emit_generate(self, c_file, obj, prefix):
         map_func = helpers.make_basic_map_name(obj.subtyp)
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-                size_t len = 0, i;
-        ''', indent=1)
-        emit_gen_key_with_check(c_file, obj.origname, indent=2)
-        emit(c_file, f'''
-                if (ptr != NULL && ptr->{obj.fixname} != NULL)
-                    len = ptr->{obj.fixname}_len;
-        ''', indent=2)
-        emit_beautify_off(c_file, '!len', indent=2)
-        emit_gen_array_open(c_file, indent=2)
-        check_gen_status(c_file, indent=2)
+        emit_array_gen_preamble(c_file, obj)
         emit(c_file, f'''
                 for (i = 0; i < len; i++)
                   {{
