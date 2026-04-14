@@ -394,10 +394,7 @@ class StringType(TypeHandler):
         ''', indent=indent)
 
     def emit_free(self, c_file, obj, prefix, indent=1):
-        emit(c_file, f'''
-            free (ptr->{obj.fixname});
-            ptr->{obj.fixname} = NULL;
-        ''', indent=indent)
+        free_and_null(c_file, "ptr", obj.fixname, indent=indent)
 
     def emit_clone(self, c_file, obj, prefix, indent=1):
         emit(c_file, f'''
@@ -522,10 +519,7 @@ class BooleanPointerType(TypeHandler):
         ''', indent=indent)
 
     def emit_free(self, c_file, obj, prefix, indent=1):
-        emit(c_file, f'''
-            free (ptr->{obj.fixname});
-            ptr->{obj.fixname} = NULL;
-        ''', indent=indent)
+        free_and_null(c_file, "ptr", obj.fixname, indent=indent)
 
     def emit_clone(self, c_file, obj, prefix, indent=1):
         emit(c_file, f'''
@@ -701,10 +695,7 @@ class NumericPointerType(TypeHandler):
         ''', indent=indent)
 
     def emit_free(self, c_file, obj, prefix, indent=1):
-        emit(c_file, f'''
-            free (ptr->{obj.fixname});
-            ptr->{obj.fixname} = NULL;
-        ''', indent=indent)
+        free_and_null(c_file, "ptr", obj.fixname, indent=indent)
 
     def emit_clone(self, c_file, obj, prefix, indent=1):
         c_typ = helpers.get_map_c_types(self.base_typ)
