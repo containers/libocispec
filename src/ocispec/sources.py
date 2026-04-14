@@ -31,6 +31,7 @@
 from textwrap import dedent
 
 import helpers
+import json_api
 
 
 def emit(c_file, code, indent=0):
@@ -93,14 +94,14 @@ def calloc_with_check(c_file, dest, count, sizeof_expr, indent=0):
 
 
 def check_gen_status(c_file, indent=0):
-    """Generate yajl_gen status check with error return.
+    """Generate JSON gen status check with error return.
 
     Args:
         c_file: List to append code lines to
         indent: Number of 4-space indentation levels
     """
     prefix = '    ' * indent
-    c_file.append(f"{prefix}if (stat != yajl_gen_status_ok)\n")
+    c_file.append(f"{prefix}if (stat != {json_api.GEN_STATUS_OK})\n")
     c_file.append(f"{prefix}    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
 
 
@@ -109,7 +110,7 @@ def do_read_value(c_file, src_expr, dest_expr, typ, origname, obj_typename, inde
 
     Args:
         c_file: Output file list
-        src_expr: Source expression (e.g., 'get_val (tree, "name", yajl_t_string)')
+        src_expr: Source expression (e.g., 'get_val (tree, "name", json_api.TYPE_STRING)')
         dest_expr: Destination expression (e.g., 'ret->field')
         typ: Field type
         origname: Original field name from schema
@@ -164,16 +165,18 @@ def emit_value_error(c_file, keyname, indent=0):
     ''', indent=indent)
 
 
-def emit_invalid_type_check(c_file, yajl_check='YAJL_IS_NUMBER', indent=0):
-    """Emit YAJL type validation with error return.
+def emit_invalid_type_check(c_file, check_expr=None, indent=0):
+    """Emit JSON type validation with error return.
 
     Args:
         c_file: List to append code lines to
-        yajl_check: YAJL type check macro (e.g., 'YAJL_IS_NUMBER')
+        check_expr: Full C check expression (default: json_api.is_number('val'))
         indent: Number of 4-space indentation levels
     """
+    if check_expr is None:
+        check_expr = json_api.is_number('val')
     emit(c_file, f'''
-        if (! {yajl_check} (val))
+        if (! {check_expr})
           {{
             *err = strdup ("invalid type");
             return NULL;
@@ -181,10 +184,10 @@ def emit_invalid_type_check(c_file, yajl_check='YAJL_IS_NUMBER', indent=0):
     ''', indent=indent)
 
 
-# YAJL generation helpers
+# JSON generation helpers
 
 def emit_gen_key(c_file, key, indent=0):
-    """Emit yajl_gen_string for an object key.
+    """Emit JSON gen_string for an object key.
 
     Args:
         c_file: List to append code lines to
@@ -193,66 +196,66 @@ def emit_gen_key(c_file, key, indent=0):
     """
     key_len = len(key)
     emit(c_file, f'''
-        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)("{key}"), {key_len} /* strlen ("{key}") */);
+        stat = {json_api.gen_string('g', f'"{key}"', f'{key_len} /* strlen ("{key}") */')};
     ''', indent=indent)
 
 
 def emit_gen_key_with_check(c_file, key, indent=0):
-    """Emit yajl_gen_string for an object key and check status."""
+    """Emit JSON gen_string for an object key and check status."""
     emit_gen_key(c_file, key, indent=indent)
     check_gen_status(c_file, indent=indent)
 
 
 def emit_gen_map_open(c_file, indent=0):
-    """Emit yajl_gen_map_open call.
+    """Emit gen_map_open call.
 
     Args:
         c_file: List to append code lines to
         indent: Number of 4-space indentation levels
     """
-    emit(c_file, '''
-        stat = yajl_gen_map_open ((yajl_gen) g);
+    emit(c_file, f'''
+        stat = {json_api.gen_map_open('g')};
     ''', indent=indent)
 
 
 def emit_gen_map_close(c_file, indent=0):
-    """Emit yajl_gen_map_close call.
+    """Emit gen_map_close call.
 
     Args:
         c_file: List to append code lines to
         indent: Number of 4-space indentation levels
     """
-    emit(c_file, '''
-        stat = yajl_gen_map_close ((yajl_gen) g);
+    emit(c_file, f'''
+        stat = {json_api.gen_map_close('g')};
     ''', indent=indent)
 
 
 def emit_gen_array_open(c_file, indent=0):
-    """Emit yajl_gen_array_open call.
+    """Emit gen_array_open call.
 
     Args:
         c_file: List to append code lines to
         indent: Number of 4-space indentation levels
     """
-    emit(c_file, '''
-        stat = yajl_gen_array_open ((yajl_gen) g);
+    emit(c_file, f'''
+        stat = {json_api.gen_array_open('g')};
     ''', indent=indent)
 
 
 def emit_gen_array_close(c_file, indent=0):
-    """Emit yajl_gen_array_close call.
+    """Emit gen_array_close call.
 
     Args:
         c_file: List to append code lines to
         indent: Number of 4-space indentation levels
     """
-    emit(c_file, '''
-        stat = yajl_gen_array_close ((yajl_gen) g);
+    emit(c_file, f'''
+        stat = {json_api.gen_array_close('g')};
     ''', indent=indent)
 
 
 def emit_beautify_off(c_file, condition='!len', indent=0):
-    """Emit yajl_gen_beautify disable.
+    """Emit beautify disable.
 
     Args:
         c_file: List to append code lines to
@@ -261,12 +264,12 @@ def emit_beautify_off(c_file, condition='!len', indent=0):
     """
     emit(c_file, f'''
         if ({condition} && !(ctx->options & OPT_GEN_SIMPLIFY))
-            yajl_gen_config (g, yajl_gen_beautify, 0);
+            {json_api.gen_config('g', json_api.GEN_BEAUTIFY, '0')};
     ''', indent=indent)
 
 
 def emit_beautify_on(c_file, condition='!len', indent=0):
-    """Emit yajl_gen_beautify enable.
+    """Emit beautify enable.
 
     Args:
         c_file: List to append code lines to
@@ -275,7 +278,7 @@ def emit_beautify_on(c_file, condition='!len', indent=0):
     """
     emit(c_file, f'''
         if ({condition} && !(ctx->options & OPT_GEN_SIMPLIFY))
-            yajl_gen_config (g, yajl_gen_beautify, 1);
+            {json_api.gen_config('g', json_api.GEN_BEAUTIFY, '1')};
     ''', indent=indent)
 
 
@@ -324,7 +327,7 @@ class StringType(TypeHandler):
     """Handler for string type."""
 
     def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
-        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_string)',
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", {json_api.TYPE_STRING})',
                       f"ret->{obj.fixname}", 'string', obj.origname, obj_typename, indent=indent)
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
@@ -361,10 +364,10 @@ class StringType(TypeHandler):
 
     def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
         emit(c_file, f'''
-            yajl_val val = {src};
+            {json_api.VAL_TYPE} val = {src};
             if (val != NULL)
               {{
-                char *str = YAJL_GET_STRING (val);
+                char *str = {json_api.get_string('val')};
                 {dest} = strdup (str ? str : "");
                 if ({dest} == NULL)
                   return NULL;
@@ -373,8 +376,8 @@ class StringType(TypeHandler):
 
     def emit_json_value(self, c_file, src, dst, ptx, level=1):
         emit(c_file, f'''
-            stat = yajl_gen_string ((yajl_gen){dst}, (const unsigned char *)({src}), strlen ({src}));
-            if (stat != yajl_gen_status_ok)
+            stat = {json_api.gen_string(dst, src, f'strlen ({src})')};
+            if (stat != {json_api.GEN_STATUS_OK})
                 GEN_SET_ERROR_AND_RETURN (stat, err);
         ''', indent=level)
 
@@ -383,7 +386,7 @@ class BooleanType(TypeHandler):
     """Handler for boolean type."""
 
     def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
-        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_true)',
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", {json_api.TYPE_TRUE})',
                       f"ret->{obj.fixname}", 'boolean', obj.origname, obj_typename, indent=indent)
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
@@ -414,10 +417,10 @@ class BooleanType(TypeHandler):
 
     def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
         emit(c_file, f'''
-            yajl_val val = {src};
+            {json_api.VAL_TYPE} val = {src};
             if (val != NULL)
               {{
-                {dest} = YAJL_IS_TRUE(val);
+                {dest} = {json_api.is_true('val')};
         ''', indent=level)
         if '[' not in dest:
             emit(c_file, f'''
@@ -425,7 +428,7 @@ class BooleanType(TypeHandler):
               }}
             else
               {{
-                val = {src.replace('yajl_t_true', 'yajl_t_false')};
+                val = {src.replace(json_api.TYPE_TRUE, json_api.TYPE_FALSE)};
                 if (val != NULL)
                   {{
                     {dest} = 0;
@@ -440,8 +443,8 @@ class BooleanType(TypeHandler):
 
     def emit_json_value(self, c_file, src, dst, ptx, level=1):
         emit(c_file, f'''
-            stat = yajl_gen_bool ((yajl_gen){dst}, (int)({src}));
-            if (stat != yajl_gen_status_ok)
+            stat = {json_api.gen_bool(dst, src)};
+            if (stat != {json_api.GEN_STATUS_OK})
                 GEN_SET_ERROR_AND_RETURN (stat, err);
         ''', indent=level)
 
@@ -450,7 +453,7 @@ class BooleanPointerType(TypeHandler):
     """Handler for booleanPointer type."""
 
     def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
-        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_true)',
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", {json_api.TYPE_TRUE})',
                       f"ret->{obj.fixname}", 'booleanPointer', obj.origname, obj_typename, indent=indent)
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
@@ -490,31 +493,31 @@ class BooleanPointerType(TypeHandler):
 
     def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
         emit(c_file, f'''
-            yajl_val val = {src};
+            {json_api.VAL_TYPE} val = {src};
             if (val != NULL)
               {{
                 {dest} = calloc (1, sizeof (bool));
                 if ({dest} == NULL)
                     return NULL;
-                *({dest}) = YAJL_IS_TRUE(val);
+                *({dest}) = {json_api.is_true('val')};
               }}
             else
              {{
-               val = get_val (tree, "{keyname}", yajl_t_false);
+               val = get_val (tree, "{keyname}", {json_api.TYPE_FALSE});
                if (val != NULL)
                  {{
                    {dest} = calloc (1, sizeof (bool));
                    if ({dest} == NULL)
                      return NULL;
-                   *({dest}) = YAJL_IS_TRUE(val);
+                   *({dest}) = {json_api.is_true('val')};
                  }}
              }}
         ''', indent=level)
 
     def emit_json_value(self, c_file, src, dst, ptx, level=1):
         emit(c_file, f'''
-            stat = yajl_gen_bool ((yajl_gen){dst}, (int)({src}));
-            if (stat != yajl_gen_status_ok)
+            stat = {json_api.gen_bool(dst, src)};
+            if (stat != {json_api.GEN_STATUS_OK})
                 GEN_SET_ERROR_AND_RETURN (stat, err);
         ''', indent=level)
 
@@ -545,7 +548,7 @@ class NumericType(TypeHandler):
         return 'long long int'
 
     def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
-        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_number)',
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", {json_api.TYPE_NUMBER})',
                       f"ret->{obj.fixname}", self.typ, obj.origname, obj_typename, indent=indent)
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
@@ -577,17 +580,17 @@ class NumericType(TypeHandler):
     def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
         conv_func, dest_cast = self._get_conversion_info()
         emit(c_file, f'''
-            yajl_val val = {src};
+            {json_api.VAL_TYPE} val = {src};
             if (val != NULL)
               {{
                 int invalid;
         ''', indent=level)
-        emit_invalid_type_check(c_file, 'YAJL_IS_NUMBER', indent=level + 1)
+        emit_invalid_type_check(c_file, json_api.is_number('val'), indent=level + 1)
         emit(c_file, f'''
-                    invalid = {conv_func} (YAJL_GET_NUMBER (val), {dest_cast}{dest});
+                    invalid = {conv_func} ({json_api.get_number('val')}, {dest_cast}{dest});
                 if (invalid)
                   {{
-                    if (asprintf (err, "Invalid value '%s' with type '{self.typ}' for key '{keyname}': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)
+                    if (asprintf (err, "Invalid value '%s' with type '{self.typ}' for key '{keyname}': %s", {json_api.get_number('val')}, strerror (-invalid)) < 0)
                         *err = strdup ("error allocating memory");
                     return NULL;
                   }}
@@ -603,7 +606,7 @@ class NumericType(TypeHandler):
     def emit_json_value(self, c_file, src, dst, ptx, level=1):
         if self.typ == 'double':
             emit(c_file, f'''
-                stat = yajl_gen_double ((yajl_gen){dst}, {src});
+                stat = {json_api.gen_double(dst, src)};
             ''', indent=level)
         elif self.typ.startswith("uint") or self.typ == 'GID' or self.typ == 'UID':
             emit(c_file, f'''
@@ -614,7 +617,7 @@ class NumericType(TypeHandler):
                 stat = map_int ({dst}, {src});
             ''', indent=level)
         emit(c_file, f'''
-            if (stat != yajl_gen_status_ok)
+            if (stat != {json_api.GEN_STATUS_OK})
                 GEN_SET_ERROR_AND_RETURN (stat, err);
         ''', indent=level)
 
@@ -627,7 +630,7 @@ class NumericPointerType(TypeHandler):
         self.base_typ = helpers.get_pointer_base_type(typ)
 
     def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
-        do_read_value(c_file, f'get_val (tree, "{obj.origname}", yajl_t_number)',
+        do_read_value(c_file, f'get_val (tree, "{obj.origname}", {json_api.TYPE_NUMBER})',
                       f"ret->{obj.fixname}", self.typ, obj.origname, obj_typename, indent=indent)
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
@@ -672,7 +675,7 @@ class NumericPointerType(TypeHandler):
         if self.base_typ == "":
             return
         emit(c_file, f'''
-            yajl_val val = {src};
+            {json_api.VAL_TYPE} val = {src};
             if (val != NULL)
               {{
                 {dest} = calloc (1, sizeof ({helpers.get_map_c_types(self.base_typ)}));
@@ -680,12 +683,12 @@ class NumericPointerType(TypeHandler):
                     return NULL;
                 int invalid;
         ''', indent=level)
-        emit_invalid_type_check(c_file, 'YAJL_IS_NUMBER', indent=level + 1)
+        emit_invalid_type_check(c_file, json_api.is_number('val'), indent=level + 1)
         emit(c_file, f'''
-                invalid = common_safe_{self.base_typ} (YAJL_GET_NUMBER (val), {dest});
+                invalid = common_safe_{self.base_typ} ({json_api.get_number('val')}, {dest});
                 if (invalid)
                   {{
-                    if (asprintf (err, "Invalid value '%s' with type '{self.typ}' for key '{keyname}': %s", YAJL_GET_NUMBER (val), strerror (-invalid)) < 0)
+                    if (asprintf (err, "Invalid value '%s' with type '{self.typ}' for key '{keyname}': %s", {json_api.get_number('val')}, strerror (-invalid)) < 0)
                         *err = strdup ("error allocating memory");
                     return NULL;
                   }}
@@ -699,7 +702,7 @@ class ObjectType(TypeHandler):
     def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
         typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
         emit(c_file, f'''
-            ret->{obj.fixname} = make_{typename} (get_val (tree, "{obj.origname}", yajl_t_object), ctx, err);
+            ret->{obj.fixname} = make_{typename} (get_val (tree, "{obj.origname}", {json_api.TYPE_OBJECT}), ctx, err);
             if (ret->{obj.fixname} == NULL && *err != 0)
               return NULL;
         ''', indent=indent)
@@ -762,14 +765,14 @@ class ObjectType(TypeHandler):
         if obj.children is not None:
             # O(n^2) complexity, but the objects should not really be big...
             condition = "\n                && ".join( \
-                [f'strcmp (tree->u.object.keys[i], "{i.origname}")' for i in obj.children])
+                [f'strcmp ({json_api.object_key_direct("tree", "i")}, "{i.origname}")' for i in obj.children])
             emit(c_file, f'''
-                if (tree->type == yajl_t_object)
+                if ({json_api.object_type_field("tree")} == {json_api.TYPE_OBJECT})
                   {{
                     size_t i;
                     size_t j = 0;
-                    size_t cnt = tree->u.object.len;
-                    yajl_val resi = NULL;
+                    size_t cnt = {json_api.object_len_field("tree")};
+                    {json_api.VAL_TYPE} resi = NULL;
 
                     if (ctx->options & OPT_PARSE_FULLKEY)
                       {{
@@ -777,31 +780,31 @@ class ObjectType(TypeHandler):
                         if (resi == NULL)
                           return NULL;
 
-                        resi->type = yajl_t_object;
-                        resi->u.object.keys = calloc (cnt, sizeof (const char *));
-                        if (resi->u.object.keys == NULL)
+                        {json_api.set_object_type("resi")};
+                        {json_api.alloc_object_keys("resi", "cnt")};
+                        if ({json_api.object_keys_field("resi")} == NULL)
                           {{
-                            yajl_tree_free (resi);
+                            {json_api.tree_free("resi")};
                             return NULL;
                           }}
-                        resi->u.object.values = calloc (cnt, sizeof (yajl_val));
-                        if (resi->u.object.values == NULL)
+                        {json_api.alloc_object_values("resi", "cnt")};
+                        if ({json_api.object_values_field("resi")} == NULL)
                           {{
-                            yajl_tree_free (resi);
+                            {json_api.tree_free("resi")};
                             return NULL;
                           }}
                       }}
 
-                    for (i = 0; i < tree->u.object.len; i++)
+                    for (i = 0; i < {json_api.object_len_field("tree")}; i++)
                       {{
                         if ({condition}){{
                             if (ctx->options & OPT_PARSE_FULLKEY)
                               {{
-                                resi->u.object.keys[j] = tree->u.object.keys[i];
-                                tree->u.object.keys[i] = NULL;
-                                resi->u.object.values[j] = tree->u.object.values[i];
-                                tree->u.object.values[i] = NULL;
-                                resi->u.object.len++;
+                                {json_api.object_key_direct("resi", "j")} = {json_api.object_key_direct("tree", "i")};
+                                {json_api.object_key_direct("tree", "i")} = NULL;
+                                {json_api.object_value_direct("resi", "j")} = {json_api.object_value_direct("tree", "i")};
+                                {json_api.object_value_direct("tree", "i")} = NULL;
+                                {json_api.object_len_field("resi")}++;
                               }}
                             j++;
                           }}
@@ -828,13 +831,13 @@ class ObjectType(TypeHandler):
             if handler:
                 handler.emit_generate(c_file, i, prefix, indent=1)
         if obj.children is not None:
-            emit(c_file, '''
+            emit(c_file, f'''
                 if (ptr != NULL && ptr->_residual != NULL)
-                  {
-                    stat = gen_yajl_object_residual (ptr->_residual, g, err);
-                    if (yajl_gen_status_ok != stat)
+                  {{
+                    stat = {json_api.gen_residual('ptr->_residual', 'g', 'err')};
+                    if ({json_api.GEN_STATUS_OK} != stat)
                         GEN_SET_ERROR_AND_RETURN (stat, err);
-                  }
+                  }}
             ''', indent=1)
         emit_gen_map_close(c_file, indent=1)
         check_gen_status(c_file, indent=1)
@@ -850,8 +853,8 @@ class ObjectType(TypeHandler):
                 handler.emit_free(c_file, i, prefix, indent=1)
 
         if obj.children is not None:
-            emit(c_file, '''
-                yajl_tree_free (ptr->_residual);
+            emit(c_file, f'''
+                {json_api.tree_free('ptr->_residual')};
                 ptr->_residual = NULL;
             ''', indent=1)
 
@@ -884,7 +887,7 @@ class MapStringObjectType(TypeHandler):
     def emit_parse(self, c_file, obj, prefix, obj_typename, indent=1):
         typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
         emit(c_file, f'''
-            ret->{obj.fixname} = make_{typename} (get_val (tree, "{obj.origname}", yajl_t_object), ctx, err);
+            ret->{obj.fixname} = make_{typename} (get_val (tree, "{obj.origname}", {json_api.TYPE_OBJECT}), ctx, err);
             if (ret->{obj.fixname} == NULL && *err != 0)
               return NULL;
         ''', indent=indent)
@@ -955,12 +958,12 @@ class MapStringObjectType(TypeHandler):
                 childname = helpers.get_prefixed_name(child.name, prefix)
 
         emit(c_file, f'''
-            if (YAJL_GET_OBJECT (tree) != NULL)
+            if ({json_api.object_check('tree')})
               {{
                 size_t i;
-                size_t len = YAJL_GET_OBJECT_NO_CHECK (tree)->len;
-                const char **keys = YAJL_GET_OBJECT_NO_CHECK (tree)->keys;
-                yajl_val *values = YAJL_GET_OBJECT_NO_CHECK (tree)->values;
+                size_t len = {json_api.object_len('tree')};
+                const char **keys = {json_api.object_keys('tree')};
+                {json_api.VAL_TYPE} *values = {json_api.object_values('tree')};
                 ret->len = len;
         ''', indent=1)
 
@@ -970,7 +973,7 @@ class MapStringObjectType(TypeHandler):
         emit(c_file, f'''
                 for (i = 0; i < len; i++)
                   {{
-                    yajl_val val;
+                    {json_api.VAL_TYPE} val;
                     const char *tmpkey = keys[i];
                     ret->keys[i] = strdup (tmpkey ? tmpkey : "");
         ''', indent=2)
@@ -1013,7 +1016,7 @@ class MapStringObjectType(TypeHandler):
                 for (i = 0; i < len; i++)
                   {{
                     char *str = ptr->keys[i] ? ptr->keys[i] : "";
-                    stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen (str));
+                    stat = {json_api.gen_string('g', 'str', 'strlen (str)')};
         ''', indent=1)
 
         check_gen_status(c_file, indent=3)
@@ -1115,7 +1118,7 @@ class BasicMapType(TypeHandler):
         emit(c_file, f'''
             do
               {{
-                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_object);
+                {json_api.VAL_TYPE} tmp = get_val (tree, "{obj.origname}", {json_api.TYPE_OBJECT});
                 if (tmp != NULL)
                   {{
                     ret->{obj.fixname} = make_{self.map_name} (tmp, ctx, err);
@@ -1152,7 +1155,7 @@ class BasicMapType(TypeHandler):
 
     def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
         emit(c_file, f'''
-            yajl_val val = {src};
+            {json_api.VAL_TYPE} val = {src};
             if (val != NULL)
               {{
                 {dest} = make_{self.map_name} (val, ctx, err);
@@ -1168,7 +1171,7 @@ class BasicMapType(TypeHandler):
     def emit_json_value(self, c_file, src, dst, ptx, level=1):
         emit(c_file, f'''
             stat = gen_{self.map_name} ({dst}, {src}, {ptx}, err);
-            if (stat != yajl_gen_status_ok)
+            if (stat != {json_api.GEN_STATUS_OK})
                 GEN_SET_ERROR_AND_RETURN (stat, err);
         ''', indent=level)
 
@@ -1215,12 +1218,12 @@ class ObjectArrayHandler(ArraySubtypeHandler):
         emit(c_file, f'''
             do
               {{
-                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
-                if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
+                {json_api.VAL_TYPE} tmp = get_val (tree, "{obj.origname}", {json_api.TYPE_ARRAY});
+                if (tmp != NULL && {json_api.array_check('tmp')})
                   {{
                     size_t i;
-                    size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
-                    yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
+                    size_t len = {json_api.array_len('tmp')};
+                    {json_api.VAL_TYPE} *values = {json_api.array_values('tmp')};
                     ret->{obj.fixname}_len = len;
         ''', indent=1)
 
@@ -1228,22 +1231,22 @@ class ObjectArrayHandler(ArraySubtypeHandler):
         if obj.nested_array:
             calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
 
-        emit(c_file, '''
+        emit(c_file, f'''
                     for (i = 0; i < len; i++)
-                      {
-                        yajl_val val = values[i];
+                      {{
+                        {json_api.VAL_TYPE} val = values[i];
         ''', indent=3)
 
         if obj.nested_array:
             emit(c_file, f'''
                         size_t j;
-                        ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(val)->len + 1, sizeof (**ret->{obj.fixname}));
+                        ret->{obj.fixname}[i] = calloc ( {json_api.array_len('val')} + 1, sizeof (**ret->{obj.fixname}));
             ''', indent=4)
             null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
-            emit(c_file, '''
-                        yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(val)->values;
-                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(val)->len; j++)
-                          {
+            emit(c_file, f'''
+                        {json_api.VAL_TYPE} *items = {json_api.array_values('val')};
+                        for (j = 0; j < {json_api.array_len('val')}; j++)
+                          {{
             ''', indent=4)
             emit(c_file, f'''
                             ret->{obj.fixname}[i][j] = make_{typename} (items[j], ctx, err);
@@ -1397,15 +1400,15 @@ class ByteArrayHandler(ArraySubtypeHandler):
         emit(c_file, f'''
             do
               {{
-                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_string);
+                {json_api.VAL_TYPE} tmp = get_val (tree, "{obj.origname}", {json_api.TYPE_STRING});
                 if (tmp != NULL)
                   {{
         ''', indent=1)
 
         if obj.nested_array:
             emit(c_file, f'''
-                    yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(tmp)->values;
-                    ret->{obj.fixname}_len = YAJL_GET_ARRAY_NO_CHECK(tmp)->len;
+                    {json_api.VAL_TYPE} *items = {json_api.array_values('tmp')};
+                    ret->{obj.fixname}_len = {json_api.array_len('tmp')};
                     ret->{obj.fixname} = calloc (ret->{obj.fixname}_len + 1, sizeof (*ret->{obj.fixname}));
             ''', indent=4)
             null_check_return(c_file, f'ret->{obj.fixname}', indent=4)
@@ -1413,7 +1416,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
                     size_t j;
                     for (j = 0; j < ret->{obj.fixname}_len; j++)
                       {{
-                        char *str = YAJL_GET_STRING (items[j]);
+                        char *str = {json_api.get_string('items[j]')};
             ''', indent=4)
             emit(c_file, f'''
                         ret->{obj.fixname}[j] = (uint8_t *)strdup (str ? str : "");
@@ -1423,8 +1426,8 @@ class ByteArrayHandler(ArraySubtypeHandler):
                       }
             ''', indent=5)
         else:
-            emit(c_file, '''
-                    char *str = YAJL_GET_STRING (tmp);
+            emit(c_file, f'''
+                    char *str = {json_api.get_string('tmp')};
             ''', indent=3)
             emit(c_file, f'''
                     ret->{obj.fixname} = (uint8_t *)strdup (str ? str : "");
@@ -1461,7 +1464,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
                             str = (const char *)ptr->{obj.fixname}[i];
                         else
                             str = "";
-                        stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
+                        stat = {json_api.gen_string('g', 'str', 'strlen(str)')};
                       }}
                 }}
             ''', indent=2)
@@ -1473,7 +1476,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
                     str = (const char *)ptr->{obj.fixname};
                     len = ptr->{obj.fixname}_len;
                   }}
-                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, len);
+                stat = {json_api.gen_string('g', 'str', 'len')};
             ''', indent=2)
 
         check_gen_status(c_file, indent=2)
@@ -1500,12 +1503,12 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
         emit(c_file, f'''
             do
               {{
-                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
-                if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
+                {json_api.VAL_TYPE} tmp = get_val (tree, "{obj.origname}", {json_api.TYPE_ARRAY});
+                if (tmp != NULL && {json_api.array_check('tmp')})
                   {{
                     size_t i;
-                    size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
-                    yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
+                    size_t len = {json_api.array_len('tmp')};
+                    {json_api.VAL_TYPE} *values = {json_api.array_values('tmp')};
                     ret->{obj.fixname}_len = len;
         ''', indent=1)
 
@@ -1520,14 +1523,14 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
 
         if obj.nested_array:
             emit(c_file, f'''
-                        yajl_val *items = YAJL_GET_ARRAY_NO_CHECK(values[i])->values;
-                        ret->{obj.fixname}[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(values[i])->len + 1, sizeof (**ret->{obj.fixname}));
+                        {json_api.VAL_TYPE} *items = {json_api.array_values('values[i]')};
+                        ret->{obj.fixname}[i] = calloc ( {json_api.array_len('values[i]')} + 1, sizeof (**ret->{obj.fixname}));
             ''', indent=4)
             null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=5)
-            emit(c_file, '''
+            emit(c_file, f'''
                         size_t j;
-                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(values[i])->len; j++)
-                          {
+                        for (j = 0; j < {json_api.array_len('values[i]')}; j++)
+                          {{
             ''', indent=4)
             read_val_generator(c_file, 5, 'items[j]',
                                f"ret->{obj.fixname}[i][j]", obj.subtyp, obj.origname, obj_typename)
@@ -1701,19 +1704,19 @@ class BasicMapArrayHandler(ArraySubtypeHandler):
         emit(c_file, f'''
             do
               {{
-                yajl_val tmp = get_val (tree, "{obj.origname}", yajl_t_array);
-                if (tmp != NULL && YAJL_GET_ARRAY (tmp) != NULL)
+                {json_api.VAL_TYPE} tmp = get_val (tree, "{obj.origname}", {json_api.TYPE_ARRAY});
+                if (tmp != NULL && {json_api.array_check('tmp')})
                   {{
                     size_t i;
-                    size_t len = YAJL_GET_ARRAY_NO_CHECK (tmp)->len;
-                    yajl_val *values = YAJL_GET_ARRAY_NO_CHECK (tmp)->values;
+                    size_t len = {json_api.array_len('tmp')};
+                    {json_api.VAL_TYPE} *values = {json_api.array_values('tmp')};
                     ret->{obj.fixname}_len = len;
         ''', indent=1)
         calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
         emit(c_file, f'''
                     for (i = 0; i < len; i++)
                       {{
-                        yajl_val val = values[i];
+                        {json_api.VAL_TYPE} val = values[i];
                         ret->{obj.fixname}[i] = make_{map_func} (val, ctx, err);
                         if (ret->{obj.fixname}[i] == NULL)
                           return NULL;
@@ -1742,7 +1745,7 @@ class BasicMapArrayHandler(ArraySubtypeHandler):
                 for (i = 0; i < len; i++)
                   {{
                     stat = gen_{map_func} (g, ptr->{obj.fixname}[i], ctx, err);
-                    if (stat != yajl_gen_status_ok)
+                    if (stat != {json_api.GEN_STATUS_OK})
                         GEN_SET_ERROR_AND_RETURN (stat, err);
                   }}
         ''', indent=2)
@@ -1988,7 +1991,7 @@ def parse_json_to_c(obj, c_file, prefix):
     emit(c_file, f'''
         define_cleaner_function ({typename} *, free_{typename})
         {typename} *
-        make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)
+        make_{typename} ({json_api.VAL_TYPE} tree, const struct parser_context *ctx, parser_error *err)
         {{
             __auto_cleanup(free_{typename}) {typename} *ret = NULL;
             *err = NULL;
@@ -2024,10 +2027,10 @@ def get_c_json(obj, c_file, prefix):
         if obj.subtypobj is None:
             return
     emit(c_file, f'''
-        yajl_gen_status
-        gen_{typename} (yajl_gen g, const {typename} *ptr, const struct parser_context *ctx, parser_error *err)
+        {json_api.GEN_STATUS_TYPE}
+        gen_{typename} ({json_api.GEN_TYPE} g, const {typename} *ptr, const struct parser_context *ctx, parser_error *err)
         {{
-            yajl_gen_status stat = yajl_gen_status_ok;
+            {json_api.GEN_STATUS_TYPE} stat = {json_api.GEN_STATUS_OK};
             *err = NULL;
             (void) ptr;  /* Silence compiler warning.  */
     ''', indent=0)
@@ -2036,7 +2039,7 @@ def get_c_json(obj, c_file, prefix):
     if handler and hasattr(handler, 'emit_gen_body'):
         handler.emit_gen_body(c_file, obj, prefix)
 
-    c_file.append("    return yajl_gen_status_ok;\n")
+    c_file.append(f"    return {json_api.GEN_STATUS_OK};\n")
     c_file.append("}\n")
     c_file.append("\n")
 
@@ -2143,10 +2146,9 @@ def src_reflect(structs, schema_info, c_file, root_typ):
         #include <string.h>
         #include <ocispec/read-file.h>
         #include "ocispec/{schema_info.header.basename}"
-
-        #define YAJL_GET_ARRAY_NO_CHECK(v) (&(v)->u.array)
-        #define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)
     ''', indent=0)
+    for define in json_api.get_prologue_defines():
+        c_file.append(define)
     for i in structs:
         append_c_code(i, c_file, schema_info.prefix)
 
@@ -2166,17 +2168,17 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
 
         define_cleaner_function ({typename} *, free_{typename})
         {typename}
-        *make_{typename} (yajl_val tree, const struct parser_context *ctx, parser_error *err)
+        *make_{typename} ({json_api.VAL_TYPE} tree, const struct parser_context *ctx, parser_error *err)
         {{
             __auto_cleanup(free_{typename}) {typename} *ptr = NULL;
             size_t i, alen;
 
             (void) ctx;
 
-            if (tree == NULL || err == NULL || YAJL_GET_ARRAY (tree) == NULL)
+            if (tree == NULL || err == NULL || !({json_api.array_check('tree')}))
               return NULL;
             *err = NULL;
-            alen = YAJL_GET_ARRAY_NO_CHECK (tree)->len;
+            alen = {json_api.array_len('tree')};
             if (alen == 0)
               return NULL;
             ptr = calloc (1, sizeof ({typename}));
@@ -2195,11 +2197,11 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
               return NULL;
         ''', indent=1)
 
-    emit(c_file, '''
+    emit(c_file, f'''
 
             for (i = 0; i < alen; i++)
-              {
-                yajl_val work = YAJL_GET_ARRAY_NO_CHECK (tree)->values[i];
+              {{
+                {json_api.VAL_TYPE} work = {json_api.array_get('tree', 'i')};
     ''', indent=1)
 
     if obj.subtypobj or obj.subtyp == 'object':
@@ -2211,11 +2213,11 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
         if obj.nested_array:
             emit(c_file, f'''
                         size_t j;
-                        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));
+                        ptr->items[i] = calloc ( {json_api.array_len('work')} + 1, sizeof (**ptr->items));
                         if (ptr->items[i] == NULL)
                           return NULL;
-                        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;
-                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)
+                        {json_api.VAL_TYPE} *tmps = {json_api.array_values('work')};
+                        for (j = 0; j < {json_api.array_len('work')}; j++)
                           {{
                               ptr->items[i][j] = make_{subtypename} (tmps[j], ctx, err);
                               if (ptr->items[i][j] == NULL)
@@ -2231,28 +2233,28 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
             ''', indent=2)
     elif obj.subtyp == 'byte':
         if obj.nested_array:
-            emit(c_file, '''
-                        char *str = YAJL_GET_STRING (work);
+            emit(c_file, f'''
+                        char *str = {json_api.get_string('work')};
                         ptr->items[j] = (uint8_t *)strdup (str ? str : "");
                         if (ptr->items[j] == NULL)
                           return NULL;
             ''', indent=2)
         else:
-            emit(c_file, '''
-                        char *str = YAJL_GET_STRING (tree);
+            emit(c_file, f'''
+                        char *str = {json_api.get_string('tree')};
                         memcpy(ptr->items, str ? str : "", strlen(str ? str : ""));
                         break;
             ''', indent=2)
     else:
         if obj.nested_array:
-            emit(c_file, '''
-                        ptr->items[i] = calloc ( YAJL_GET_ARRAY_NO_CHECK(work)->len + 1, sizeof (**ptr->items));
+            emit(c_file, f'''
+                        ptr->items[i] = calloc ( {json_api.array_len('work')} + 1, sizeof (**ptr->items));
                         if (ptr->items[i] == NULL)
                           return NULL;
                         size_t j;
-                        yajl_val *tmps = YAJL_GET_ARRAY_NO_CHECK(work)->values;
-                        for (j = 0; j < YAJL_GET_ARRAY_NO_CHECK(work)->len; j++)
-                          {
+                        {json_api.VAL_TYPE} *tmps = {json_api.array_values('work')};
+                        for (j = 0; j < {json_api.array_len('work')}; j++)
+                          {{
             ''', indent=2)
             read_val_generator(c_file, 3, 'tmps[j]', \
                                 "ptr->items[i][j]", obj.subtyp, obj.origname, c_typ)
@@ -2387,14 +2389,14 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
     typename = helpers.get_top_array_type_name(obj.name, prefix)
 
     emit(c_file, f'''
-        yajl_gen_status gen_{typename} (yajl_gen g, const {typename} *ptr, const struct parser_context *ctx,
+        {json_api.GEN_STATUS_TYPE} gen_{typename} ({json_api.GEN_TYPE} g, const {typename} *ptr, const struct parser_context *ctx,
                                parser_error *err)
         {{
-            yajl_gen_status stat;
+            {json_api.GEN_STATUS_TYPE} stat;
             size_t i;
 
             if (ptr == NULL)
-                return yajl_gen_status_ok;
+                return {json_api.GEN_STATUS_OK};
             *err = NULL;
     ''', indent=0)
 
@@ -2422,7 +2424,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
                         for (j = 0; j < ptr->subitem_lens[i]; j++)
                           {{
                             stat = gen_{subtypename} (g, ptr->items[i][j], ctx, err);
-                            if (stat != yajl_gen_status_ok)
+                            if (stat != {json_api.GEN_STATUS_OK})
                                 GEN_SET_ERROR_AND_RETURN (stat, err);
                           }}
             ''', indent=3)
@@ -2446,27 +2448,27 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         if obj.nested_array:
             emit_gen_array_open(c_file, indent=3)
             check_gen_status(c_file, indent=3)
-            emit(c_file, '''
-                        {
+            emit(c_file, f'''
+                        {{
                             size_t i;
                             for (i = 0; i < ptr->len; i++)
-                              {
+                              {{
                                 if (ptr->items[i] != NULL)
                                     str = (const char *)ptr->items[i];
                                 else
                                     str = "";
-                                stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, strlen(str));
-                              }
-                        }
+                                stat = {json_api.gen_string('g', 'str', 'strlen(str)')};
+                              }}
+                        }}
             ''', indent=3)
             emit_gen_array_close(c_file, indent=3)
         else:
-            emit(c_file, '''
+            emit(c_file, f'''
                     if (ptr != NULL && ptr->items != NULL)
-                      {
+                      {{
                         str = (const char *)ptr->items;
-                      }
-                    stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *)str, ptr->len);
+                      }}
+                    stat = {json_api.gen_string('g', 'str', 'ptr->len')};
             ''', indent=2)
         emit(c_file, '''
             }
@@ -2506,14 +2508,14 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
         emit_gen_array_close(c_file, indent=1)
 
 
-    emit(c_file, '''
+    emit(c_file, f'''
 
     if (ptr->len > 0 && !(ctx->options & OPT_GEN_SIMPLIFY))
-        yajl_gen_config (g, yajl_gen_beautify, 1);
-    if (stat != yajl_gen_status_ok)
+        {json_api.gen_config('g', json_api.GEN_BEAUTIFY, '1')};
+    if (stat != {json_api.GEN_STATUS_OK})
         GEN_SET_ERROR_AND_RETURN (stat, err);
     ''', indent=1)
-    c_file.append("    return yajl_gen_status_ok;\n")
+    c_file.append(f"    return {json_api.GEN_STATUS_OK};\n")
     c_file.append("}\n")
     c_file.append("\n")
 
@@ -2588,13 +2590,13 @@ def get_c_epilog(c_file, prefix, typ, obj):
 
     emit(c_file, f'''
 
-        define_cleaner_function (yajl_val, yajl_tree_free)
+        {json_api.get_val_cleaner_define()}
 
         {typename} *
         {typename}_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err)
         {{
             {typename} *ptr = NULL;
-            __auto_cleanup(yajl_tree_free) yajl_val tree = NULL;
+            __auto_cleanup({json_api.TREE_FREE_FUNC}) {json_api.VAL_TYPE} tree = NULL;
             char errbuf[1024];
             struct parser_context tmp_ctx = {{ 0 }};
 
@@ -2605,7 +2607,7 @@ def get_c_epilog(c_file, prefix, typ, obj):
             if (ctx == NULL)
              ctx = (const struct parser_context *)(&tmp_ctx);
 
-            tree = yajl_tree_parse (jsondata, errbuf, sizeof (errbuf));
+            tree = {json_api.tree_parse('jsondata', 'errbuf', 'sizeof (errbuf)')};
             if (tree == NULL)
               {{
                 if (asprintf (err, "cannot parse the data: %s", errbuf) < 0)
@@ -2617,27 +2619,14 @@ def get_c_epilog(c_file, prefix, typ, obj):
         }}
     ''', indent=0)
 
-    emit(c_file, '''
-
-        static void
-        cleanup_yajl_gen (yajl_gen g)
-        {
-            if (!g)
-              return;
-            yajl_gen_clear (g);
-            yajl_gen_free (g);
-        }
-
-        define_cleaner_function (yajl_gen, cleanup_yajl_gen)
-
-    ''', indent=0)
+    c_file.append(json_api.get_gen_cleanup_block())
 
     emit(c_file, f'''
 
         char *
         {typename}_generate_json (const {typename} *ptr, const struct parser_context *ctx, parser_error *err)
         {{
-            __auto_cleanup(cleanup_yajl_gen) yajl_gen g = NULL;
+            __auto_cleanup(cleanup_{json_api.GEN_TYPE}) {json_api.GEN_TYPE} g = NULL;
             struct parser_context tmp_ctx = {{ 0 }};
             const unsigned char *gen_buf = NULL;
             char *json_buf = NULL;
@@ -2656,14 +2645,14 @@ def get_c_epilog(c_file, prefix, typ, obj):
                 return json_buf;
               }}
 
-            if (yajl_gen_status_ok != gen_{typename} (g, ptr, ctx, err))
+            if ({json_api.GEN_STATUS_OK} != gen_{typename} (g, ptr, ctx, err))
               {{
                 if (*err == NULL)
                     *err = strdup ("Failed to generate json");
                 return json_buf;
               }}
 
-            yajl_gen_get_buf (g, &gen_buf, &gen_len);
+            {json_api.gen_get_buf('g', '&gen_buf', '&gen_len')};
             if (gen_buf == NULL)
               {{
                 *err = strdup ("Error to get generated json");

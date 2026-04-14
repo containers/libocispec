@@ -273,6 +273,7 @@ EXTRA_DIST = autogen.sh \
 	src/ocispec/generate.py \
 	src/ocispec/headers.py \
 	src/ocispec/helpers.py \
+	src/ocispec/json_api.py \
 	src/ocispec/sources.py \
 	$(HEADER_FILES) \
 	src/ocispec/read-file.h \
