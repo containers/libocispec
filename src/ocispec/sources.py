@@ -329,6 +329,22 @@ def emit_array_gen_preamble(c_file, obj, len_indent='    '):
     check_gen_status(c_file, indent=2)
 
 
+def emit_compound_gen(c_file, obj, key_name, gen_name, ptr_check='ptr != NULL', indent=1):
+    """Emit generate code for a compound field (object, mapStringObject, basicMap)."""
+    emit(c_file, f'''
+        if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
+          {{
+    ''', indent=indent)
+    emit_gen_key_with_check(c_file, key_name, indent=indent + 1)
+    emit(c_file, f'''
+            stat = gen_{gen_name} (g, {ptr_check} ? ptr->{obj.fixname} : NULL, ctx, err);
+    ''', indent=indent + 1)
+    check_gen_status(c_file, indent=indent + 1)
+    emit(c_file, '''
+          }
+    ''', indent=indent)
+
+
 def emit_pointer_clone(c_file, obj, sizeof_type, indent=1):
     """Emit clone code for a heap-allocated scalar (bool* or numeric*)."""
     emit(c_file, f'''
@@ -743,18 +759,7 @@ class ObjectType(TypeHandler):
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
         typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-        ''', indent=indent)
-        emit_gen_key_with_check(c_file, obj.origname, indent=indent + 1)
-        emit(c_file, f'''
-                stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);
-        ''', indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
-        emit(c_file, '''
-              }
-        ''', indent=indent)
+        emit_compound_gen(c_file, obj, obj.origname, typename, indent=indent)
 
     def emit_free(self, c_file, obj, prefix, indent=1):
         typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
@@ -928,18 +933,7 @@ class MapStringObjectType(TypeHandler):
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
         typename = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-        ''', indent=indent)
-        emit_gen_key_with_check(c_file, obj.origname, indent=indent + 1)
-        emit(c_file, f'''
-                stat = gen_{typename} (g, ptr != NULL ? ptr->{obj.fixname} : NULL, ctx, err);
-        ''', indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
-        emit(c_file, '''
-              }
-        ''', indent=indent)
+        emit_compound_gen(c_file, obj, obj.origname, typename, indent=indent)
 
     def emit_free(self, c_file, obj, prefix, indent=1):
         free_func = obj.subtypname or helpers.get_prefixed_name(obj.name, prefix)
@@ -1168,18 +1162,7 @@ class BasicMapType(TypeHandler):
         ''', indent=indent)
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
-        emit(c_file, f'''
-            if ((ctx->options & OPT_GEN_KEY_VALUE) || (ptr != NULL && ptr->{obj.fixname} != NULL))
-              {{
-        ''', indent=indent)
-        emit_gen_key_with_check(c_file, obj.fixname, indent=indent + 1)
-        emit(c_file, f'''
-                stat = gen_{self.map_name} (g, ptr ? ptr->{obj.fixname} : NULL, ctx, err);
-        ''', indent=indent + 1)
-        check_gen_status(c_file, indent=indent + 1)
-        emit(c_file, '''
-              }
-        ''', indent=indent)
+        emit_compound_gen(c_file, obj, obj.fixname, self.map_name, ptr_check='ptr', indent=indent)
 
     def emit_free(self, c_file, obj, prefix, indent=1):
         emit(c_file, f'''
