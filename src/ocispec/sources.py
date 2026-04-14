@@ -329,6 +329,19 @@ def emit_array_gen_preamble(c_file, obj, len_indent='    '):
     check_gen_status(c_file, indent=2)
 
 
+def emit_pointer_clone(c_file, obj, sizeof_type, indent=1):
+    """Emit clone code for a heap-allocated scalar (bool* or numeric*)."""
+    emit(c_file, f'''
+        if (src->{obj.fixname} != NULL)
+          {{
+            ret->{obj.fixname} = calloc (1, sizeof ({sizeof_type}));
+            if (ret->{obj.fixname} == NULL)
+                return NULL;
+            *(ret->{obj.fixname}) = *(src->{obj.fixname});
+          }}
+    ''', indent=indent)
+
+
 def get_compound_children(obj):
     """Get the children/subtypes for a compound type.
 
@@ -522,15 +535,7 @@ class BooleanPointerType(TypeHandler):
         free_and_null(c_file, "ptr", obj.fixname, indent=indent)
 
     def emit_clone(self, c_file, obj, prefix, indent=1):
-        emit(c_file, f'''
-            if (src->{obj.fixname} != NULL)
-              {{
-                ret->{obj.fixname} = calloc (1, sizeof (bool));
-                if (ret->{obj.fixname} == NULL)
-                    return NULL;
-                *(ret->{obj.fixname}) = *(src->{obj.fixname});
-              }}
-        ''', indent=indent)
+        emit_pointer_clone(c_file, obj, 'bool', indent=indent)
 
     def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
         emit(c_file, f'''
@@ -698,16 +703,7 @@ class NumericPointerType(TypeHandler):
         free_and_null(c_file, "ptr", obj.fixname, indent=indent)
 
     def emit_clone(self, c_file, obj, prefix, indent=1):
-        c_typ = helpers.get_map_c_types(self.base_typ)
-        emit(c_file, f'''
-            if (src->{obj.fixname} != NULL)
-              {{
-                ret->{obj.fixname} = calloc (1, sizeof ({c_typ}));
-                if (ret->{obj.fixname} == NULL)
-                    return NULL;
-                *(ret->{obj.fixname}) = *(src->{obj.fixname});
-              }}
-        ''', indent=indent)
+        emit_pointer_clone(c_file, obj, helpers.get_map_c_types(self.base_typ), indent=indent)
 
     def emit_read_value(self, c_file, src, dest, keyname, obj_typename, level=1):
         if self.base_typ == "":
