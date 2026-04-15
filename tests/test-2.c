@@ -28,7 +28,9 @@ main ()
   parser_error err;
   runtime_spec_schema_config_schema *container = runtime_spec_schema_config_schema_parse_file ("tests/data/config.nocwd.json", 0, &err);
   if (container != NULL) {
+    free (err);
     exit (4);
   }
+  free (err);
   exit (0);
 }
