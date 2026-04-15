@@ -12,23 +12,26 @@ AM_INIT_AUTOMAKE([1.11 -Wno-portability foreign tar-ustar no-dist-gzip dist-xz s
 AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
 
-AM_EXTRA_RECURSIVE_TARGETS([yajl])
-AC_CONFIG_SUBDIRS([yajl])
-
-AC_ARG_ENABLE(embedded-yajl,
-AS_HELP_STRING([--enable-embedded-yajl], [Statically link a modified yajl version]),
+AC_ARG_ENABLE(embedded-yyjson,
+AS_HELP_STRING([--enable-embedded-yyjson], [Statically link the embedded yyjson version]),
 [
 case "${enableval}" in
-  yes) embedded_yajl=true ;;
-  no)  embedded_yajl=false ;;
-  *) AC_MSG_ERROR(bad value ${enableval} for --enable-embedded-yajl) ;;
-esac],[embedded_yajl=false])
+  yes) embedded_yyjson=true ;;
+  no)  embedded_yyjson=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-embedded-yyjson) ;;
+esac],[embedded_yyjson=auto])
 
-AM_CONDITIONAL([HAVE_EMBEDDED_YAJL], [test x"$embedded_yajl" = xtrue])
-AM_COND_IF([HAVE_EMBEDDED_YAJL], [], [
-AC_SEARCH_LIBS(yajl_tree_get, [yajl], [AC_DEFINE([HAVE_YAJL], 1, [Define if libyajl is available])], [AC_MSG_ERROR([*** libyajl headers not found])])
-PKG_CHECK_MODULES([YAJL], [yajl >= 2.0.0])
+if test x"$embedded_yyjson" != xtrue; then
+PKG_CHECK_MODULES([YYJSON], [yyjson >= 0.8.0], [embedded_yyjson=false], [
+  if test x"$embedded_yyjson" = xauto; then
+    AC_MSG_NOTICE([yyjson not found on the system, using the embedded version])
+    embedded_yyjson=true
+  else
+    AC_MSG_ERROR([yyjson >= 0.8.0 not found and embedded yyjson is disabled])
+  fi
 ])
+fi
+AM_CONDITIONAL([HAVE_EMBEDDED_YYJSON], [test x"$embedded_yyjson" = xtrue])
 
 # Optionally install the library.
 AC_ARG_ENABLE(libocispec-install,

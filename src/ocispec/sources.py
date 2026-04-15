@@ -40,9 +40,9 @@ def emit(c_file, code, indent=0):
     Args:
         c_file: List to append code lines to
         code: Multi-line string (will be dedented)
-        indent: Number of 4-space indentation levels
+        indent: Number of 2-space indentation levels
     """
-    prefix = '    ' * indent
+    prefix = '  ' * indent
     for line in dedent(code).strip().split('\n'):
         if line:
             c_file.append(prefix + line + '\n')
@@ -57,9 +57,9 @@ def free_and_null(c_file, ptr, field, indent=0):
         c_file: List to append code lines to
         ptr: Pointer variable name
         field: Field name (can include array indexing like '[i]')
-        indent: Number of 4-space indentation levels
+        indent: Number of 2-space indentation levels
     """
-    prefix = '    ' * indent
+    prefix = '  ' * indent
     c_file.append(f"{prefix}free ({ptr}->{field});\n")
     c_file.append(f"{prefix}{ptr}->{field} = NULL;\n")
 
@@ -70,9 +70,9 @@ def null_check_return(c_file, var, indent=0):
     Args:
         c_file: List to append code lines to
         var: Variable to check (can be expression like 'ret->field' or 'ret->field[i]')
-        indent: Number of 4-space indentation levels
+        indent: Number of 2-space indentation levels
     """
-    prefix = '    ' * indent
+    prefix = '  ' * indent
     c_file.append(f"{prefix}if ({var} == NULL)\n")
     c_file.append(f"{prefix}  return NULL;\n")
 
@@ -85,9 +85,9 @@ def calloc_with_check(c_file, dest, count, sizeof_expr, indent=0):
         dest: Destination variable
         count: Count expression for calloc
         sizeof_expr: sizeof expression (the content inside sizeof())
-        indent: Number of 4-space indentation levels
+        indent: Number of 2-space indentation levels
     """
-    prefix = '    ' * indent
+    prefix = '  ' * indent
     c_file.append(f"{prefix}{dest} = calloc ({count}, sizeof ({sizeof_expr}));\n")
     c_file.append(f"{prefix}if ({dest} == NULL)\n")
     c_file.append(f"{prefix}  return NULL;\n")
@@ -98,11 +98,11 @@ def check_gen_status(c_file, indent=0):
 
     Args:
         c_file: List to append code lines to
-        indent: Number of 4-space indentation levels
+        indent: Number of 2-space indentation levels
     """
-    prefix = '    ' * indent
+    prefix = '  ' * indent
     c_file.append(f"{prefix}if (stat != {json_api.GEN_STATUS_OK})\n")
-    c_file.append(f"{prefix}    GEN_SET_ERROR_AND_RETURN (stat, err);\n")
+    c_file.append(f"{prefix}  GEN_SET_ERROR_AND_RETURN (stat, err);\n")
 
 
 def do_read_value(c_file, src_expr, dest_expr, typ, origname, obj_typename, indent=1):
@@ -123,8 +123,7 @@ def do_read_value(c_file, src_expr, dest_expr, typ, origname, obj_typename, inde
     ''', indent=indent)
     read_val_generator(c_file, indent + 1, src_expr, dest_expr, typ, origname, obj_typename)
     emit(c_file, f'''
-          }}
-        while (0);
+      }} while (0);
     ''', indent=indent)
 
 
@@ -296,7 +295,6 @@ def emit_array_parse_preamble(c_file, obj):
               {{
                 size_t i;
                 size_t len = {json_api.array_len('tmp')};
-                {json_api.VAL_TYPE} *values = {json_api.array_values('tmp')};
                 ret->{obj.fixname}_len = len;
     ''', indent=1)
     calloc_with_check(c_file, f'ret->{obj.fixname}', 'len + 1', f'*ret->{obj.fixname}', indent=3)
@@ -304,7 +302,7 @@ def emit_array_parse_preamble(c_file, obj):
         calloc_with_check(c_file, f'ret->{obj.fixname}_item_lens', 'len + 1', 'size_t', indent=3)
 
 
-def emit_array_gen_preamble(c_file, obj, len_indent='    '):
+def emit_array_gen_preamble(c_file, obj, len_indent='  '):
     """Emit the common preamble for array generation.
 
     Emits the if-OPT_GEN + gen_key + len setup + beautify_off + array_open +
@@ -440,7 +438,7 @@ class StringType(TypeHandler):
             {json_api.VAL_TYPE} val = {src};
             if (val != NULL)
               {{
-                char *str = {json_api.get_string('val')};
+                const char *str = {json_api.get_string('val')};
                 {dest} = strdup (str ? str : "");
                 if ({dest} == NULL)
                   return NULL;
@@ -499,15 +497,6 @@ class BooleanType(TypeHandler):
             emit(c_file, f'''
                     {dest}_present = 1;
               }}
-            else
-              {{
-                val = {src.replace(json_api.TYPE_TRUE, json_api.TYPE_FALSE)};
-                if (val != NULL)
-                  {{
-                    {dest} = 0;
-                    {dest}_present = 1;
-                  }}
-              }}
             ''', indent=level + 1)
         else:
             emit(c_file, f'''
@@ -563,17 +552,6 @@ class BooleanPointerType(TypeHandler):
                     return NULL;
                 *({dest}) = {json_api.is_true('val')};
               }}
-            else
-             {{
-               val = get_val (tree, "{keyname}", {json_api.TYPE_FALSE});
-               if (val != NULL)
-                 {{
-                   {dest} = calloc (1, sizeof (bool));
-                   if ({dest} == NULL)
-                     return NULL;
-                   *({dest}) = {json_api.is_true('val')};
-                 }}
-             }}
         ''', indent=level)
 
     def emit_json_value(self, c_file, src, dst, ptx, level=1):
@@ -802,58 +780,65 @@ class ObjectType(TypeHandler):
             ''', indent=1)
 
         if obj.children is not None:
-            # O(n^2) complexity, but the objects should not really be big...
             condition = "\n                && ".join( \
-                [f'strcmp ({json_api.object_key_direct("tree", "i")}, "{i.origname}")' for i in obj.children])
+                [f'strcmp (key_str, "{i.origname}")' for i in obj.children])
             emit(c_file, f'''
-                if ({json_api.object_type_field("tree")} == {json_api.TYPE_OBJECT})
+                if ({json_api.object_check('tree')})
                   {{
-                    size_t i;
-                    size_t j = 0;
-                    size_t cnt = {json_api.object_len_field("tree")};
-                    {json_api.VAL_TYPE} resi = NULL;
+                    yyjson_obj_iter iter;
+                    yyjson_obj_iter_init (tree, &iter);
+                    yyjson_val *key;
+                    yyjson_mut_doc *residual_doc = NULL;
+                    yyjson_mut_val *residual_obj = NULL;
+                    size_t unknown_count = 0;
 
-                    if (ctx->options & OPT_PARSE_FULLKEY)
+                    while ((key = yyjson_obj_iter_next (&iter)) != NULL)
                       {{
-                        resi = calloc (1, sizeof(*tree));
-                        if (resi == NULL)
-                          return NULL;
-
-                        {json_api.set_object_type("resi")};
-                        {json_api.alloc_object_keys("resi", "cnt")};
-                        if ({json_api.object_keys_field("resi")} == NULL)
+                        const char *key_str = yyjson_get_str (key);
+                        if (key_str != NULL
+                            && {condition})
                           {{
-                            {json_api.tree_free("resi")};
-                            return NULL;
-                          }}
-                        {json_api.alloc_object_values("resi", "cnt")};
-                        if ({json_api.object_values_field("resi")} == NULL)
-                          {{
-                            {json_api.tree_free("resi")};
-                            return NULL;
-                          }}
-                      }}
-
-                    for (i = 0; i < {json_api.object_len_field("tree")}; i++)
-                      {{
-                        if ({condition}){{
+                            unknown_count++;
                             if (ctx->options & OPT_PARSE_FULLKEY)
                               {{
-                                {json_api.object_key_direct("resi", "j")} = {json_api.object_key_direct("tree", "i")};
-                                {json_api.object_key_direct("tree", "i")} = NULL;
-                                {json_api.object_value_direct("resi", "j")} = {json_api.object_value_direct("tree", "i")};
-                                {json_api.object_value_direct("tree", "i")} = NULL;
-                                {json_api.object_len_field("resi")}++;
+                                if (residual_doc == NULL)
+                                  {{
+                                    residual_doc = yyjson_mut_doc_new (NULL);
+                                    if (residual_doc == NULL)
+                                      return NULL;
+                                    residual_obj = yyjson_mut_obj (residual_doc);
+                                    if (residual_obj == NULL)
+                                      {{
+                                        yyjson_mut_doc_free (residual_doc);
+                                        return NULL;
+                                      }}
+                                    yyjson_mut_doc_set_root (residual_doc, residual_obj);
+                                  }}
+                                {{
+                                  yyjson_val *rval = yyjson_obj_iter_get_val (key);
+                                  yyjson_mut_val *mut_key = yyjson_val_mut_copy (residual_doc, key);
+                                  yyjson_mut_val *mut_val = yyjson_val_mut_copy (residual_doc, rval);
+                                  if (mut_key == NULL || mut_val == NULL)
+                                    {{
+                                      yyjson_mut_doc_free (residual_doc);
+                                      return NULL;
+                                    }}
+                                  yyjson_mut_obj_add (residual_obj, mut_key, mut_val);
+                                }}
                               }}
-                            j++;
                           }}
                       }}
 
-                    if ((ctx->options & OPT_PARSE_STRICT) && j > 0 && ctx->errfile != NULL)
+                    if ((ctx->options & OPT_PARSE_STRICT) && unknown_count > 0 && ctx->errfile != NULL)
                       (void) fprintf (ctx->errfile, "WARNING: unknown key found\\n");
 
-                    if (ctx->options & OPT_PARSE_FULLKEY)
-                      ret->_residual = resi;
+                    if ((ctx->options & OPT_PARSE_FULLKEY) && residual_doc != NULL)
+                      {{
+                        ret->_residual = yyjson_mut_write (residual_doc, 0, NULL);
+                        yyjson_mut_doc_free (residual_doc);
+                        if (ret->_residual == NULL)
+                          return NULL;
+                      }}
                   }}
             ''', indent=1)
 
@@ -893,7 +878,7 @@ class ObjectType(TypeHandler):
 
         if obj.children is not None:
             emit(c_file, f'''
-                {json_api.tree_free('ptr->_residual')};
+                free (ptr->_residual);
                 ptr->_residual = NULL;
             ''', indent=1)
 
@@ -990,8 +975,8 @@ class MapStringObjectType(TypeHandler):
               {{
                 size_t i;
                 size_t len = {json_api.object_len('tree')};
-                const char **keys = {json_api.object_keys('tree')};
-                {json_api.VAL_TYPE} *values = {json_api.object_values('tree')};
+                yyjson_obj_iter iter;
+                yyjson_obj_iter_init (tree, &iter);
                 ret->len = len;
         ''', indent=1)
 
@@ -1001,22 +986,22 @@ class MapStringObjectType(TypeHandler):
         emit(c_file, f'''
                 for (i = 0; i < len; i++)
                   {{
-                    {json_api.VAL_TYPE} val;
-                    const char *tmpkey = keys[i];
+                    yyjson_val *key = yyjson_obj_iter_next (&iter);
+                    yyjson_val *val = yyjson_obj_iter_get_val (key);
+                    const char *tmpkey = yyjson_get_str (key);
                     ret->keys[i] = strdup (tmpkey ? tmpkey : "");
         ''', indent=2)
 
         null_check_return(c_file, 'ret->keys[i]', indent=3)
 
         emit(c_file, f'''
-                    val = values[i];
                     ret->{child.fixname}[i] = make_{childname} (val, ctx, err);
         ''', indent=3)
 
         null_check_return(c_file, f'ret->{child.fixname}[i]', indent=3)
 
-        c_file.append('          }\n')
         c_file.append('      }\n')
+        c_file.append('  }\n')
 
     def emit_gen_body(self, c_file, obj, prefix):
         """Generate the body of gen_typename() for mapStringObject."""
@@ -1155,10 +1140,9 @@ class BasicMapType(TypeHandler):
         ''', indent=indent)
         emit_value_error(c_file, obj.origname, indent=indent + 3)
         emit(c_file, '''
-                      }
                   }
               }
-            while (0);
+          } while (0);
         ''', indent=indent)
 
     def emit_generate(self, c_file, obj, prefix, indent=1):
@@ -1237,7 +1221,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
         emit(c_file, f'''
                     for (i = 0; i < len; i++)
                       {{
-                        {json_api.VAL_TYPE} val = values[i];
+                        {json_api.VAL_TYPE} val = {json_api.array_get('tmp', 'i')};
         ''', indent=3)
 
         if obj.nested_array:
@@ -1247,12 +1231,11 @@ class ObjectArrayHandler(ArraySubtypeHandler):
             ''', indent=4)
             null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
             emit(c_file, f'''
-                        {json_api.VAL_TYPE} *items = {json_api.array_values('val')};
                         for (j = 0; j < {json_api.array_len('val')}; j++)
                           {{
             ''', indent=4)
             emit(c_file, f'''
-                            ret->{obj.fixname}[i][j] = make_{typename} (items[j], ctx, err);
+                            ret->{obj.fixname}[i][j] = make_{typename} ({json_api.array_get('val', 'j')}, ctx, err);
             ''', indent=5)
             null_check_return(c_file, f'ret->{obj.fixname}[i][j]', indent=5)
             emit(c_file, f'''
@@ -1266,10 +1249,9 @@ class ObjectArrayHandler(ArraySubtypeHandler):
             null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
 
         emit(c_file, '''
-                          }
-                    }
-                  }
-                while (0);
+                      }
+                }
+              } while (0);
         ''', indent=1)
 
     def emit_generate(self, c_file, obj, prefix):
@@ -1397,7 +1379,6 @@ class ByteArrayHandler(ArraySubtypeHandler):
 
         if obj.nested_array:
             emit(c_file, f'''
-                    {json_api.VAL_TYPE} *items = {json_api.array_values('tmp')};
                     ret->{obj.fixname}_len = {json_api.array_len('tmp')};
                     ret->{obj.fixname} = calloc (ret->{obj.fixname}_len + 1, sizeof (*ret->{obj.fixname}));
             ''', indent=4)
@@ -1406,7 +1387,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
                     size_t j;
                     for (j = 0; j < ret->{obj.fixname}_len; j++)
                       {{
-                        char *str = {json_api.get_string('items[j]')};
+                        const char *str = {json_api.get_string(json_api.array_get('tmp', 'j'))};
             ''', indent=4)
             emit(c_file, f'''
                         ret->{obj.fixname}[j] = (uint8_t *)strdup (str ? str : "");
@@ -1417,7 +1398,7 @@ class ByteArrayHandler(ArraySubtypeHandler):
             ''', indent=5)
         else:
             emit(c_file, f'''
-                    char *str = {json_api.get_string('tmp')};
+                    const char *str = {json_api.get_string('tmp')};
             ''', indent=3)
             emit(c_file, f'''
                     ret->{obj.fixname} = (uint8_t *)strdup (str ? str : "");
@@ -1428,9 +1409,8 @@ class ByteArrayHandler(ArraySubtypeHandler):
             ''', indent=3)
 
         emit(c_file, '''
-                    }
-                  }
-                while (0);
+                }
+              } while (0);
         ''', indent=1)
 
     def emit_generate(self, c_file, obj, prefix):
@@ -1499,30 +1479,29 @@ class PrimitiveArrayHandler(ArraySubtypeHandler):
 
         if obj.nested_array:
             emit(c_file, f'''
-                        {json_api.VAL_TYPE} *items = {json_api.array_values('values[i]')};
-                        ret->{obj.fixname}[i] = calloc ( {json_api.array_len('values[i]')} + 1, sizeof (**ret->{obj.fixname}));
+                        {json_api.VAL_TYPE} inner_arr = {json_api.array_get('tmp', 'i')};
+                        ret->{obj.fixname}[i] = calloc ( {json_api.array_len('inner_arr')} + 1, sizeof (**ret->{obj.fixname}));
             ''', indent=4)
             null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=5)
             emit(c_file, f'''
                         size_t j;
-                        for (j = 0; j < {json_api.array_len('values[i]')}; j++)
+                        for (j = 0; j < {json_api.array_len('inner_arr')}; j++)
                           {{
             ''', indent=4)
-            read_val_generator(c_file, 5, 'items[j]',
+            read_val_generator(c_file, 5, f'{json_api.array_get("inner_arr", "j")}',
                                f"ret->{obj.fixname}[i][j]", obj.subtyp, obj.origname, obj_typename)
             emit(c_file, f'''
                             ret->{obj.fixname}_item_lens[i] += 1;
                         }};
             ''', indent=5)
         else:
-            read_val_generator(c_file, 4, 'values[i]',
+            read_val_generator(c_file, 4, f'{json_api.array_get("tmp", "i")}',
                                f"ret->{obj.fixname}[i]", obj.subtyp, obj.origname, obj_typename)
 
         emit(c_file, '''
-                          }
-                    }
-                  }
-                while (0);
+                      }
+                }
+              } while (0);
         ''', indent=1)
 
     def emit_generate(self, c_file, obj, prefix):
@@ -1668,14 +1647,13 @@ class BasicMapArrayHandler(ArraySubtypeHandler):
         emit(c_file, f'''
                     for (i = 0; i < len; i++)
                       {{
-                        {json_api.VAL_TYPE} val = values[i];
+                        {json_api.VAL_TYPE} val = {json_api.array_get('tmp', 'i')};
                         ret->{obj.fixname}[i] = make_{map_func} (val, ctx, err);
                         if (ret->{obj.fixname}[i] == NULL)
                           return NULL;
                       }}
                   }}
-              }}
-            while (0);
+              }} while (0);
         ''', indent=1)
 
     def emit_generate(self, c_file, obj, prefix):
@@ -1930,12 +1908,15 @@ def parse_json_to_c(obj, c_file, prefix):
             return
     emit(c_file, f'''
         define_cleaner_function ({typename} *, free_{typename})
+    ''', indent=0)
+    c_file.append("\n")
+    emit(c_file, f'''
         {typename} *
-        make_{typename} ({json_api.VAL_TYPE} tree, const struct parser_context *ctx, parser_error *err)
+        make_{typename} ({json_api.VAL_TYPE}tree, const struct parser_context *ctx, parser_error *err)
         {{
-            __auto_cleanup(free_{typename}) {typename} *ret = NULL;
+            __auto_cleanup (free_{typename}) {typename} *ret = NULL;
             *err = NULL;
-            (void) ctx;  /* Silence compiler warning.  */
+            (void) ctx; /* Silence compiler warning.  */
             if (tree == NULL)
               return NULL;
             ret = calloc (1, sizeof (*ret));
@@ -1947,7 +1928,7 @@ def parse_json_to_c(obj, c_file, prefix):
     if handler and hasattr(handler, 'emit_make_body'):
         handler.emit_make_body(c_file, obj, prefix)
 
-    c_file.append("    return move_ptr (ret);\n")
+    c_file.append("  return move_ptr (ret);\n")
     c_file.append("}\n")
     c_file.append("\n")
 
@@ -1972,14 +1953,14 @@ def get_c_json(obj, c_file, prefix):
         {{
             {json_api.GEN_STATUS_TYPE} stat = {json_api.GEN_STATUS_OK};
             *err = NULL;
-            (void) ptr;  /* Silence compiler warning.  */
+            (void) ptr; /* Silence compiler warning.  */
     ''', indent=0)
 
     handler = get_type_handler(obj.typ)
     if handler and hasattr(handler, 'emit_gen_body'):
         handler.emit_gen_body(c_file, obj, prefix)
 
-    c_file.append(f"    return {json_api.GEN_STATUS_OK};\n")
+    c_file.append(f"  return {json_api.GEN_STATUS_OK};\n")
     c_file.append("}\n")
     c_file.append("\n")
 
@@ -2011,7 +1992,7 @@ def make_clone(obj, c_file, prefix):
         {typename} *
         clone_{typename} ({typename} *src)
         {{
-            __auto_cleanup(free_{typename}) {typename} *ret = NULL;
+            __auto_cleanup (free_{typename}) {typename} *ret = NULL;
 
             if (src == NULL)
               return NULL;
@@ -2025,7 +2006,7 @@ def make_clone(obj, c_file, prefix):
     if handler and hasattr(handler, 'emit_clone_body'):
         handler.emit_clone_body(c_file, obj, prefix)
 
-    c_file.append("    return move_ptr (ret);\n")
+    c_file.append("  return move_ptr (ret);\n")
     c_file.append("}\n")
     c_file.append("\n")
 
@@ -2065,10 +2046,9 @@ def make_c_free (obj, c_file, prefix):
         handler.emit_free_body(c_file, obj, prefix)
 
     emit(c_file, '''
-            free (ptr);
-        }
-
+        free (ptr);
     ''', indent=1)
+    c_file.append("}\n")
 
 
 def src_reflect(structs, schema_info, c_file, root_typ):
@@ -2081,7 +2061,7 @@ def src_reflect(structs, schema_info, c_file, root_typ):
         /* Generated from {schema_info.name.basename}. Do not edit!  */
 
         #ifndef _GNU_SOURCE
-        #define _GNU_SOURCE
+        #  define _GNU_SOURCE
         #endif
         #include <string.h>
         #include <ocispec/read-file.h>
@@ -2107,15 +2087,18 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
     emit(c_file, f'''
 
         define_cleaner_function ({typename} *, free_{typename})
+    ''', indent=0)
+    c_file.append("\n")
+    emit(c_file, f'''
         {typename}
-        *make_{typename} ({json_api.VAL_TYPE} tree, const struct parser_context *ctx, parser_error *err)
+        *make_{typename} ({json_api.VAL_TYPE}tree, const struct parser_context *ctx, parser_error *err)
         {{
-            __auto_cleanup(free_{typename}) {typename} *ptr = NULL;
+            __auto_cleanup (free_{typename}) {typename} *ptr = NULL;
             size_t i, alen;
 
             (void) ctx;
 
-            if (tree == NULL || err == NULL || !({json_api.array_check('tree')}))
+            if (tree == NULL || err == NULL || ! ({json_api.array_check('tree')}))
               return NULL;
             *err = NULL;
             alen = {json_api.array_len('tree')};
@@ -2124,7 +2107,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
             ptr = calloc (1, sizeof ({typename}));
             if (ptr == NULL)
               return NULL;
-            ptr->items = calloc (alen + 1, sizeof(*ptr->items));
+            ptr->items = calloc (alen + 1, sizeof (*ptr->items));
             if (ptr->items == NULL)
               return NULL;
             ptr->len = alen;
@@ -2156,10 +2139,9 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
                         ptr->items[i] = calloc ( {json_api.array_len('work')} + 1, sizeof (**ptr->items));
                         if (ptr->items[i] == NULL)
                           return NULL;
-                        {json_api.VAL_TYPE} *tmps = {json_api.array_values('work')};
                         for (j = 0; j < {json_api.array_len('work')}; j++)
                           {{
-                              ptr->items[i][j] = make_{subtypename} (tmps[j], ctx, err);
+                              ptr->items[i][j] = make_{subtypename} ({json_api.array_get('work', 'j')}, ctx, err);
                               if (ptr->items[i][j] == NULL)
                                 return NULL;
                               ptr->subitem_lens[i] += 1;
@@ -2174,14 +2156,14 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
     elif obj.subtyp == 'byte':
         if obj.nested_array:
             emit(c_file, f'''
-                        char *str = {json_api.get_string('work')};
+                        const char *str = {json_api.get_string('work')};
                         ptr->items[j] = (uint8_t *)strdup (str ? str : "");
                         if (ptr->items[j] == NULL)
                           return NULL;
             ''', indent=2)
         else:
             emit(c_file, f'''
-                        char *str = {json_api.get_string('tree')};
+                        const char *str = {json_api.get_string('tree')};
                         memcpy(ptr->items, str ? str : "", strlen(str ? str : ""));
                         break;
             ''', indent=2)
@@ -2192,11 +2174,10 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
                         if (ptr->items[i] == NULL)
                           return NULL;
                         size_t j;
-                        {json_api.VAL_TYPE} *tmps = {json_api.array_values('work')};
                         for (j = 0; j < {json_api.array_len('work')}; j++)
                           {{
             ''', indent=2)
-            read_val_generator(c_file, 3, 'tmps[j]', \
+            read_val_generator(c_file, 3, f'{json_api.array_get("work", "j")}', \
                                 "ptr->items[i][j]", obj.subtyp, obj.origname, c_typ)
             emit(c_file, '''
                             ptr->subitem_lens[i] += 1;
@@ -2210,7 +2191,7 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
 
       }
     ''', indent=1)
-    c_file.append("    return move_ptr(ptr);\n")
+    c_file.append("  return move_ptr (ptr);\n")
     c_file.append("}\n")
     c_file.append("\n")
 
@@ -2455,7 +2436,7 @@ def get_c_epilog_for_array_make_gen(c_file, prefix, typ, obj):
     if (stat != {json_api.GEN_STATUS_OK})
         GEN_SET_ERROR_AND_RETURN (stat, err);
     ''', indent=1)
-    c_file.append(f"    return {json_api.GEN_STATUS_OK};\n")
+    c_file.append(f"  return {json_api.GEN_STATUS_OK};\n")
     c_file.append("}\n")
     c_file.append("\n")
 
@@ -2531,13 +2512,16 @@ def get_c_epilog(c_file, prefix, typ, obj):
     emit(c_file, f'''
 
         {json_api.get_val_cleaner_define()}
+    ''', indent=0)
+    c_file.append("\n")
 
+    emit(c_file, f'''
         {typename} *
         {typename}_parse_data (const char *jsondata, const struct parser_context *ctx, parser_error *err)
         {{
             {typename} *ptr = NULL;
-            __auto_cleanup({json_api.TREE_FREE_FUNC}) {json_api.VAL_TYPE} tree = NULL;
-            char errbuf[1024];
+            __auto_cleanup ({json_api.DOC_FREE_FUNC}) {json_api.DOC_TYPE}doc = NULL;
+            {json_api.VAL_TYPE}tree = NULL;
             struct parser_context tmp_ctx = {{ 0 }};
 
             if (jsondata == NULL || err == NULL)
@@ -2545,13 +2529,18 @@ def get_c_epilog(c_file, prefix, typ, obj):
 
             *err = NULL;
             if (ctx == NULL)
-             ctx = (const struct parser_context *)(&tmp_ctx);
+             ctx = (const struct parser_context *) (&tmp_ctx);
 
-            tree = {json_api.tree_parse('jsondata', 'errbuf', 'sizeof (errbuf)')};
+            doc = {json_api.doc_read('jsondata', 'strlen (jsondata)')};
+            if (doc == NULL)
+              {{
+                *err = strdup ("cannot parse the data");
+                return NULL;
+              }}
+            tree = {json_api.doc_get_root('doc')};
             if (tree == NULL)
               {{
-                if (asprintf (err, "cannot parse the data: %s", errbuf) < 0)
-                    *err = strdup ("error allocating memory");
+                *err = strdup ("cannot parse the data");
                 return NULL;
               }}
             ptr = make_{typename} (tree, ctx, err);
@@ -2560,15 +2549,15 @@ def get_c_epilog(c_file, prefix, typ, obj):
     ''', indent=0)
 
     c_file.append(json_api.get_gen_cleanup_block())
+    c_file.append("\n")
 
     emit(c_file, f'''
-
         char *
         {typename}_generate_json (const {typename} *ptr, const struct parser_context *ctx, parser_error *err)
         {{
-            __auto_cleanup(cleanup_{json_api.GEN_TYPE}) {json_api.GEN_TYPE} g = NULL;
+            __auto_cleanup (cleanup_{json_api.GEN_TYPE_NAME}) {json_api.GEN_TYPE}g = NULL;
             struct parser_context tmp_ctx = {{ 0 }};
-            const unsigned char *gen_buf = NULL;
+            const char *gen_buf = NULL;
             char *json_buf = NULL;
             size_t gen_len = 0;
 
@@ -2577,9 +2566,9 @@ def get_c_epilog(c_file, prefix, typ, obj):
 
             *err = NULL;
             if (ctx == NULL)
-                ctx = (const struct parser_context *)(&tmp_ctx);
+                ctx = (const struct parser_context *) (&tmp_ctx);
 
-            if (!json_gen_init(&g, ctx))
+            if (! json_gen_init (&g, ctx))
               {{
                 *err = strdup ("Json_gen init failed");
                 return json_buf;

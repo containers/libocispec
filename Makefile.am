@@ -1,11 +1,8 @@
-DIST_SUBDIRS = yajl
-SUBDIRS = yajl
-
 AM_CFLAGS = $(WARN_CFLAGS) -I$(top_srcdir)/src -I$(top_builddir)/src
 
-if HAVE_EMBEDDED_YAJL
-AM_CFLAGS += -I$(top_srcdir)/yajl/src/headers
-endif HAVE_EMBEDDED_YAJL
+if HAVE_EMBEDDED_YYJSON
+AM_CFLAGS += -I$(top_srcdir)/yyjson/src
+endif HAVE_EMBEDDED_YYJSON
 
 CLEANFILES = $(man_MANS) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 
@@ -160,6 +157,10 @@ libocispec_la_SOURCES = $(BUILT_SOURCES) \
 	src/ocispec/read-file.c \
 	src/ocispec/json_common.c
 
+if HAVE_EMBEDDED_YYJSON
+libocispec_la_SOURCES += yyjson/src/yyjson.c
+endif
+
 TMP_H_FILES = $(HEADER_FILES:.h=.h.tmp)
 TMP_C_FILES = $(SOURCE_FILES:.c=.c.tmp)
 
@@ -167,10 +168,9 @@ CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES) $(TMP_H_FILES) $(TMP_C_FILES)
 
 TESTS_LDADD = libocispec.la $(SELINUX_LIBS)
 
-if HAVE_EMBEDDED_YAJL
-TESTS_LDADD += yajl/libyajl.la
+if HAVE_EMBEDDED_YYJSON
 else
-TESTS_LDADD += $(YAJL_LIBS)
+TESTS_LDADD += $(YYJSON_LIBS)
 endif
 
 libocispec_a_SOURCES =
@@ -289,12 +289,12 @@ EXTRA_DIST = autogen.sh \
 	image-spec \
 	src/ocispec/json_common.h \
 	src/ocispec/json_common.c \
-	src/yajl
+	yyjson/src/yyjson.h
 
 sync:
 	(cd image-spec; git pull https://github.com/opencontainers/image-spec)
 	(cd runtime-spec; git pull https://github.com/opencontainers/runtime-spec)
-	(cd yajl; git pull https://github.com/containers/yajl main)
+
 
 generate: src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 

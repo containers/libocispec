@@ -31,6 +31,8 @@ import os
 import sys
 import json
 import argparse
+import subprocess
+import shutil
 
 from collections import OrderedDict
 import helpers
@@ -730,6 +732,11 @@ def reflection(schema_info, gen_ref):
                 os.unlink(schema_info.source.name + ".tmp")
             except:
                 pass
+
+    clang_format = shutil.which('clang-format')
+    if clang_format:
+        for filepath in [schema_info.header.name, schema_info.source.name]:
+            subprocess.run([clang_format, '-i', filepath], check=False)
 
     if gen_ref is True:
         if schema_info.refs:
