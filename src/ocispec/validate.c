@@ -62,6 +62,7 @@ LLVMFuzzerTestOneInput (uint8_t *buf, size_t len)
 }
 #endif
 
+#ifndef FUZZER
 int
 main (int argc, char *argv[])
 {
@@ -69,22 +70,6 @@ main (int argc, char *argv[])
   runtime_spec_schema_config_schema *container;
   const char *file = "config.json";
   struct parser_context ctx;
-
-#ifdef FUZZER
-  if (getenv ("VALIDATE_FUZZ"))
-    {
-      extern void HF_ITER (uint8_t** buf, size_t* len);
-      for (;;)
-        {
-          size_t len;
-          uint8_t *buf;
-
-          HF_ITER (&buf, &len);
-
-          LLVMFuzzerTestOneInput (buf, len);
-	}
-    }
-#endif
 
   if (argc > 1)
     file = argv[1];
@@ -105,3 +90,4 @@ main (int argc, char *argv[])
 
   exit (EXIT_SUCCESS);
 }
+#endif
