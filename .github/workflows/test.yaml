@@ -53,6 +53,17 @@ jobs:
             git describe --broken --dirty --all | grep -qv dirty
             make clean
 
+  fuzzing:
+    runs-on: ubuntu-latest
+    name: Fuzzing
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          set-safe-directory: true
+      - run: sudo docker build -t libocispec-fuzzing tests/fuzzing
+      - run: sudo docker run --rm -e RUN_TIME=120 -v ${PWD}:/libocispec libocispec-fuzzing
+
   test_and_build_rust_bindings:
     name: test and build rust bindings
     runs-on: ubuntu-latest

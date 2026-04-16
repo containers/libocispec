@@ -276,6 +276,7 @@ EXTRA_DIST = autogen.sh \
 	tests/data/top_double_array_string.json \
 	tests/data/config-netdevices.json \
 	tests/data/map-string-string-array.json \
+	tests/data/int64_values.json \
 	tests/test-spec \
 	src/ocispec/generate.py \
 	src/ocispec/headers.py \
