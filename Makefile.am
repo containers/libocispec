@@ -53,6 +53,7 @@ SOURCE_FILES =							\
 	src/ocispec/basic_test_top_double_array_obj.c \
 	src/ocispec/basic_test_top_double_array_refobj.c \
 	src/ocispec/basic_test_top_double_array_string.c \
+	src/ocispec/basic_test_int64_values.c \
 	src/ocispec/basic_test_map_string_string_array.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
@@ -147,6 +148,8 @@ src/ocispec/basic_test_double_array_item.h \
 	src/ocispec/basic_test_top_double_array_obj.c \
 	src/ocispec/basic_test_top_double_array_refobj.c \
 	src/ocispec/basic_test_top_double_array_string.c \
+	src/ocispec/basic_test_int64_values.h \
+	src/ocispec/basic_test_int64_values.c \
 	src/ocispec/basic_test_map_string_string_array.c: src/basic-test_stamp
 
 $(HEADER_FILES): %.h: %.c src/ocispec/generate.py
@@ -222,6 +225,9 @@ tests_test_13_LDADD = $(TESTS_LDADD)
 tests_test_14_SOURCES = tests/test-14.c
 tests_test_14_LDADD = $(TESTS_LDADD)
 
+tests_test_15_SOURCES = tests/test-15.c
+tests_test_15_LDADD = $(TESTS_LDADD)
+
 src_ocispec_validate_SOURCES = src/ocispec/validate.c
 src_ocispec_validate_LDADD = $(TESTS_LDADD)
 
@@ -238,7 +244,8 @@ TESTS = tests/test-1 \
 	tests/test-11 \
 	tests/test-12 \
 	tests/test-13 \
-	tests/test-14
+	tests/test-14 \
+	tests/test-15
 
 noinst_PROGRAMS = src/ocispec/validate $(TESTS)
 

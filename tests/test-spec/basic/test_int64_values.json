@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "int64 values",
+  "type": "object",
+  "properties": {
+    "positive_int64": {
+      "type": "int64"
+    },
+    "negative_int64": {
+      "type": "int64"
+    },
+    "max_int64": {
+      "type": "int64"
+    },
+    "min_int64": {
+      "type": "int64"
+    },
+    "zero_int64": {
+      "type": "int64"
+    },
+    "max_int64_minus1": {
+      "type": "int64"
+    },
+    "min_int64_plus1": {
+      "type": "int64"
+    },
+    "small_uint64": {
+      "type": "uint64"
+    },
+    "large_uint64": {
+      "type": "uint64"
+    },
+    "max_uint64": {
+      "type": "uint64"
+    },
+    "max_uint64_minus1": {
+      "type": "uint64"
+    },
+    "zero_uint64": {
+      "type": "uint64"
+    },
+    "one_int64": {
+      "type": "int64"
+    },
+    "neg_one_int64": {
+      "type": "int64"
+    },
+    "one_uint64": {
+      "type": "uint64"
+    },
+    "neg_two_int64": {
+      "type": "int64"
+    }
+  }
+}
