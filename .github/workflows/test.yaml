@@ -19,12 +19,12 @@ jobs:
           - arch: ppc64le
             distro: ubuntu24.04
     steps:
-      - uses: actions/checkout@v3.0.2
+      - uses: actions/checkout@v6
         with:
           submodules: true
           set-safe-directory: true
 
-      - uses: uraimo/run-on-arch-action@v3.0.1
+      - uses: uraimo/run-on-arch-action@v3.1.0
         name: Build
         id: build
         with:
@@ -57,15 +57,7 @@ jobs:
     name: test and build rust bindings
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --lib
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --all-features
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --lib
+      - run: cargo build --release --all-features
