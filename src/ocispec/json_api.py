@@ -32,170 +32,131 @@ JSON library abstraction for C code generation.
 All JSON library-specific C code fragments are centralized in this module.
 To switch to a different JSON library, modify this module only -- the rest
 of the generator uses these names and helpers exclusively.
+
+Current backend: json-c
 """
 
 # ---------------------------------------------------------------------------
 # C type names
 # ---------------------------------------------------------------------------
-VAL_TYPE = "yajl_val"
-GEN_TYPE = "yajl_gen"
-GEN_STATUS_TYPE = "yajl_gen_status"
-GEN_STATUS_OK = "yajl_gen_status_ok"
+VAL_TYPE = "json_object *"
+DOC_TYPE = "json_object *"
+GEN_TYPE = "json_gen_ctx *"
+GEN_TYPE_NAME = "json_gen_ctx"       # without pointer, for function names
+GEN_STATUS_TYPE = "json_gen_status"
+GEN_STATUS_OK = "json_gen_status_ok"
+RESIDUAL_TYPE = "json_object *"
 
 # ---------------------------------------------------------------------------
 # Type constants passed to get_val()
 # ---------------------------------------------------------------------------
-TYPE_STRING = "yajl_t_string"
-TYPE_NUMBER = "yajl_t_number"
-TYPE_OBJECT = "yajl_t_object"
-TYPE_ARRAY = "yajl_t_array"
-TYPE_TRUE = "yajl_t_true"
-TYPE_FALSE = "yajl_t_false"
+TYPE_STRING = "json_type_string"
+TYPE_NUMBER = "json_c_type_number"
+TYPE_OBJECT = "json_type_object"
+TYPE_ARRAY = "json_type_array"
+TYPE_BOOL = "json_type_boolean"
+TYPE_TRUE = TYPE_BOOL
+TYPE_FALSE = TYPE_BOOL
 
 # ---------------------------------------------------------------------------
 # Value extraction -- each returns a C expression string
 # ---------------------------------------------------------------------------
 
 def get_string(val):
-    return f"YAJL_GET_STRING ({val})"
+    return f"json_object_get_string ({val})"
 
 def get_number(val):
-    return f"YAJL_GET_NUMBER ({val})"
+    return f"json_object_get_string ({val})"
 
 def is_number(val):
-    return f"YAJL_IS_NUMBER ({val})"
+    return f"(json_object_is_type ({val}, json_type_int) || json_object_is_type ({val}, json_type_double))"
 
 def is_true(val):
-    return f"YAJL_IS_TRUE ({val})"
+    return f"json_object_get_boolean ({val})"
 
 # ---------------------------------------------------------------------------
 # Array access -- each returns a C expression string
 # ---------------------------------------------------------------------------
 
 def array_check(val):
-    return f"YAJL_GET_ARRAY ({val}) != NULL"
+    return f"json_object_is_type ({val}, json_type_array)"
 
 def array_len(val):
-    return f"YAJL_GET_ARRAY_NO_CHECK ({val})->len"
+    return f"json_object_array_length ({val})"
 
 def array_get(val, idx):
-    return f"YAJL_GET_ARRAY_NO_CHECK ({val})->values[{idx}]"
-
-def array_values(val):
-    return f"YAJL_GET_ARRAY_NO_CHECK ({val})->values"
+    return f"json_object_array_get_idx ({val}, {idx})"
 
 # ---------------------------------------------------------------------------
 # Object access -- each returns a C expression string
 # ---------------------------------------------------------------------------
 
 def object_check(val):
-    return f"YAJL_GET_OBJECT ({val}) != NULL"
+    return f"json_object_is_type ({val}, json_type_object)"
 
 def object_len(val):
-    return f"YAJL_GET_OBJECT_NO_CHECK ({val})->len"
-
-def object_keys(val):
-    return f"YAJL_GET_OBJECT_NO_CHECK ({val})->keys"
-
-def object_values(val):
-    return f"YAJL_GET_OBJECT_NO_CHECK ({val})->values"
-
-# ---------------------------------------------------------------------------
-# Internal structure access (for residual handling)
-# ---------------------------------------------------------------------------
-
-def object_type_field(var):
-    return f"{var}->type"
-
-def object_type_value():
-    return TYPE_OBJECT
-
-def set_object_type(var):
-    return f"{var}->type = {TYPE_OBJECT}"
-
-def object_keys_field(var):
-    return f"{var}->u.object.keys"
-
-def object_values_field(var):
-    return f"{var}->u.object.values"
-
-def alloc_object_keys(var, count):
-    return f"{var}->u.object.keys = calloc ({count}, sizeof (const char *))"
-
-def alloc_object_values(var, count):
-    return f"{var}->u.object.values = calloc ({count}, sizeof ({VAL_TYPE}))"
-
-def object_key_direct(var, idx):
-    return f"{var}->u.object.keys[{idx}]"
-
-def object_value_direct(var, idx):
-    return f"{var}->u.object.values[{idx}]"
-
-def object_len_field(var):
-    return f"{var}->u.object.len"
+    return f"json_object_object_length ({val})"
 
 # ---------------------------------------------------------------------------
 # Generation -- each returns a C expression string
 # ---------------------------------------------------------------------------
 
 def gen_string(gen, str_expr, len_expr):
-    return f"yajl_gen_string (({GEN_TYPE}) {gen}, (const unsigned char *)({str_expr}), {len_expr})"
+    return f"json_gen_string ({gen}, (const char *) ({str_expr}), {len_expr})"
 
 def gen_bool(gen, val):
-    return f"yajl_gen_bool (({GEN_TYPE}){gen}, (int)({val}))"
+    return f"json_gen_bool ({gen}, (int) ({val}))"
 
 def gen_double(gen, val):
-    return f"yajl_gen_double (({GEN_TYPE}){gen}, {val})"
+    return f"json_gen_double ({gen}, {val})"
 
 def gen_map_open(gen):
-    return f"yajl_gen_map_open (({GEN_TYPE}) {gen})"
+    return f"json_gen_map_open ({gen})"
 
 def gen_map_close(gen):
-    return f"yajl_gen_map_close (({GEN_TYPE}) {gen})"
+    return f"json_gen_map_close ({gen})"
 
 def gen_array_open(gen):
-    return f"yajl_gen_array_open (({GEN_TYPE}) {gen})"
+    return f"json_gen_array_open ({gen})"
 
 def gen_array_close(gen):
-    return f"yajl_gen_array_close (({GEN_TYPE}) {gen})"
+    return f"json_gen_array_close ({gen})"
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-GEN_BEAUTIFY = "yajl_gen_beautify"
+GEN_BEAUTIFY = "json_gen_beautify"
 
 def gen_config(gen, option, val):
-    return f"yajl_gen_config ({gen}, {option}, {val})"
+    return f"json_gen_config ({gen}, {option}, {val})"
 
 # ---------------------------------------------------------------------------
 # Buffer access and cleanup
 # ---------------------------------------------------------------------------
 
 def gen_get_buf(gen, buf_var, len_var):
-    return f"yajl_gen_get_buf ({gen}, {buf_var}, {len_var})"
-
-def gen_clear(gen):
-    return f"yajl_gen_clear ({gen})"
+    return f"json_gen_get_buf ({gen}, {buf_var}, {len_var})"
 
 def gen_free(gen):
-    return f"yajl_gen_free ({gen})"
+    return f"json_gen_free ({gen})"
 
 # ---------------------------------------------------------------------------
 # Parsing and lifecycle
 # ---------------------------------------------------------------------------
 
-def tree_parse(data, buf, size):
-    return f"yajl_tree_parse ({data}, {buf}, {size})"
+DOC_FREE_FUNC = "json_object_put"
+TREE_FREE_FUNC = DOC_FREE_FUNC
 
-TREE_FREE_FUNC = "yajl_tree_free"
+def doc_read(data, len_expr):
+    return f"json_tokener_parse ({data})"
 
-def tree_free(val):
-    return f"{TREE_FREE_FUNC} ({val})"
+def doc_get_root(doc):
+    return doc
 
 # ---------------------------------------------------------------------------
 # Residual serialization
 # ---------------------------------------------------------------------------
-GEN_RESIDUAL_FUNC = "gen_yajl_object_residual"
+GEN_RESIDUAL_FUNC = "gen_json_object_residual"
 
 def gen_residual(obj, gen, err):
     return f"{GEN_RESIDUAL_FUNC} ({obj}, {gen}, {err})"
@@ -205,10 +166,7 @@ def gen_residual(obj, gen, err):
 # ---------------------------------------------------------------------------
 
 def get_prologue_defines():
-    return [
-        "#define YAJL_GET_ARRAY_NO_CHECK(v) (&(v)->u.array)\n",
-        "#define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)\n",
-    ]
+    return []
 
 # ---------------------------------------------------------------------------
 # Cleanup helpers emitted once per generated .c file (epilog)
@@ -218,17 +176,16 @@ def get_gen_cleanup_block():
     """Return the static cleanup function for the JSON generator."""
     return f"""\
 static void
-cleanup_{GEN_TYPE} ({GEN_TYPE} g)
+cleanup_{GEN_TYPE_NAME} ({GEN_TYPE}g)
 {{
-    if (!g)
-      return;
-    {gen_clear('g')};
-    {gen_free('g')};
+  if (! g)
+    return;
+  {gen_free('g')};
 }}
 
-define_cleaner_function ({GEN_TYPE}, cleanup_{GEN_TYPE})
+define_cleaner_function ({GEN_TYPE}, cleanup_{GEN_TYPE_NAME})
 """
 
 def get_val_cleaner_define():
-    """Return the cleaner macro for the JSON value tree."""
-    return f"define_cleaner_function ({VAL_TYPE}, {TREE_FREE_FUNC})"
+    """Return the cleaner macro for the JSON document."""
+    return f"define_cleaner_function ({DOC_TYPE}, {DOC_FREE_FUNC})"

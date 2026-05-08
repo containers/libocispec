@@ -1,7 +1,7 @@
 FROM quay.io/fedora/fedora:latest
 
 RUN dnf install -y python3 automake autoconf libtool make git pkg-config clang \
-    glibc-static libunwind-devel binutils-devel xz-devel libatomic
+    glibc-static libunwind-devel binutils-devel xz-devel libatomic json-c-devel
 
 RUN git clone --depth 1 https://github.com/google/honggfuzz.git && cd honggfuzz && make -j $(nproc) && make install PREFIX=/usr
 

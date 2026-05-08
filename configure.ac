@@ -12,23 +12,7 @@ AM_INIT_AUTOMAKE([1.11 -Wno-portability foreign tar-ustar no-dist-gzip dist-xz s
 AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
 
-AM_EXTRA_RECURSIVE_TARGETS([yajl])
-AC_CONFIG_SUBDIRS([yajl])
-
-AC_ARG_ENABLE(embedded-yajl,
-AS_HELP_STRING([--enable-embedded-yajl], [Statically link a modified yajl version]),
-[
-case "${enableval}" in
-  yes) embedded_yajl=true ;;
-  no)  embedded_yajl=false ;;
-  *) AC_MSG_ERROR(bad value ${enableval} for --enable-embedded-yajl) ;;
-esac],[embedded_yajl=false])
-
-AM_CONDITIONAL([HAVE_EMBEDDED_YAJL], [test x"$embedded_yajl" = xtrue])
-AM_COND_IF([HAVE_EMBEDDED_YAJL], [], [
-AC_SEARCH_LIBS(yajl_tree_get, [yajl], [AC_DEFINE([HAVE_YAJL], 1, [Define if libyajl is available])], [AC_MSG_ERROR([*** libyajl headers not found])])
-PKG_CHECK_MODULES([YAJL], [yajl >= 2.0.0])
-])
+PKG_CHECK_MODULES([JSON_C], [json-c >= 0.14])
 
 # Optionally install the library.
 AC_ARG_ENABLE(libocispec-install,
