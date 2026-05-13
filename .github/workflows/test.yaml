@@ -11,20 +11,20 @@ jobs:
       matrix:
         include:
           - arch: armv7
-            distro: ubuntu_latest
+            distro: ubuntu24.04
           - arch: aarch64
-            distro: ubuntu_latest
+            distro: ubuntu24.04
           - arch: s390x
-            distro: ubuntu_latest
+            distro: ubuntu24.04
           - arch: ppc64le
-            distro: ubuntu_latest
+            distro: ubuntu24.04
     steps:
-      - uses: actions/checkout@v3.0.2
+      - uses: actions/checkout@v6
         with:
           submodules: true
           set-safe-directory: true
 
-      - uses: uraimo/run-on-arch-action@v3.0.1
+      - uses: uraimo/run-on-arch-action@v3.1.0
         name: Build
         id: build
         with:
@@ -38,34 +38,37 @@ jobs:
 
           install: |
             apt-get update -q -y
-            apt-get install -q -y python3 automake libtool autotools-dev git make cmake pkg-config gcc wget xz-utils
+            apt-get install -q -y python3 automake libtool autotools-dev git make pkg-config gcc wget xz-utils libjson-c-dev
 
           run: |
             find $(pwd) -name '.git' -exec bash -c 'git config --global --add safe.directory ${0%/.git}' {} \;
-            ./autogen.sh --enable-embedded-yajl
-            ./configure --enable-embedded-yajl CFLAGS='-Wall -Wextra -Werror'
+            ./autogen.sh
+            ./configure CFLAGS='-Wall -Wextra -Werror'
             # Run make check first to catch test failures with accessible logs
             make -j $(nproc)
             make check || (cat test-suite.log 2>/dev/null; exit 1)
             # Now run distcheck for distribution validation
-            make -j $(nproc) distcheck DISTCHECK_CONFIGURE_FLAGS="--enable-embedded-yajl"
+            make -j $(nproc) distcheck
             # check that the working dir is clean
             git describe --broken --dirty --all | grep -qv dirty
             make clean
+
+  fuzzing:
+    runs-on: ubuntu-latest
+    name: Fuzzing
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          set-safe-directory: true
+      - run: sudo docker build -t libocispec-fuzzing tests/fuzzing
+      - run: sudo docker run --rm -e RUN_TIME=120 -v ${PWD}:/libocispec libocispec-fuzzing
 
   test_and_build_rust_bindings:
     name: test and build rust bindings
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --lib
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --all-features
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --lib
+      - run: cargo build --release --all-features

@@ -5,130 +5,410 @@
 #include <limits.h>
 #include "ocispec/json_common.h"
 
-#define YAJL_GET_OBJECT_NO_CHECK(v) (&(v)->u.object)
-#define YAJL_GET_STRING_NO_CHECK(v) ((v)->u.string)
-
 #define MAX_NUM_STR_LEN 21
 
-static yajl_gen_status gen_yajl_val (yajl_val obj, yajl_gen g, parser_error *err);
+/* ---------------------------------------------------------------------------
+ * Streaming JSON generator -- wraps json-c object building
+ * ---------------------------------------------------------------------------*/
 
-static yajl_gen_status
-gen_yajl_val_obj (yajl_val obj, yajl_gen g, parser_error *err)
+static json_gen_status
+add_value (json_gen_ctx *g, json_object *val)
 {
-  size_t i;
-  yajl_gen_status stat = yajl_gen_status_ok;
+  if (val == NULL)
+    return json_gen_in_error_state;
 
-  stat = yajl_gen_map_open (g);
-  if (yajl_gen_status_ok != stat)
-    GEN_SET_ERROR_AND_RETURN (stat, err);
-
-  for (i = 0; i < obj->u.object.len; i++)
+  if (g->depth < 0)
     {
-      stat = yajl_gen_string (g, (const unsigned char *) obj->u.object.keys[i], strlen (obj->u.object.keys[i]));
-      if (yajl_gen_status_ok != stat)
-        GEN_SET_ERROR_AND_RETURN (stat, err);
-      stat = gen_yajl_val (obj->u.object.values[i], g, err);
-      if (yajl_gen_status_ok != stat)
-        GEN_SET_ERROR_AND_RETURN (stat, err);
+      /* Top-level value (no container open yet). */
+      g->root = val;
+      return json_gen_status_ok;
     }
 
-  stat = yajl_gen_map_close (g);
-  if (yajl_gen_status_ok != stat)
-    GEN_SET_ERROR_AND_RETURN (stat, err);
-  return yajl_gen_status_ok;
-}
-
-static yajl_gen_status
-gen_yajl_val_array (yajl_val arr, yajl_gen g, parser_error *err)
-{
-  size_t i;
-  yajl_gen_status stat = yajl_gen_status_ok;
-
-  stat = yajl_gen_array_open (g);
-  if (yajl_gen_status_ok != stat)
-    GEN_SET_ERROR_AND_RETURN (stat, err);
-
-  for (i = 0; i < arr->u.array.len; i++)
+  if (g->is_map[g->depth])
     {
-      stat = gen_yajl_val (arr->u.array.values[i], g, err);
-      if (yajl_gen_status_ok != stat)
-        GEN_SET_ERROR_AND_RETURN (stat, err);
-    }
-
-  stat = yajl_gen_array_close (g);
-  if (yajl_gen_status_ok != stat)
-    GEN_SET_ERROR_AND_RETURN (stat, err);
-  return yajl_gen_status_ok;
-}
-
-static yajl_gen_status
-gen_yajl_val (yajl_val obj, yajl_gen g, parser_error *err)
-{
-  yajl_gen_status __stat = yajl_gen_status_ok;
-  char *__tstr;
-
-  switch (obj->type)
-    {
-    case yajl_t_string:
-      __tstr = YAJL_GET_STRING (obj);
-      if (__tstr == NULL)
+      if (g->pending_key[g->depth] != NULL)
         {
-          return __stat;
+          json_object_object_add (g->stack[g->depth], g->pending_key[g->depth], val);
+          free (g->pending_key[g->depth]);
+          g->pending_key[g->depth] = NULL;
         }
-      __stat = yajl_gen_string (g, (const unsigned char *) __tstr, strlen (__tstr));
-      if (yajl_gen_status_ok != __stat)
-        GEN_SET_ERROR_AND_RETURN (__stat, err);
-      return yajl_gen_status_ok;
-    case yajl_t_number:
-      __tstr = YAJL_GET_NUMBER (obj);
-      if (__tstr == NULL)
+      else
         {
-          return __stat;
+          json_object_put (val);
+          return json_gen_in_error_state;
         }
-      __stat = yajl_gen_number (g, __tstr, strlen (__tstr));
-      if (yajl_gen_status_ok != __stat)
-        GEN_SET_ERROR_AND_RETURN (__stat, err);
-      return yajl_gen_status_ok;
-    case yajl_t_object:
-      return gen_yajl_val_obj (obj, g, err);
-    case yajl_t_array:
-      return gen_yajl_val_array (obj, g, err);
-    case yajl_t_true:
-      return yajl_gen_bool (g, true);
-    case yajl_t_false:
-      return yajl_gen_bool (g, false);
-    case yajl_t_null:
-      return yajl_gen_null(g);
-    case yajl_t_any:
-      return __stat;
     }
-  return __stat;
-}
-
-yajl_gen_status
-gen_yajl_object_residual (yajl_val obj, yajl_gen g, parser_error *err)
-{
-  size_t i;
-  yajl_gen_status stat = yajl_gen_status_ok;
-
-  for (i = 0; i < obj->u.object.len; i++)
+  else
     {
-      if (obj->u.object.keys[i] == NULL)
-        {
-          continue;
-        }
-      stat = yajl_gen_string (g, (const unsigned char *) obj->u.object.keys[i], strlen (obj->u.object.keys[i]));
-      if (yajl_gen_status_ok != stat)
-        GEN_SET_ERROR_AND_RETURN (stat, err);
-      stat = gen_yajl_val (obj->u.object.values[i], g, err);
-      if (yajl_gen_status_ok != stat)
-        GEN_SET_ERROR_AND_RETURN (stat, err);
+      json_object_array_add (g->stack[g->depth], val);
     }
 
-  return yajl_gen_status_ok;
+  return json_gen_status_ok;
 }
 
-yajl_gen_status
+json_gen_status
+json_gen_map_open (json_gen_ctx *g)
+{
+  json_object *obj;
+
+  if (g->depth + 1 >= JSON_GEN_MAX_DEPTH)
+    return json_gen_in_error_state;
+
+  obj = json_object_new_object ();
+  if (obj == NULL)
+    return json_gen_in_error_state;
+
+  g->depth++;
+  g->stack[g->depth] = obj;
+  g->is_map[g->depth] = true;
+  g->pending_key[g->depth] = NULL;
+
+  return json_gen_status_ok;
+}
+
+json_gen_status
+json_gen_map_close (json_gen_ctx *g)
+{
+  json_object *obj;
+
+  if (g->depth < 0)
+    return json_gen_in_error_state;
+
+  obj = g->stack[g->depth];
+  g->depth--;
+
+  return add_value (g, obj);
+}
+
+json_gen_status
+json_gen_array_open (json_gen_ctx *g)
+{
+  json_object *arr;
+
+  if (g->depth + 1 >= JSON_GEN_MAX_DEPTH)
+    return json_gen_in_error_state;
+
+  arr = json_object_new_array ();
+  if (arr == NULL)
+    return json_gen_in_error_state;
+
+  g->depth++;
+  g->stack[g->depth] = arr;
+  g->is_map[g->depth] = false;
+  g->pending_key[g->depth] = NULL;
+
+  return json_gen_status_ok;
+}
+
+json_gen_status
+json_gen_array_close (json_gen_ctx *g)
+{
+  json_object *arr;
+
+  if (g->depth < 0)
+    return json_gen_in_error_state;
+
+  arr = g->stack[g->depth];
+  g->depth--;
+
+  return add_value (g, arr);
+}
+
+json_gen_status
+json_gen_string (json_gen_ctx *g, const char *str, size_t len)
+{
+  if (g->depth >= 0 && g->is_map[g->depth] && g->pending_key[g->depth] == NULL)
+    {
+      g->pending_key[g->depth] = strndup (str, len);
+      if (g->pending_key[g->depth] == NULL)
+        return json_gen_in_error_state;
+      return json_gen_status_ok;
+    }
+
+  json_object *val;
+
+  if (len > INT_MAX)
+    return json_gen_in_error_state;
+
+  val = json_object_new_string_len (str, (int) len);
+  return add_value (g, val);
+}
+
+json_gen_status
+json_gen_number (json_gen_ctx *g, const char *numstr, size_t len)
+{
+  json_object *val;
+  char buf[MAX_NUM_STR_LEN];
+  char *endptr;
+
+  if (len >= sizeof (buf))
+    return json_gen_in_error_state;
+  memcpy (buf, numstr, len);
+  buf[len] = '\0';
+
+  if (strchr (buf, '.') || strchr (buf, 'e') || strchr (buf, 'E'))
+    {
+      double d = strtod (buf, &endptr);
+      val = json_object_new_double (d);
+    }
+  else if (buf[0] == '-')
+    {
+      long long int lli = strtoll (buf, &endptr, 10);
+      val = json_object_new_int64 ((int64_t) lli);
+    }
+  else
+    {
+      unsigned long long ull = strtoull (buf, &endptr, 10);
+      if (ull > (unsigned long long) INT64_MAX)
+        val = json_object_new_uint64 ((uint64_t) ull);
+      else
+        val = json_object_new_int64 ((int64_t) ull);
+    }
+
+  return add_value (g, val);
+}
+
+json_gen_status
+json_gen_bool (json_gen_ctx *g, int val)
+{
+  json_object *v = json_object_new_boolean (val);
+  return add_value (g, v);
+}
+
+json_gen_status
+json_gen_double (json_gen_ctx *g, double val)
+{
+  json_object *v = json_object_new_double (val);
+  return add_value (g, v);
+}
+
+json_gen_status
+json_gen_null (json_gen_ctx *g)
+{
+  if (g->depth < 0)
+    {
+      g->root = NULL;
+      return json_gen_status_ok;
+    }
+
+  if (g->is_map[g->depth])
+    {
+      if (g->pending_key[g->depth] != NULL)
+        {
+          json_object_object_add (g->stack[g->depth], g->pending_key[g->depth], NULL);
+          free (g->pending_key[g->depth]);
+          g->pending_key[g->depth] = NULL;
+        }
+      else
+        {
+          return json_gen_in_error_state;
+        }
+    }
+  else
+    {
+      json_object_array_add (g->stack[g->depth], NULL);
+    }
+
+  return json_gen_status_ok;
+}
+
+json_gen_status
+json_gen_get_buf (json_gen_ctx *g, const char **buf, size_t *len)
+{
+  const char *str;
+  int flags = JSON_C_TO_STRING_SPACED;
+
+  if (g->buf != NULL)
+    {
+      free (g->buf);
+      g->buf = NULL;
+    }
+
+  if (g->beautify)
+    flags = JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_SPACED;
+
+  if (g->root == NULL)
+    return json_gen_in_error_state;
+
+  str = json_object_to_json_string_ext (g->root, flags);
+  if (str == NULL)
+    return json_gen_in_error_state;
+
+  g->buf = strdup (str);
+  if (g->buf == NULL)
+    return json_gen_in_error_state;
+  g->buf_len = strlen (g->buf);
+
+  *buf = g->buf;
+  *len = g->buf_len;
+  return json_gen_status_ok;
+}
+
+void
+json_gen_config (json_gen_ctx *g, int option, int val)
+{
+  if (g == NULL)
+    return;
+  if (option == json_gen_beautify)
+    g->beautify = (val != 0);
+}
+
+void
+json_gen_free (json_gen_ctx *g)
+{
+  int i;
+
+  if (g == NULL)
+    return;
+  if (g->buf != NULL)
+    free (g->buf);
+  if (g->root != NULL)
+    json_object_put (g->root);
+  for (i = 0; i <= g->depth; i++)
+    {
+      free (g->pending_key[i]);
+      json_object_put (g->stack[i]);
+    }
+  free (g);
+}
+
+/* ---------------------------------------------------------------------------
+ * Residual generation -- parse stored JSON string, inject into gen context
+ * ---------------------------------------------------------------------------*/
+
+static json_gen_status
+gen_json_val (json_object *val, json_gen_ctx *g, parser_error *err)
+{
+  json_gen_status stat = json_gen_status_ok;
+  enum json_type type;
+
+  if (val == NULL)
+    {
+      stat = json_gen_null (g);
+      if (json_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+      return json_gen_status_ok;
+    }
+
+  type = json_object_get_type (val);
+
+  switch (type)
+    {
+    case json_type_string:
+      {
+        const char *str = json_object_get_string (val);
+        if (str == NULL)
+          return stat;
+        stat = json_gen_string (g, str, strlen (str));
+        if (json_gen_status_ok != stat)
+          GEN_SET_ERROR_AND_RETURN (stat, err);
+        return json_gen_status_ok;
+      }
+    case json_type_int:
+      {
+        char numstr[MAX_NUM_STR_LEN];
+        int nret;
+        uint64_t uval = json_object_get_uint64 (val);
+        int64_t sval = json_object_get_int64 (val);
+        if (sval < 0)
+          nret = snprintf (numstr, sizeof (numstr), "%lld", (long long) sval);
+        else
+          nret = snprintf (numstr, sizeof (numstr), "%llu", (unsigned long long) uval);
+        if (nret < 0 || (size_t) nret >= sizeof (numstr))
+          return json_gen_in_error_state;
+        stat = json_gen_number (g, numstr, strlen (numstr));
+        if (json_gen_status_ok != stat)
+          GEN_SET_ERROR_AND_RETURN (stat, err);
+        return json_gen_status_ok;
+      }
+    case json_type_double:
+      {
+        double d = json_object_get_double (val);
+        stat = json_gen_double (g, d);
+        if (json_gen_status_ok != stat)
+          GEN_SET_ERROR_AND_RETURN (stat, err);
+        return json_gen_status_ok;
+      }
+    case json_type_boolean:
+      stat = json_gen_bool (g, json_object_get_boolean (val));
+      if (json_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+      return json_gen_status_ok;
+    case json_type_null:
+      stat = json_gen_null (g);
+      if (json_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+      return json_gen_status_ok;
+    case json_type_object:
+      {
+        stat = json_gen_map_open (g);
+        if (json_gen_status_ok != stat)
+          GEN_SET_ERROR_AND_RETURN (stat, err);
+        json_object_object_foreach (val, key, child)
+          {
+            stat = json_gen_string (g, key, strlen (key));
+            if (json_gen_status_ok != stat)
+              GEN_SET_ERROR_AND_RETURN (stat, err);
+            stat = gen_json_val (child, g, err);
+            if (json_gen_status_ok != stat)
+              GEN_SET_ERROR_AND_RETURN (stat, err);
+          }
+        stat = json_gen_map_close (g);
+        if (json_gen_status_ok != stat)
+          GEN_SET_ERROR_AND_RETURN (stat, err);
+        return json_gen_status_ok;
+      }
+    case json_type_array:
+      {
+        size_t i, alen;
+        stat = json_gen_array_open (g);
+        if (json_gen_status_ok != stat)
+          GEN_SET_ERROR_AND_RETURN (stat, err);
+        alen = json_object_array_length (val);
+        for (i = 0; i < alen; i++)
+          {
+            stat = gen_json_val (json_object_array_get_idx (val, i), g, err);
+            if (json_gen_status_ok != stat)
+              GEN_SET_ERROR_AND_RETURN (stat, err);
+          }
+        stat = json_gen_array_close (g);
+        if (json_gen_status_ok != stat)
+          GEN_SET_ERROR_AND_RETURN (stat, err);
+        return json_gen_status_ok;
+      }
+    default:
+      return stat;
+    }
+}
+
+json_gen_status
+gen_json_object_residual (json_object *residual, json_gen_ctx *g, parser_error *err)
+{
+  json_gen_status stat = json_gen_status_ok;
+
+  if (residual == NULL)
+    return json_gen_status_ok;
+
+  if (! json_object_is_type (residual, json_type_object))
+    return json_gen_in_error_state;
+
+  json_object_object_foreach (residual, key, child)
+    {
+      stat = json_gen_string (g, key, strlen (key));
+      if (json_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+      stat = gen_json_val (child, g, err);
+      if (json_gen_status_ok != stat)
+        GEN_SET_ERROR_AND_RETURN (stat, err);
+    }
+  return json_gen_status_ok;
+}
+
+/* ---------------------------------------------------------------------------
+ * map_uint / map_int -- write a number to the generator
+ * ---------------------------------------------------------------------------*/
+
+json_gen_status
 map_uint (void *ctx, long long unsigned int num)
 {
   char numstr[MAX_NUM_STR_LEN];
@@ -136,11 +416,11 @@ map_uint (void *ctx, long long unsigned int num)
 
   ret = snprintf (numstr, sizeof (numstr), "%llu", num);
   if (ret < 0 || (size_t) ret >= sizeof (numstr))
-    return yajl_gen_in_error_state;
-  return yajl_gen_number ((yajl_gen) ctx, (const char *) numstr, strlen (numstr));
+    return json_gen_in_error_state;
+  return json_gen_number ((json_gen_ctx *) ctx, (const char *) numstr, strlen (numstr));
 }
 
-yajl_gen_status
+json_gen_status
 map_int (void *ctx, long long int num)
 {
   char numstr[MAX_NUM_STR_LEN];
@@ -148,28 +428,59 @@ map_int (void *ctx, long long int num)
 
   ret = snprintf (numstr, sizeof (numstr), "%lld", num);
   if (ret < 0 || (size_t) ret >= sizeof (numstr))
-    return yajl_gen_in_error_state;
-  return yajl_gen_number ((yajl_gen) ctx, (const char *) numstr, strlen (numstr));
+    return json_gen_in_error_state;
+  return json_gen_number ((json_gen_ctx *) ctx, (const char *) numstr, strlen (numstr));
 }
 
+/* ---------------------------------------------------------------------------
+ * json_gen_init -- allocate and configure generator context
+ * ---------------------------------------------------------------------------*/
+
 bool
-json_gen_init (yajl_gen *g, const struct parser_context *ctx)
+json_gen_init (json_gen_ctx **g, const struct parser_context *ctx)
 {
-  *g = yajl_gen_alloc (NULL);
-  if (NULL == *g)
+  json_gen_ctx *gen = calloc (1, sizeof (json_gen_ctx));
+  if (gen == NULL)
     return false;
 
-  yajl_gen_config (*g, yajl_gen_beautify, (int) (! (ctx->options & OPT_GEN_SIMPLIFY)));
-  yajl_gen_config (*g, yajl_gen_validate_utf8, (int) (! (ctx->options & OPT_GEN_NO_VALIDATE_UTF8)));
+  gen->depth = -1;
+  gen->root = NULL;
+  gen->buf = NULL;
+  gen->buf_len = 0;
+  gen->beautify = (ctx == NULL) || ! (ctx->options & OPT_GEN_SIMPLIFY);
+
+  *g = gen;
   return true;
 }
 
-yajl_val
-get_val (yajl_val tree, const char *name, yajl_type type)
+/* ---------------------------------------------------------------------------
+ * get_val -- look up a key in an object, optionally filtering by type
+ * ---------------------------------------------------------------------------*/
+
+json_object *
+get_val (json_object *tree, const char *name, int type)
 {
-  const char *path[] = { name, NULL };
-  return yajl_tree_get (tree, path, type);
+  json_object *val = NULL;
+
+  if (! json_object_object_get_ex (tree, name, &val))
+    return NULL;
+
+  if (type == json_c_type_number)
+    {
+      if (! json_object_is_type (val, json_type_int) && ! json_object_is_type (val, json_type_double))
+        return NULL;
+    }
+  else if (! json_object_is_type (val, (enum json_type) type))
+    {
+      return NULL;
+    }
+
+  return val;
 }
+
+/* ---------------------------------------------------------------------------
+ * safe_strdup / safe_malloc -- abort on failure
+ * ---------------------------------------------------------------------------*/
 
 char *
 safe_strdup (const char *src)
@@ -195,6 +506,10 @@ safe_malloc (size_t size)
     abort ();
   return ret;
 }
+
+/* ---------------------------------------------------------------------------
+ * common_safe_* -- numeric string conversions
+ * ---------------------------------------------------------------------------*/
 
 int
 common_safe_double (const char *numstr, double *converted)
@@ -454,18 +769,22 @@ common_safe_int (const char *numstr, int *converted)
   return 0;
 }
 
-yajl_gen_status
+/* ---------------------------------------------------------------------------
+ * gen_json_map_* / make_json_map_* / free_json_map_* / append_json_map_*
+ * ---------------------------------------------------------------------------*/
+
+json_gen_status
 gen_json_map_int_int (void *ctx, const json_map_int_int *map, const struct parser_context *ptx, parser_error *err)
 {
-  yajl_gen_status stat = yajl_gen_status_ok;
-  yajl_gen g = (yajl_gen) ctx;
+  json_gen_status stat = json_gen_status_ok;
+  json_gen_ctx *g = (json_gen_ctx *) ctx;
   size_t len = 0, i = 0;
   if (map != NULL)
     len = map->len;
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 0);
-  stat = yajl_gen_map_open ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+    json_gen_config (g, json_gen_beautify, 0);
+  stat = json_gen_map_open (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   for (i = 0; i < len; i++)
     {
@@ -476,22 +795,22 @@ gen_json_map_int_int (void *ctx, const json_map_int_int *map, const struct parse
         {
           if (! *err)
             *err = strdup ("Error to print string");
-          return yajl_gen_in_error_state;
+          return json_gen_in_error_state;
         }
-      stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) numstr, strlen (numstr));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_string (g, numstr, strlen (numstr));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
       stat = map_int (g, map->values[i]);
-      if (yajl_gen_status_ok != stat)
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     }
 
-  stat = yajl_gen_map_close ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_map_close (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 1);
-  return yajl_gen_status_ok;
+    json_gen_config (g, json_gen_beautify, 1);
+  return json_gen_status_ok;
 }
 
 void
@@ -510,7 +829,7 @@ free_json_map_int_int (json_map_int_int *map)
 define_cleaner_function (json_map_int_int *, free_json_map_int_int)
 
 json_map_int_int *
-make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_error *err)
+make_json_map_int_int (json_object *src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_int_int) json_map_int_int *ret = NULL;
   size_t i;
@@ -518,10 +837,10 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_er
 
   (void) ctx; /* Silence compiler warning.  */
 
-  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+  if (src == NULL || ! json_object_is_type (src, json_type_object))
     return NULL;
 
-  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  len = json_object_object_length (src);
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
     return NULL;
@@ -539,11 +858,9 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_er
       return NULL;
     }
 
-  for (i = 0; i < len; i++)
+  i = 0;
+  json_object_object_foreach (src, srckey, srcval)
     {
-      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
-      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
-
       ret->keys[i] = 0;
       ret->values[i] = 0;
       ret->len = i + 1;
@@ -565,7 +882,8 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_er
       if (srcval != NULL)
         {
           int invalid;
-          if (! YAJL_IS_NUMBER (srcval))
+          const char *numstr;
+          if (! json_object_is_type (srcval, json_type_int) && ! json_object_is_type (srcval, json_type_double))
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'int' for key '%s'", srckey) < 0)
                 {
@@ -573,7 +891,8 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_er
                 }
               return NULL;
             }
-          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
+          numstr = json_object_get_string (srcval);
+          invalid = common_safe_int (numstr, &(ret->values[i]));
           if (invalid)
             {
               if (*err == NULL
@@ -584,6 +903,7 @@ make_json_map_int_int (yajl_val src, const struct parser_context *ctx, parser_er
               return NULL;
             }
         }
+      i++;
     }
   return move_ptr (ret);
 }
@@ -629,18 +949,18 @@ append_json_map_int_int (json_map_int_int *map, int key, int val)
   return 0;
 }
 
-yajl_gen_status
+json_gen_status
 gen_json_map_int_bool (void *ctx, const json_map_int_bool *map, const struct parser_context *ptx, parser_error *err)
 {
-  yajl_gen_status stat = yajl_gen_status_ok;
-  yajl_gen g = (yajl_gen) ctx;
+  json_gen_status stat = json_gen_status_ok;
+  json_gen_ctx *g = (json_gen_ctx *) ctx;
   size_t len = 0, i = 0;
   if (map != NULL)
     len = map->len;
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 0);
-  stat = yajl_gen_map_open ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+    json_gen_config (g, json_gen_beautify, 0);
+  stat = json_gen_map_open (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   for (i = 0; i < len; i++)
     {
@@ -651,22 +971,22 @@ gen_json_map_int_bool (void *ctx, const json_map_int_bool *map, const struct par
         {
           if (! *err)
             *err = strdup ("Error to print string");
-          return yajl_gen_in_error_state;
+          return json_gen_in_error_state;
         }
-      stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) numstr, strlen (numstr));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_string (g, numstr, strlen (numstr));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
-      stat = yajl_gen_bool ((yajl_gen) g, (int) (map->values[i]));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_bool (g, (int) (map->values[i]));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     }
 
-  stat = yajl_gen_map_close ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_map_close (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 1);
-  return yajl_gen_status_ok;
+    json_gen_config (g, json_gen_beautify, 1);
+  return json_gen_status_ok;
 }
 
 void
@@ -691,7 +1011,7 @@ free_json_map_int_bool (json_map_int_bool *map)
 define_cleaner_function (json_map_int_bool *, free_json_map_int_bool)
 
 json_map_int_bool *
-make_json_map_int_bool (yajl_val src, const struct parser_context *ctx, parser_error *err)
+make_json_map_int_bool (json_object *src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_int_bool) json_map_int_bool *ret = NULL;
   size_t i;
@@ -699,10 +1019,10 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx, parser_e
 
   (void) ctx; /* Silence compiler warning.  */
 
-  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+  if (src == NULL || ! json_object_is_type (src, json_type_object))
     return NULL;
 
-  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  len = json_object_object_length (src);
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
     return NULL;
@@ -717,11 +1037,10 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx, parser_e
     {
       return NULL;
     }
-  for (i = 0; i < len; i++)
-    {
-      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
-      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
+  i = 0;
+  json_object_object_foreach (src, srckey, srcval)
+    {
       ret->keys[i] = 0;
       ret->values[i] = false;
       ret->len = i + 1;
@@ -742,10 +1061,8 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx, parser_e
 
       if (srcval != NULL)
         {
-          if (YAJL_IS_TRUE (srcval))
-            ret->values[i] = true;
-          else if (YAJL_IS_FALSE (srcval))
-            ret->values[i] = false;
+          if (json_object_is_type (srcval, json_type_boolean))
+            ret->values[i] = json_object_get_boolean (srcval);
           else
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'bool' for key '%s'", srckey) < 0)
@@ -755,6 +1072,7 @@ make_json_map_int_bool (yajl_val src, const struct parser_context *ctx, parser_e
               return NULL;
             }
         }
+      i++;
     }
   return move_ptr (ret);
 }
@@ -800,19 +1118,19 @@ append_json_map_int_bool (json_map_int_bool *map, int key, bool val)
   return 0;
 }
 
-yajl_gen_status
+json_gen_status
 gen_json_map_int_string (void *ctx, const json_map_int_string *map, const struct parser_context *ptx, parser_error *err)
 {
-  yajl_gen_status stat = yajl_gen_status_ok;
-  yajl_gen g = (yajl_gen) ctx;
+  json_gen_status stat = json_gen_status_ok;
+  json_gen_ctx *g = (json_gen_ctx *) ctx;
   size_t len = 0, i = 0;
   if (map != NULL)
     len = map->len;
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 0);
+    json_gen_config (g, json_gen_beautify, 0);
 
-  stat = yajl_gen_map_open ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_map_open (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   for (i = 0; i < len; i++)
     {
@@ -823,22 +1141,22 @@ gen_json_map_int_string (void *ctx, const json_map_int_string *map, const struct
         {
           if (! *err)
             *err = strdup ("Error to print string");
-          return yajl_gen_in_error_state;
+          return json_gen_in_error_state;
         }
-      stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) numstr, strlen (numstr));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_string (g, numstr, strlen (numstr));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
-      stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) (map->values[i]), strlen (map->values[i]));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_string (g, map->values[i], strlen (map->values[i]));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     }
 
-  stat = yajl_gen_map_close ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_map_close (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 1);
-  return yajl_gen_status_ok;
+    json_gen_config (g, json_gen_beautify, 1);
+  return json_gen_status_ok;
 }
 
 void
@@ -864,18 +1182,18 @@ free_json_map_int_string (json_map_int_string *map)
 define_cleaner_function (json_map_int_string *, free_json_map_int_string)
 
 json_map_int_string *
-make_json_map_int_string (yajl_val src, const struct parser_context *ctx, parser_error *err)
+make_json_map_int_string (json_object *src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_int_string) json_map_int_string *ret = NULL;
   size_t i;
   size_t len;
 
-  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+  if (src == NULL || ! json_object_is_type (src, json_type_object))
     return NULL;
 
   (void) ctx; /* Silence compiler warning.  */
 
-  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  len = json_object_object_length (src);
 
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
@@ -894,11 +1212,9 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx, parser
       return NULL;
     }
 
-  for (i = 0; i < len; i++)
+  i = 0;
+  json_object_object_foreach (src, srckey, srcval)
     {
-      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
-      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
-
       ret->keys[i] = 0;
       ret->values[i] = NULL;
       ret->len = i + 1;
@@ -920,7 +1236,8 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx, parser
 
       if (srcval != NULL)
         {
-          if (! YAJL_IS_STRING (srcval))
+          const char *str;
+          if (! json_object_is_type (srcval, json_type_string))
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'string' for key '%s'", srckey) < 0)
                 {
@@ -928,9 +1245,10 @@ make_json_map_int_string (yajl_val src, const struct parser_context *ctx, parser
                 }
               return NULL;
             }
-          char *str = YAJL_GET_STRING_NO_CHECK (srcval);
+          str = json_object_get_string (srcval);
           ret->values[i] = strdup (str ? str : "");
         }
+      i++;
     }
   return move_ptr (ret);
 }
@@ -971,35 +1289,35 @@ append_json_map_int_string (json_map_int_string *map, int key, const char *val)
   return 0;
 }
 
-yajl_gen_status
+json_gen_status
 gen_json_map_string_int (void *ctx, const json_map_string_int *map, const struct parser_context *ptx, parser_error *err)
 {
-  yajl_gen_status stat = yajl_gen_status_ok;
-  yajl_gen g = (yajl_gen) ctx;
+  json_gen_status stat = json_gen_status_ok;
+  json_gen_ctx *g = (json_gen_ctx *) ctx;
   size_t len = 0, i = 0;
   if (map != NULL)
     len = map->len;
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 0);
-  stat = yajl_gen_map_open ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+    json_gen_config (g, json_gen_beautify, 0);
+  stat = json_gen_map_open (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   for (i = 0; i < len; i++)
     {
-      stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) (map->keys[i]), strlen (map->keys[i]));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_string (g, map->keys[i], strlen (map->keys[i]));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
       stat = map_int (g, map->values[i]);
-      if (yajl_gen_status_ok != stat)
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     }
 
-  stat = yajl_gen_map_close ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_map_close (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 1);
-  return yajl_gen_status_ok;
+    json_gen_config (g, json_gen_beautify, 1);
+  return json_gen_status_ok;
 }
 
 void
@@ -1024,7 +1342,7 @@ free_json_map_string_int (json_map_string_int *map)
 define_cleaner_function (json_map_string_int *, free_json_map_string_int)
 
 json_map_string_int *
-make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser_error *err)
+make_json_map_string_int (json_object *src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_string_int) json_map_string_int *ret = NULL;
   size_t i;
@@ -1032,10 +1350,10 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser
 
   (void) ctx; /* Silence compiler warning.  */
 
-  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+  if (src == NULL || ! json_object_is_type (src, json_type_object))
     return NULL;
 
-  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  len = json_object_object_length (src);
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
     {
@@ -1055,11 +1373,10 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
-  for (i = 0; i < len; i++)
-    {
-      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
-      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
+  i = 0;
+  json_object_object_foreach (src, srckey, srcval)
+    {
       ret->keys[i] = NULL;
       ret->values[i] = 0;
       ret->len = i + 1;
@@ -1074,7 +1391,8 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser
       if (srcval != NULL)
         {
           int invalid;
-          if (! YAJL_IS_NUMBER (srcval))
+          const char *numstr;
+          if (! json_object_is_type (srcval, json_type_int) && ! json_object_is_type (srcval, json_type_double))
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'int' for key '%s'", srckey) < 0)
                 {
@@ -1082,7 +1400,8 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser
                 }
               return NULL;
             }
-          invalid = common_safe_int (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
+          numstr = json_object_get_string (srcval);
+          invalid = common_safe_int (numstr, &(ret->values[i]));
           if (invalid)
             {
               if (*err == NULL
@@ -1093,6 +1412,7 @@ make_json_map_string_int (yajl_val src, const struct parser_context *ctx, parser
               return NULL;
             }
         }
+      i++;
     }
   return move_ptr (ret);
 }
@@ -1131,37 +1451,37 @@ append_json_map_string_int (json_map_string_int *map, const char *key, int val)
   return 0;
 }
 
-yajl_gen_status
+json_gen_status
 gen_json_map_string_int64 (void *ctx, const json_map_string_int64 *map, const struct parser_context *ptx,
                            parser_error *err)
 {
-  yajl_gen_status stat = yajl_gen_status_ok;
-  yajl_gen g = (yajl_gen) ctx;
+  json_gen_status stat = json_gen_status_ok;
+  json_gen_ctx *g = (json_gen_ctx *) ctx;
   size_t len = 0, i = 0;
   if (map != NULL)
     len = map->len;
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 0);
-  stat = yajl_gen_map_open ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+    json_gen_config (g, json_gen_beautify, 0);
+  stat = json_gen_map_open (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
 
   for (i = 0; i < len; i++)
     {
-      stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) (map->keys[i]), strlen (map->keys[i]));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_string (g, map->keys[i], strlen (map->keys[i]));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
       stat = map_int (g, map->values[i]);
-      if (yajl_gen_status_ok != stat)
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     }
 
-  stat = yajl_gen_map_close ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_map_close (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 1);
-  return yajl_gen_status_ok;
+    json_gen_config (g, json_gen_beautify, 1);
+  return json_gen_status_ok;
 }
 
 void
@@ -1186,31 +1506,33 @@ free_json_map_string_int64 (json_map_string_int64 *map)
 define_cleaner_function (json_map_string_int64 *, free_json_map_string_int64)
 
 json_map_string_int64 *
-make_json_map_string_int64 (yajl_val src, const struct parser_context *ctx,
-                                                       parser_error *err)
+make_json_map_string_int64 (json_object *src, const struct parser_context *ctx,
+                            parser_error *err)
 {
   __auto_cleanup (free_json_map_string_int64) json_map_string_int64 *ret = NULL;
 
   (void) ctx; /* Silence compiler warning.  */
 
-  if (src != NULL && YAJL_GET_OBJECT (src) != NULL)
+  if (src != NULL && json_object_is_type (src, json_type_object))
     {
       size_t i;
-      size_t len = YAJL_GET_OBJECT (src)->len;
+      size_t len = json_object_object_length (src);
+
       ret = safe_malloc (sizeof (*ret));
       ret->len = len;
       ret->keys = safe_malloc ((len + 1) * sizeof (char *));
       ret->values = safe_malloc ((len + 1) * sizeof (int64_t));
-      for (i = 0; i < len; i++)
+
+      i = 0;
+      json_object_object_foreach (src, srckey, srcval)
         {
-          const char *srckey = YAJL_GET_OBJECT (src)->keys[i];
-          yajl_val srcval = YAJL_GET_OBJECT (src)->values[i];
           ret->keys[i] = safe_strdup (srckey ? srckey : "");
 
           if (srcval != NULL)
             {
               int64_t invalid;
-              if (! YAJL_IS_NUMBER (srcval))
+              const char *numstr;
+              if (! json_object_is_type (srcval, json_type_int) && ! json_object_is_type (srcval, json_type_double))
                 {
                   if (*err == NULL && asprintf (err, "Invalid value with type 'int' for key '%s'", srckey) < 0)
                     {
@@ -1218,7 +1540,8 @@ make_json_map_string_int64 (yajl_val src, const struct parser_context *ctx,
                     }
                   return NULL;
                 }
-              invalid = common_safe_int64 (YAJL_GET_NUMBER (srcval), &(ret->values[i]));
+              numstr = json_object_get_string (srcval);
+              invalid = common_safe_int64 (numstr, &(ret->values[i]));
               if (invalid)
                 {
                   if (*err == NULL
@@ -1230,6 +1553,7 @@ make_json_map_string_int64 (yajl_val src, const struct parser_context *ctx,
                   return NULL;
                 }
             }
+          i++;
         }
     }
   return move_ptr (ret);
@@ -1267,36 +1591,36 @@ append_json_map_string_int64 (json_map_string_int64 *map, const char *key, int64
   return 0;
 }
 
-yajl_gen_status
+json_gen_status
 gen_json_map_string_bool (void *ctx, const json_map_string_bool *map, const struct parser_context *ptx,
                           parser_error *err)
 {
-  yajl_gen_status stat = yajl_gen_status_ok;
-  yajl_gen g = (yajl_gen) ctx;
+  json_gen_status stat = json_gen_status_ok;
+  json_gen_ctx *g = (json_gen_ctx *) ctx;
   size_t len = 0, i = 0;
   if (map != NULL)
     len = map->len;
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 0);
-  stat = yajl_gen_map_open ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+    json_gen_config (g, json_gen_beautify, 0);
+  stat = json_gen_map_open (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   for (i = 0; i < len; i++)
     {
-      stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) (map->keys[i]), strlen (map->keys[i]));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_string (g, map->keys[i], strlen (map->keys[i]));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
-      stat = yajl_gen_bool ((yajl_gen) g, (int) (map->values[i]));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_bool (g, (int) (map->values[i]));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     }
 
-  stat = yajl_gen_map_close ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_map_close (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 1);
-  return yajl_gen_status_ok;
+    json_gen_config (g, json_gen_beautify, 1);
+  return json_gen_status_ok;
 }
 
 void
@@ -1322,7 +1646,7 @@ free_json_map_string_bool (json_map_string_bool *map)
 define_cleaner_function (json_map_string_bool *, free_json_map_string_bool)
 
 json_map_string_bool *
-make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parser_error *err)
+make_json_map_string_bool (json_object *src, const struct parser_context *ctx, parser_error *err)
 {
   __auto_cleanup (free_json_map_string_bool) json_map_string_bool *ret = NULL;
   size_t i;
@@ -1330,10 +1654,10 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parse
 
   (void) ctx; /* Silence compiler warning.  */
 
-  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+  if (src == NULL || ! json_object_is_type (src, json_type_object))
     return NULL;
 
-  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  len = json_object_object_length (src);
 
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
@@ -1350,13 +1674,12 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parse
     {
       return NULL;
     }
-  for (i = 0; i < len; i++)
-    {
-      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
-      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
+  i = 0;
+  json_object_object_foreach (src, srckey, srcval)
+    {
       ret->keys[i] = NULL;
-      ret->values[i] = NULL;
+      ret->values[i] = false;
       ret->len = i + 1;
 
       ret->keys[i] = strdup (srckey ? srckey : "");
@@ -1367,10 +1690,8 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parse
         }
       if (srcval != NULL)
         {
-          if (YAJL_IS_TRUE (srcval))
-            ret->values[i] = true;
-          else if (YAJL_IS_FALSE (srcval))
-            ret->values[i] = false;
+          if (json_object_is_type (srcval, json_type_boolean))
+            ret->values[i] = json_object_get_boolean (srcval);
           else
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'bool' for key '%s'", srckey) < 0)
@@ -1380,6 +1701,7 @@ make_json_map_string_bool (yajl_val src, const struct parser_context *ctx, parse
               return NULL;
             }
         }
+      i++;
     }
   return move_ptr (ret);
 }
@@ -1433,39 +1755,39 @@ append_json_map_string_bool (json_map_string_bool *map, const char *key, bool va
   return 0;
 }
 
-yajl_gen_status
+json_gen_status
 gen_json_map_string_string (void *ctx, const json_map_string_string *map, const struct parser_context *ptx,
                             parser_error *err)
 {
-  yajl_gen_status stat = yajl_gen_status_ok;
-  yajl_gen g = (yajl_gen) ctx;
+  json_gen_status stat = json_gen_status_ok;
+  json_gen_ctx *g = (json_gen_ctx *) ctx;
   size_t len = 0, i = 0;
   if (map != NULL)
     len = map->len;
 
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 0);
+    json_gen_config (g, json_gen_beautify, 0);
 
-  stat = yajl_gen_map_open ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_map_open (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
 
   for (i = 0; i < len; i++)
     {
-      stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) (map->keys[i]), strlen (map->keys[i]));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_string (g, map->keys[i], strlen (map->keys[i]));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
-      stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) (map->values[i]), strlen (map->values[i]));
-      if (yajl_gen_status_ok != stat)
+      stat = json_gen_string (g, map->values[i], strlen (map->values[i]));
+      if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
     }
 
-  stat = yajl_gen_map_close ((yajl_gen) g);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_map_close (g);
+  if (json_gen_status_ok != stat)
     GEN_SET_ERROR_AND_RETURN (stat, err);
   if (! len && ! (ptx->options & OPT_GEN_SIMPLIFY))
-    yajl_gen_config (g, yajl_gen_beautify, 1);
-  return yajl_gen_status_ok;
+    json_gen_config (g, json_gen_beautify, 1);
+  return json_gen_status_ok;
 }
 
 void
@@ -1492,18 +1814,18 @@ free_json_map_string_string (json_map_string_string *map)
 define_cleaner_function (json_map_string_string *, free_json_map_string_string)
 
 json_map_string_string *
-make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
-                                                         parser_error *err)
+make_json_map_string_string (json_object *src, const struct parser_context *ctx,
+                             parser_error *err)
 {
   __auto_cleanup (free_json_map_string_string) json_map_string_string *ret = NULL;
   size_t i;
   size_t len;
 
   (void) ctx; /* Silence compiler warning.  */
-  if (src == NULL || YAJL_GET_OBJECT (src) == NULL)
+  if (src == NULL || ! json_object_is_type (src, json_type_object))
     return NULL;
 
-  len = YAJL_GET_OBJECT_NO_CHECK (src)->len;
+  len = json_object_object_length (src);
 
   ret = calloc (1, sizeof (*ret));
   if (ret == NULL)
@@ -1527,11 +1849,10 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
       *(err) = strdup ("error allocating memory");
       return NULL;
     }
-  for (i = 0; i < len; i++)
-    {
-      const char *srckey = YAJL_GET_OBJECT_NO_CHECK (src)->keys[i];
-      yajl_val srcval = YAJL_GET_OBJECT_NO_CHECK (src)->values[i];
 
+  i = 0;
+  json_object_object_foreach (src, srckey, srcval)
+    {
       ret->keys[i] = NULL;
       ret->values[i] = NULL;
       ret->len = i + 1;
@@ -1543,8 +1864,8 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
         }
       if (srcval != NULL)
         {
-          char *str;
-          if (! YAJL_IS_STRING (srcval))
+          const char *str;
+          if (! json_object_is_type (srcval, json_type_string))
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'string' for key '%s'", srckey) < 0)
                 {
@@ -1553,7 +1874,7 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
               return NULL;
             }
 
-          str = YAJL_GET_STRING_NO_CHECK (srcval);
+          str = json_object_get_string (srcval);
 
           ret->values[i] = strdup (str ? str : "");
           if (ret->values[i] == NULL)
@@ -1561,6 +1882,7 @@ make_json_map_string_string (yajl_val src, const struct parser_context *ctx,
               return NULL;
             }
         }
+      i++;
     }
   return move_ptr (ret);
 }
@@ -1592,11 +1914,11 @@ clone_map_string_string (json_map_string_string *src)
     {
       ret->keys[i] = strdup (src->keys[i]);
       if (ret->keys[i] == NULL)
-          return NULL;
+        return NULL;
 
       ret->values[i] = strdup (src->values[i]);
       if (ret->values[i] == NULL)
-          return NULL;
+        return NULL;
     }
   return move_ptr (ret);
 }
@@ -1660,26 +1982,29 @@ append_json_map_string_string (json_map_string_string *map, const char *key, con
   return 0;
 }
 
+/* ---------------------------------------------------------------------------
+ * json_marshal_string -- marshal a C string to a JSON string value
+ * ---------------------------------------------------------------------------*/
+
 static void
-cleanup_yajl_gen (yajl_gen g)
+cleanup_json_gen_ctx (json_gen_ctx *g)
 {
   if (! g)
     return;
-  yajl_gen_clear (g);
-  yajl_gen_free (g);
+  json_gen_free (g);
 }
 
-define_cleaner_function (yajl_gen, cleanup_yajl_gen)
+define_cleaner_function (json_gen_ctx *, cleanup_json_gen_ctx)
 
 char *
 json_marshal_string (const char *str, size_t length, const struct parser_context *ctx, parser_error *err)
 {
-  __auto_cleanup (cleanup_yajl_gen) yajl_gen g = NULL;
+  __auto_cleanup (cleanup_json_gen_ctx) json_gen_ctx *g = NULL;
   struct parser_context tmp_ctx = { 0 };
-  const unsigned char *gen_buf = NULL;
+  const char *gen_buf = NULL;
   char *json_buf = NULL;
   size_t gen_len = 0;
-  yajl_gen_status stat;
+  json_gen_status stat;
 
   if (str == NULL || err == NULL)
     return NULL;
@@ -1693,14 +2018,14 @@ json_marshal_string (const char *str, size_t length, const struct parser_context
       *err = strdup ("Json_gen init failed");
       return json_buf;
     }
-  stat = yajl_gen_string ((yajl_gen) g, (const unsigned char *) str, length);
-  if (yajl_gen_status_ok != stat)
+  stat = json_gen_string (g, str, length);
+  if (json_gen_status_ok != stat)
     {
       if (asprintf (err, "error generating json, errcode: %d", (int) stat) < 0)
         *err = strdup ("error allocating memory");
       return json_buf;
     }
-  yajl_gen_get_buf (g, &gen_buf, &gen_len);
+  json_gen_get_buf (g, &gen_buf, &gen_len);
   if (gen_buf == NULL)
     {
       *err = strdup ("Error to get generated json");

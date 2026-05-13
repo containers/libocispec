@@ -1,11 +1,4 @@
-DIST_SUBDIRS = yajl
-SUBDIRS = yajl
-
-AM_CFLAGS = $(WARN_CFLAGS) -I$(top_srcdir)/src -I$(top_builddir)/src
-
-if HAVE_EMBEDDED_YAJL
-AM_CFLAGS += -I$(top_srcdir)/yajl/src/headers
-endif HAVE_EMBEDDED_YAJL
+AM_CFLAGS = $(WARN_CFLAGS) -I$(top_srcdir)/src -I$(top_builddir)/src $(JSON_C_CFLAGS)
 
 CLEANFILES = $(man_MANS) src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 
@@ -53,6 +46,7 @@ SOURCE_FILES =							\
 	src/ocispec/basic_test_top_double_array_obj.c \
 	src/ocispec/basic_test_top_double_array_refobj.c \
 	src/ocispec/basic_test_top_double_array_string.c \
+	src/ocispec/basic_test_int64_values.c \
 	src/ocispec/basic_test_map_string_string_array.c
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
@@ -70,6 +64,7 @@ src/runtime_spec_stamp: src/ocispec/json_common.h src/ocispec/json_common.c
 
 src/image_spec_stamp: src/ocispec/json_common.h src/ocispec/json_common.c
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir} --out=${builddir}/src/ocispec ${srcdir}/image-spec/schema
+
 	@touch $@
 
 src/image_manifest_stamp: src/ocispec/json_common.h src/ocispec/json_common.c
@@ -147,6 +142,8 @@ src/ocispec/basic_test_double_array_item.h \
 	src/ocispec/basic_test_top_double_array_obj.c \
 	src/ocispec/basic_test_top_double_array_refobj.c \
 	src/ocispec/basic_test_top_double_array_string.c \
+	src/ocispec/basic_test_int64_values.h \
+	src/ocispec/basic_test_int64_values.c \
 	src/ocispec/basic_test_map_string_string_array.c: src/basic-test_stamp
 
 $(HEADER_FILES): %.h: %.c src/ocispec/generate.py
@@ -162,13 +159,7 @@ TMP_C_FILES = $(SOURCE_FILES:.c=.c.tmp)
 
 CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES) $(TMP_H_FILES) $(TMP_C_FILES)
 
-TESTS_LDADD = libocispec.la $(SELINUX_LIBS)
-
-if HAVE_EMBEDDED_YAJL
-TESTS_LDADD += yajl/libyajl.la
-else
-TESTS_LDADD += $(YAJL_LIBS)
-endif
+TESTS_LDADD = libocispec.la $(SELINUX_LIBS) $(JSON_C_LIBS)
 
 libocispec_a_SOURCES =
 
@@ -222,6 +213,9 @@ tests_test_13_LDADD = $(TESTS_LDADD)
 tests_test_14_SOURCES = tests/test-14.c
 tests_test_14_LDADD = $(TESTS_LDADD)
 
+tests_test_15_SOURCES = tests/test-15.c
+tests_test_15_LDADD = $(TESTS_LDADD)
+
 src_ocispec_validate_SOURCES = src/ocispec/validate.c
 src_ocispec_validate_LDADD = $(TESTS_LDADD)
 
@@ -238,7 +232,8 @@ TESTS = tests/test-1 \
 	tests/test-11 \
 	tests/test-12 \
 	tests/test-13 \
-	tests/test-14
+	tests/test-14 \
+	tests/test-15
 
 noinst_PROGRAMS = src/ocispec/validate $(TESTS)
 
@@ -269,6 +264,7 @@ EXTRA_DIST = autogen.sh \
 	tests/data/top_double_array_string.json \
 	tests/data/config-netdevices.json \
 	tests/data/map-string-string-array.json \
+	tests/data/int64_values.json \
 	tests/test-spec \
 	src/ocispec/generate.py \
 	src/ocispec/headers.py \
@@ -280,13 +276,12 @@ EXTRA_DIST = autogen.sh \
 	runtime-spec \
 	image-spec \
 	src/ocispec/json_common.h \
-	src/ocispec/json_common.c \
-	src/yajl
+	src/ocispec/json_common.c
 
 sync:
 	(cd image-spec; git pull https://github.com/opencontainers/image-spec)
 	(cd runtime-spec; git pull https://github.com/opencontainers/runtime-spec)
-	(cd yajl; git pull https://github.com/containers/yajl main)
+
 
 generate: src/runtime_spec_stamp src/image_spec_stamp src/image_manifest_stamp src/basic-test_stamp
 

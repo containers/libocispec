@@ -38,7 +38,7 @@ def append_header_arr(obj, header, prefix):
     if not obj.subtypobj or obj.subtypname:
         return
 
-    header.append("typedef struct {\n")
+    header.append("typedef struct\n{\n")
     for i in obj.subtypobj:
         if i.typ == 'array':
             c_typ = helpers.get_prefixed_pointer(i.name, i.subtyp, prefix) or \
@@ -47,21 +47,21 @@ def append_header_arr(obj, header, prefix):
                 c_typ = helpers.get_name_substr(i.name, prefix)
 
             if not helpers.is_compound_type(i.subtyp):
-                header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}*{i.fixname};\n")
+                header.append(f"  {c_typ}{' ' if '*' not in c_typ else ''}*{i.fixname};\n")
             else:
-                header.append(f"    {c_typ} **{i.fixname};\n")
-            header.append(f"    size_t {i.fixname + '_len'};\n\n")
+                header.append(f"  {c_typ} **{i.fixname};\n")
+            header.append(f"  size_t {i.fixname + '_len'};\n\n")
         else:
             c_typ = helpers.get_prefixed_pointer(i.name, i.typ, prefix) or \
                 helpers.get_map_c_types(i.typ)
-            header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}{i.fixname};\n")
+            header.append(f"  {c_typ}{' ' if '*' not in c_typ else ''}{i.fixname};\n")
     for i in obj.subtypobj:
         if helpers.is_numeric_type(i.typ) or i.typ == 'boolean':
-            header.append(f"    unsigned int {i.fixname}_present : 1;\n")
+            header.append(f"  unsigned int {i.fixname}_present : 1;\n")
     typename = helpers.get_name_substr(obj.name, prefix)
-    header.append(f"}}\n{typename};\n\n")
+    header.append(f"}} {typename};\n\n")
     header.append(f"void free_{typename} ({typename} *ptr);\n\n")
-    header.append(f"{typename} *make_{typename} ({json_api.VAL_TYPE} tree, const struct parser_context *ctx, parser_error *err);\n\n")
+    header.append(f"{typename} *make_{typename} ({json_api.VAL_TYPE}tree, const struct parser_context *ctx, parser_error *err);\n\n")
 
 
 def append_header_map_str_obj(obj, header, prefix):
@@ -71,16 +71,16 @@ def append_header_map_str_obj(obj, header, prefix):
     History: 2019-06-17
     '''
     child = obj.children[0]
-    header.append("typedef struct {\n")
-    header.append("    char **keys;\n")
+    header.append("typedef struct\n{\n")
+    header.append("  char **keys;\n")
     if helpers.valid_basic_map_name(child.typ):
         c_typ = helpers.get_prefixed_pointer("", child.typ, "")
     elif child.subtypname:
         c_typ = child.subtypname +  " *"
     else:
         c_typ = helpers.get_prefixed_pointer(child.name, child.typ, prefix)
-    header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}*{child.fixname};\n")
-    header.append("    size_t len;\n")
+    header.append(f"  {c_typ}{' ' if '*' not in c_typ else ''}*{child.fixname};\n")
+    header.append("  size_t len;\n")
 
 
 def append_header_child_arr(child, header, prefix):
@@ -105,16 +105,16 @@ def append_header_child_arr(child, header, prefix):
         dflag = "*"
 
     if helpers.valid_basic_map_name(child.subtyp):
-        header.append(f"    {helpers.make_basic_map_name(child.subtyp)} **{child.fixname};\n")
+        header.append(f"  {helpers.make_basic_map_name(child.subtyp)} **{child.fixname};\n")
     elif not helpers.is_compound_type(child.subtyp):
-        header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}*{dflag}{child.fixname};\n")
+        header.append(f"  {c_typ}{' ' if '*' not in c_typ else ''}*{dflag}{child.fixname};\n")
     else:
-        header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}**{dflag}{child.fixname};\n")
+        header.append(f"  {c_typ}{' ' if '*' not in c_typ else ''}**{dflag}{child.fixname};\n")
 
     if child.nested_array and not helpers.valid_basic_map_name(child.subtyp):
-        header.append(f"    size_t *{child.fixname + '_item_lens'};\n")
+        header.append(f"  size_t *{child.fixname + '_item_lens'};\n")
 
-    header.append(f"    size_t {child.fixname + '_len'};\n\n")
+    header.append(f"  size_t {child.fixname + '_len'};\n\n")
 
 def append_header_child_others(child, header, prefix):
     '''
@@ -130,7 +130,7 @@ def append_header_child_others(child, header, prefix):
         c_typ = helpers.get_prefixed_pointer(child.subtypname, child.typ, "")
     else:
         c_typ = helpers.get_prefixed_pointer(child.name, child.typ, prefix)
-    header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}{child.fixname};\n\n")
+    header.append(f"  {c_typ}{' ' if '*' not in c_typ else ''}{child.fixname};\n\n")
 
 
 def append_type_c_header(obj, header, prefix):
@@ -153,29 +153,29 @@ def append_type_c_header(obj, header, prefix):
     elif obj.typ == 'object':
         if obj.subtypname is not None:
             return
-        header.append("typedef struct {\n")
+        header.append("typedef struct\n{\n")
         if obj.children is None:
-            header.append("    char unuseful; // unuseful definition to avoid empty struct\n")
+            header.append("  char unuseful; // unuseful definition to avoid empty struct\n")
         present_tags = []
         for i in obj.children or []:
             if helpers.is_numeric_type(i.typ) or i.typ == 'boolean':
-                present_tags.append(f"    unsigned int {i.fixname}_present : 1;\n")
+                present_tags.append(f"  unsigned int {i.fixname}_present : 1;\n")
             if i.typ == 'array':
                 append_header_child_arr(i, header, prefix)
             else:
                 append_header_child_others(i, header, prefix)
         if obj.children is not None:
-            header.append(f"    {json_api.VAL_TYPE} _residual;\n")
+            header.append(f"  {json_api.RESIDUAL_TYPE}_residual;\n")
         if len(present_tags) > 0:
             header.append("\n")
             for tag in present_tags:
                 header.append(tag)
     typename = helpers.get_prefixed_name(obj.name, prefix)
-    header.append(f"}}\n{typename};\n\n")
+    header.append(f"}} {typename};\n\n")
     header.append(f"void free_{typename} ({typename} *ptr);\n\n")
     header.append(f"{typename} *clone_{typename} ({typename} *src);\n")
-    header.append(f"{typename} *make_{typename} ({json_api.VAL_TYPE} tree, const struct parser_context *ctx, parser_error *err);\n\n")
-    header.append(f"{json_api.GEN_STATUS_TYPE} gen_{typename} ({json_api.GEN_TYPE} g, const {typename} *ptr, const struct parser_context *ctx, parser_error *err);\n\n")
+    header.append(f"{typename} *make_{typename} ({json_api.VAL_TYPE}tree, const struct parser_context *ctx, parser_error *err);\n\n")
+    header.append(f"{json_api.GEN_STATUS_TYPE} gen_{typename} ({json_api.GEN_TYPE}g, const {typename} *ptr, const struct parser_context *ctx, parser_error *err);\n\n")
 
 def header_reflect_top_array(obj, prefix, header):
     c_typ = helpers.get_prefixed_pointer(obj.name, obj.subtyp, prefix) or \
@@ -189,14 +189,14 @@ def header_reflect_top_array(obj, prefix, header):
         return
 
     typename = helpers.get_top_array_type_name(obj.name, prefix)
-    header.append("typedef struct {\n")
+    header.append("typedef struct\n{\n")
     if obj.nested_array:
-        header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}**items;\n")
-        header.append("    size_t *subitem_lens;\n\n")
+        header.append(f"  {c_typ}{' ' if '*' not in c_typ else ''}**items;\n")
+        header.append("  size_t *subitem_lens;\n\n")
     else:
-        header.append(f"    {c_typ}{' ' if '*' not in c_typ else ''}*items;\n")
-    header.append("    size_t len;\n\n")
-    header.append(f"}}\n{typename};\n\n")
+        header.append(f"  {c_typ}{' ' if '*' not in c_typ else ''}*items;\n")
+    header.append("  size_t len;\n\n")
+    header.append(f"}} {typename};\n\n")
 
 
     header.append(f"void free_{typename} ({typename} *ptr);\n\n")

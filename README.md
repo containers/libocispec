@@ -11,7 +11,7 @@ from C, and generate json string from corresponding struct.
 The parser is generated directly from the JSON schema in the source repository.
 
 ## Installation
-Expects [yajl](https://github.com/containers/yajl) to be installed and linkable.
+Expects [json-c](https://github.com/json-c/json-c) (>= 0.14) to be installed and linkable.
 ```sh
 $ ./autogen.sh
 $ ./configure
