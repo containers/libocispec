@@ -216,7 +216,7 @@ json_gen_status
 json_gen_get_buf (json_gen_ctx *g, const char **buf, size_t *len)
 {
   const char *str;
-  int flags = JSON_C_TO_STRING_SPACED;
+  int flags = JSON_C_TO_STRING_SPACED | JSON_C_TO_STRING_NOSLASHESCAPE;
 
   if (g->buf != NULL)
     {
@@ -225,7 +225,7 @@ json_gen_get_buf (json_gen_ctx *g, const char **buf, size_t *len)
     }
 
   if (g->beautify)
-    flags = JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_SPACED;
+    flags |= JSON_C_TO_STRING_PRETTY;
 
   if (g->root == NULL)
     return json_gen_in_error_state;
