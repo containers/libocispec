@@ -2045,7 +2045,6 @@ def src_reflect(structs, schema_info, c_file, root_typ):
         #  define _GNU_SOURCE
         #endif
         #include <string.h>
-        #include <ocispec/read-file.h>
         #include "ocispec/{schema_info.header.basename}"
     ''', indent=0)
     for define in json_api.get_prologue_defines():
@@ -2444,25 +2443,34 @@ def get_c_epilog(c_file, prefix, typ, obj):
 
     emit(c_file, f'''
 
+        {json_api.get_val_cleaner_define()}
+    ''', indent=0)
+    c_file.append("\n")
+
+    emit(c_file, f'''
+
         {typename} *
         {typename}_parse_file (const char *filename, const struct parser_context *ctx, parser_error *err)
         {{
             {typename} *ptr = NULL;
-            size_t filesize;
-            __auto_free char *content = NULL;
+            __auto_cleanup ({json_api.DOC_FREE_FUNC}) {json_api.DOC_TYPE}tree = NULL;
+            struct parser_context tmp_ctx = {{ 0 }};
 
             if (filename == NULL || err == NULL)
               return NULL;
 
             *err = NULL;
-            content = read_file (filename, &filesize);
-            if (content == NULL)
+            if (ctx == NULL)
+              ctx = (const struct parser_context *) (&tmp_ctx);
+
+            tree = {json_api.doc_read_file('filename')};
+            if (tree == NULL)
               {{
                 if (asprintf (err, "cannot read the file: %s", filename) < 0)
                     *err = strdup ("error allocating memory");
                 return NULL;
               }}
-            ptr = {typename}_parse_data (content, ctx, err);
+            ptr = make_{typename} (tree, ctx, err);
             return ptr;
         }}
     ''', indent=0)
@@ -2472,29 +2480,68 @@ def get_c_epilog(c_file, prefix, typ, obj):
         {typename}_parse_file_stream (FILE *stream, const struct parser_context *ctx, parser_error *err)
         {{
             {typename} *ptr = NULL;
-            size_t filesize;
-            __auto_free char *content = NULL;
+            __auto_cleanup ({json_api.DOC_FREE_FUNC}) {json_api.DOC_TYPE}tree = NULL;
+            struct parser_context tmp_ctx = {{ 0 }};
+            int fd;
 
             if (stream == NULL || err == NULL)
               return NULL;
 
             *err = NULL;
-            content = fread_file (stream, &filesize);
-            if (content == NULL)
+            if (ctx == NULL)
+              ctx = (const struct parser_context *) (&tmp_ctx);
+
+            fd = fileno (stream);
+            if (fd >= 0)
               {{
-                *err = strdup ("cannot read the file");
+                tree = {json_api.doc_read_fd('fd')};
+              }}
+            else
+              {{
+                __auto_free char *buf = NULL;
+                size_t buf_len = 0, buf_alloc = 0;
+                char tmp[4096];
+                size_t nread;
+
+                while ((nread = fread (tmp, 1, sizeof (tmp), stream)) > 0)
+                  {{
+                    if (buf_len + nread >= buf_alloc)
+                      {{
+                        char *newbuf;
+                        buf_alloc = (buf_len + nread) * 2 + 1;
+                        newbuf = realloc (buf, buf_alloc);
+                        if (newbuf == NULL)
+                          {{
+                            *err = strdup ("error allocating memory");
+                            return NULL;
+                          }}
+                        buf = newbuf;
+                      }}
+                    memcpy (buf + buf_len, tmp, nread);
+                    buf_len += nread;
+                  }}
+                if (ferror (stream))
+                  {{
+                    *err = strdup ("error reading the file stream");
+                    return NULL;
+                  }}
+                if (buf == NULL)
+                  {{
+                    *err = strdup ("cannot read the file stream");
+                    return NULL;
+                  }}
+                buf[buf_len] = '\\0';
+                tree = {json_api.doc_read('buf', 'buf_len')};
+              }}
+            if (tree == NULL)
+              {{
+                *err = strdup ("cannot read the file stream");
                 return NULL;
               }}
-            ptr = {typename}_parse_data (content, ctx, err);
+            ptr = make_{typename} (tree, ctx, err);
             return ptr;
         }}
     ''', indent=0)
-
-    emit(c_file, f'''
-
-        {json_api.get_val_cleaner_define()}
-    ''', indent=0)
-    c_file.append("\n")
 
     emit(c_file, f'''
         {typename} *
