@@ -1146,6 +1146,13 @@ gen_json_map_int_string (void *ctx, const json_map_int_string *map, const struct
       stat = json_gen_string (g, numstr, strlen (numstr));
       if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
+      if (map->values[i] == NULL)
+        {
+          stat = json_gen_null (g);
+          if (json_gen_status_ok != stat)
+            GEN_SET_ERROR_AND_RETURN (stat, err);
+          continue;
+        }
       stat = json_gen_string (g, map->values[i], strlen (map->values[i]));
       if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
@@ -1304,6 +1311,8 @@ gen_json_map_string_int (void *ctx, const json_map_string_int *map, const struct
     GEN_SET_ERROR_AND_RETURN (stat, err);
   for (i = 0; i < len; i++)
     {
+      if (map->keys[i] == NULL)
+        continue;
       stat = json_gen_string (g, map->keys[i], strlen (map->keys[i]));
       if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
@@ -1468,6 +1477,8 @@ gen_json_map_string_int64 (void *ctx, const json_map_string_int64 *map, const st
 
   for (i = 0; i < len; i++)
     {
+      if (map->keys[i] == NULL)
+        continue;
       stat = json_gen_string (g, map->keys[i], strlen (map->keys[i]));
       if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
@@ -1607,6 +1618,8 @@ gen_json_map_string_bool (void *ctx, const json_map_string_bool *map, const stru
     GEN_SET_ERROR_AND_RETURN (stat, err);
   for (i = 0; i < len; i++)
     {
+      if (map->keys[i] == NULL)
+        continue;
       stat = json_gen_string (g, map->keys[i], strlen (map->keys[i]));
       if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
@@ -1774,9 +1787,18 @@ gen_json_map_string_string (void *ctx, const json_map_string_string *map, const 
 
   for (i = 0; i < len; i++)
     {
+      if (map->keys[i] == NULL)
+        continue;
       stat = json_gen_string (g, map->keys[i], strlen (map->keys[i]));
       if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);
+      if (map->values[i] == NULL)
+        {
+          stat = json_gen_null (g);
+          if (json_gen_status_ok != stat)
+            GEN_SET_ERROR_AND_RETURN (stat, err);
+          continue;
+        }
       stat = json_gen_string (g, map->values[i], strlen (map->values[i]));
       if (json_gen_status_ok != stat)
         GEN_SET_ERROR_AND_RETURN (stat, err);

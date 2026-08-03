@@ -54,8 +54,7 @@ HEADER_FILES = $(SOURCE_FILES:.c=.h)
 if ENABLE_LIBOCISPEC_INSTALL
 ocispec_includedir = $(includedir)/ocispec
 ocispec_include_HEADERS = $(HEADER_FILES) \
-                          src/ocispec/json_common.h \
-                          src/ocispec/read-file.h
+                          src/ocispec/json_common.h
 endif
 
 src/runtime_spec_stamp: src/ocispec/json_common.h src/ocispec/json_common.c
@@ -151,7 +150,6 @@ $(HEADER_FILES): %.h: %.c src/ocispec/generate.py
 BUILT_SOURCES = $(HEADER_FILES) $(SOURCE_FILES)
 
 libocispec_la_SOURCES = $(BUILT_SOURCES) \
-	src/ocispec/read-file.c \
 	src/ocispec/json_common.c
 
 TMP_H_FILES = $(HEADER_FILES:.h=.h.tmp)
@@ -272,7 +270,6 @@ EXTRA_DIST = autogen.sh \
 	src/ocispec/json_api.py \
 	src/ocispec/sources.py \
 	$(HEADER_FILES) \
-	src/ocispec/read-file.h \
 	runtime-spec \
 	image-spec \
 	src/ocispec/json_common.h \

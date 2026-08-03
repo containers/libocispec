@@ -150,6 +150,12 @@ TREE_FREE_FUNC = DOC_FREE_FUNC
 def doc_read(data, len_expr):
     return f"json_tokener_parse ({data})"
 
+def doc_read_file(path):
+    return f"json_object_from_file ({path})"
+
+def doc_read_fd(fd_expr):
+    return f"json_object_from_fd ({fd_expr})"
+
 def doc_get_root(doc):
     return doc
 
