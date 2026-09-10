@@ -57,20 +57,29 @@ ocispec_include_HEADERS = $(HEADER_FILES) \
                           src/ocispec/json_common.h
 endif
 
-src/runtime_spec_stamp: src/ocispec/json_common.h src/ocispec/json_common.c
+GENERATOR_FILES = \
+	src/ocispec/generate.py \
+	src/ocispec/headers.py \
+	src/ocispec/helpers.py \
+	src/ocispec/json_api.py \
+	src/ocispec/sources.py
+
+STAMP_DEPS = src/ocispec/json_common.h src/ocispec/json_common.c $(GENERATOR_FILES)
+
+src/runtime_spec_stamp: $(STAMP_DEPS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir} --out=${builddir}/src/ocispec ${srcdir}/runtime-spec/schema
 	@touch $@
 
-src/image_spec_stamp: src/ocispec/json_common.h src/ocispec/json_common.c
+src/image_spec_stamp: $(STAMP_DEPS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir} --out=${builddir}/src/ocispec ${srcdir}/image-spec/schema
 
 	@touch $@
 
-src/image_manifest_stamp: src/ocispec/json_common.h src/ocispec/json_common.c
+src/image_manifest_stamp: $(STAMP_DEPS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${builddir}/src/ocispec ${srcdir}/tests/test-spec/imageManifestItems
 	@touch $@
 
-src/basic-test_stamp: src/ocispec/json_common.h src/ocispec/json_common.c
+src/basic-test_stamp: $(STAMP_DEPS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${builddir}/src/ocispec ${srcdir}/tests/test-spec/basic
 	@touch $@
 
@@ -264,11 +273,7 @@ EXTRA_DIST = autogen.sh \
 	tests/data/map-string-string-array.json \
 	tests/data/int64_values.json \
 	tests/test-spec \
-	src/ocispec/generate.py \
-	src/ocispec/headers.py \
-	src/ocispec/helpers.py \
-	src/ocispec/json_api.py \
-	src/ocispec/sources.py \
+	$(GENERATOR_FILES) \
 	$(HEADER_FILES) \
 	runtime-spec \
 	image-spec \
