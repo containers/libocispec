@@ -13,41 +13,50 @@ noinst_LTLIBRARIES = libocispec.la
 noinst_LIBRARIES = libocispec.a
 endif
 
-SOURCE_FILES =							\
-	src/ocispec/image_spec_schema_config_schema.c		\
-	src/ocispec/image_spec_schema_content_descriptor.c	\
-	src/ocispec/image_spec_schema_defs.c			\
-	src/ocispec/image_spec_schema_defs_descriptor.c		\
-	src/ocispec/image_spec_schema_image_index_schema.c	\
-	src/ocispec/image_spec_schema_image_layout_schema.c	\
-	src/ocispec/image_spec_schema_image_manifest_schema.c	\
+IMAGE_SPEC_SOURCES = \
+	src/ocispec/image_spec_schema_config_schema.c \
+	src/ocispec/image_spec_schema_content_descriptor.c \
+	src/ocispec/image_spec_schema_defs.c \
+	src/ocispec/image_spec_schema_defs_descriptor.c \
+	src/ocispec/image_spec_schema_image_index_schema.c \
+	src/ocispec/image_spec_schema_image_layout_schema.c \
+	src/ocispec/image_spec_schema_image_manifest_schema.c
+
+RUNTIME_SPEC_SOURCES = \
 	src/ocispec/runtime_spec_schema_config_freebsd.c \
 	src/ocispec/runtime_spec_schema_config_linux.c \
-	src/ocispec/runtime_spec_schema_config_zos.c \
 	src/ocispec/runtime_spec_schema_config_schema.c \
 	src/ocispec/runtime_spec_schema_config_solaris.c \
 	src/ocispec/runtime_spec_schema_config_vm.c \
 	src/ocispec/runtime_spec_schema_config_windows.c \
+	src/ocispec/runtime_spec_schema_config_zos.c \
 	src/ocispec/runtime_spec_schema_defs.c \
 	src/ocispec/runtime_spec_schema_defs_freebsd.c \
 	src/ocispec/runtime_spec_schema_defs_linux.c \
-	src/ocispec/runtime_spec_schema_defs_zos.c \
 	src/ocispec/runtime_spec_schema_defs_vm.c \
 	src/ocispec/runtime_spec_schema_defs_windows.c \
-	src/ocispec/runtime_spec_schema_state_schema.c \
+	src/ocispec/runtime_spec_schema_defs_zos.c \
 	src/ocispec/runtime_spec_schema_features_linux.c \
 	src/ocispec/runtime_spec_schema_features_schema.c \
-	src/ocispec/image_manifest_items_image_manifest_items_schema.c \
-	src/ocispec/basic_test_double_array_item.c \
+	src/ocispec/runtime_spec_schema_state_schema.c
+
+IMAGE_MANIFEST_SOURCES = \
+	src/ocispec/image_manifest_items_image_manifest_items_schema.c
+
+BASIC_TEST_SOURCES = \
 	src/ocispec/basic_test_double_array.c \
+	src/ocispec/basic_test_double_array_item.c \
+	src/ocispec/basic_test_int64_values.c \
+	src/ocispec/basic_test_map_string_string_array.c \
 	src/ocispec/basic_test_top_array_int.c \
 	src/ocispec/basic_test_top_array_string.c \
 	src/ocispec/basic_test_top_double_array_int.c \
 	src/ocispec/basic_test_top_double_array_obj.c \
 	src/ocispec/basic_test_top_double_array_refobj.c \
-	src/ocispec/basic_test_top_double_array_string.c \
-	src/ocispec/basic_test_int64_values.c \
-	src/ocispec/basic_test_map_string_string_array.c
+	src/ocispec/basic_test_top_double_array_string.c
+
+SOURCE_FILES = $(IMAGE_SPEC_SOURCES) $(RUNTIME_SPEC_SOURCES) \
+	$(IMAGE_MANIFEST_SOURCES) $(BASIC_TEST_SOURCES)
 
 HEADER_FILES = $(SOURCE_FILES:.c=.h)
 
@@ -82,78 +91,11 @@ src/basic-test_stamp: $(STAMP_DEPS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${builddir}/src/ocispec ${srcdir}/tests/test-spec/basic
 	@touch $@
 
-src/ocispec/image_spec_schema_config_schema.c \
-	src/ocispec/image_spec_schema_content_descriptor.c \
-	src/ocispec/image_spec_schema_defs.c \
-	src/ocispec/image_spec_schema_defs_descriptor.c \
-	src/ocispec/image_spec_schema_image_index_schema.c \
-	src/ocispec/image_spec_schema_image_layout_schema.c \
-	src/ocispec/image_spec_schema_image_manifest_schema.c \
-	src/ocispec/image_spec_schema_config_schema.h \
-	src/ocispec/image_spec_schema_content_descriptor.h \
-	src/ocispec/image_spec_schema_defs.h \
-	src/ocispec/image_spec_schema_defs_descriptor.h \
-	src/ocispec/image_spec_schema_image_index_schema.h \
-	src/ocispec/image_spec_schema_image_layout_schema.h \
-	src/ocispec/image_spec_schema_image_manifest_schema.h: src/image_spec_stamp
-
-src/ocispec/runtime_spec_schema_config_linux.h \
-	src/ocispec/runtime_spec_schema_config_schema.h \
-	src/ocispec/runtime_spec_schema_config_solaris.h \
-	src/ocispec/runtime_spec_schema_config_vm.h \
-	src/ocispec/runtime_spec_schema_config_windows.h \
-	src/ocispec/runtime_spec_schema_defs.h \
-	src/ocispec/runtime_spec_schema_defs_linux.h \
-	src/ocispec/runtime_spec_schema_defs_zos.h \
-	src/ocispec/runtime_spec_schema_features_linux.h \
-	src/ocispec/runtime_spec_schema_features_schema.h \
-	src/ocispec/runtime_spec_schema_features_linux.c \
-	src/ocispec/runtime_spec_schema_features_schema.c \
-	src/ocispec/runtime_spec_schema_defs_vm.h \
-	src/ocispec/runtime_spec_schema_defs_windows.h \
-	src/ocispec/runtime_spec_schema_state_schema.h \
-	src/ocispec/runtime_spec_schema_config_linux.c \
-	src/ocispec/runtime_spec_schema_config_zos.c \
-	src/ocispec/runtime_spec_schema_config_schema.c \
-	src/ocispec/runtime_spec_schema_config_solaris.c \
-	src/ocispec/runtime_spec_schema_config_vm.c \
-	src/ocispec/runtime_spec_schema_config_windows.c \
-	src/ocispec/runtime_spec_schema_defs.c \
-	src/ocispec/runtime_spec_schema_defs_linux.c \
-	src/ocispec/runtime_spec_schema_defs_vm.c \
-	src/ocispec/runtime_spec_schema_defs_zos.c \
-	src/ocispec/runtime_spec_schema_defs_windows.c \
-        src/ocispec/runtime_spec_schema_config_freebsd.h \
-        src/ocispec/runtime_spec_schema_defs_freebsd.h \
-        src/ocispec/runtime_spec_schema_config_freebsd.c \
-        src/ocispec/runtime_spec_schema_defs_freebsd.c \
-	src/ocispec/runtime_spec_schema_state_schema.c: src/runtime_spec_stamp
-
-src/ocispec/image_manifest_items_image_manifest_items_schema.h \
-	src/ocispec/image_manifest_items_image_manifest_items_schema.c: src/image_manifest_stamp
-
-src/ocispec/basic_test_double_array_item.h \
-	src/ocispec/basic_test_double_array.h \
-	src/ocispec/basic_test_top_array_int.h \
-	src/ocispec/basic_test_top_array_string.h \
-	src/ocispec/basic_test_top_double_array_int.h \
-	src/ocispec/basic_test_top_double_array_obj.h \
-	src/ocispec/basic_test_top_double_array_refobj.h \
-	src/ocispec/basic_test_top_double_array_string.h \
-	src/ocispec/basic_test_map_string_string_array.h \
-	src/ocispec/basic_test_double_array_item.c \
-	src/ocispec/basic_test_double_array.c \
-	src/ocispec/basic_test_top_array_int.c \
-	src/ocispec/basic_test_top_array_string.c \
-	src/ocispec/basic_test_top_double_array_int.c \
-	src/ocispec/basic_test_top_double_array_obj.c \
-	src/ocispec/basic_test_top_double_array_refobj.c \
-	src/ocispec/basic_test_top_double_array_string.c \
-	src/ocispec/basic_test_int64_values.h \
-	src/ocispec/basic_test_int64_values.c \
-	src/ocispec/basic_test_map_string_string_array.c: src/basic-test_stamp
-
-$(HEADER_FILES): %.h: %.c src/ocispec/generate.py
+# Each group of sources and matching headers comes out of one generator run.
+$(IMAGE_SPEC_SOURCES) $(IMAGE_SPEC_SOURCES:.c=.h): src/image_spec_stamp
+$(RUNTIME_SPEC_SOURCES) $(RUNTIME_SPEC_SOURCES:.c=.h): src/runtime_spec_stamp
+$(IMAGE_MANIFEST_SOURCES) $(IMAGE_MANIFEST_SOURCES:.c=.h): src/image_manifest_stamp
+$(BASIC_TEST_SOURCES) $(BASIC_TEST_SOURCES:.c=.h): src/basic-test_stamp
 
 BUILT_SOURCES = $(HEADER_FILES) $(SOURCE_FILES)
 
