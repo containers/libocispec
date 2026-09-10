@@ -6,11 +6,20 @@ TIMEOUT=${TIMEOUT:=10}
 RUN_TIME=${RUN_TIME:=600}
 VERBOSITY=${VERBOSITY:=}
 
+SRCDIR=/libocispec
+# The build happens on a private copy: the fuzzing build is not one to leave
+# behind in the tree the caller mounted, and the tree may well be a checkout
+# that is being worked on.
+WORKDIR=/tmp/libocispec
+
 N_TESTS=7
 
 SINGLE_RUN_TIME=$(( RUN_TIME / N_TESTS ))
 
-git config --global --add safe.directory /libocispec
+rm -rf "$WORKDIR"
+cp -a "$SRCDIR" "$WORKDIR"
+cd "$WORKDIR"
+git config --global --add safe.directory "$WORKDIR"
 git clean -fdx
 ./autogen.sh
 # hfuzz-clang looks these up with getenv(2) as it compiles, so they have to be
