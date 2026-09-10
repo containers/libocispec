@@ -107,7 +107,8 @@ TMP_C_FILES = $(SOURCE_FILES:.c=.c.tmp)
 
 CLEANFILES += $(HEADER_FILES) $(SOURCE_FILES) $(TMP_H_FILES) $(TMP_C_FILES)
 
-TESTS_LDADD = libocispec.la $(SELINUX_LIBS) $(JSON_C_LIBS)
+# Default for every program built here; no per-program _LDADD needed.
+LDADD = libocispec.la $(SELINUX_LIBS) $(JSON_C_LIBS)
 
 libocispec_a_SOURCES =
 
@@ -118,54 +119,6 @@ if ENABLE_LIBOCISPEC_INSTALL
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = ocispec.pc
 endif
-
-tests_test_1_SOURCES = tests/test-1.c
-tests_test_1_LDADD = $(TESTS_LDADD)
-
-tests_test_2_SOURCES = tests/test-2.c
-tests_test_2_LDADD = $(TESTS_LDADD)
-
-tests_test_3_SOURCES = tests/test-3.c
-tests_test_3_LDADD = $(TESTS_LDADD)
-
-tests_test_4_SOURCES = tests/test-4.c
-tests_test_4_LDADD = $(TESTS_LDADD)
-
-tests_test_5_SOURCES = tests/test-5.c
-tests_test_5_LDADD = $(TESTS_LDADD)
-
-tests_test_6_SOURCES = tests/test-6.c
-tests_test_6_LDADD = $(TESTS_LDADD)
-
-tests_test_7_SOURCES = tests/test-7.c
-tests_test_7_LDADD = $(TESTS_LDADD)
-
-tests_test_8_SOURCES = tests/test-8.c
-tests_test_8_LDADD = $(TESTS_LDADD)
-
-tests_test_9_SOURCES = tests/test-9.c
-tests_test_9_LDADD = $(TESTS_LDADD)
-
-tests_test_10_SOURCES = tests/test-10.c
-tests_test_10_LDADD = $(TESTS_LDADD)
-
-tests_test_11_SOURCES = tests/test-11.c
-tests_test_11_LDADD = $(TESTS_LDADD)
-
-tests_test_12_SOURCES = tests/test-12.c
-tests_test_12_LDADD = $(TESTS_LDADD)
-
-tests_test_13_SOURCES = tests/test-13.c
-tests_test_13_LDADD = $(TESTS_LDADD)
-
-tests_test_14_SOURCES = tests/test-14.c
-tests_test_14_LDADD = $(TESTS_LDADD)
-
-tests_test_15_SOURCES = tests/test-15.c
-tests_test_15_LDADD = $(TESTS_LDADD)
-
-src_ocispec_validate_SOURCES = src/ocispec/validate.c
-src_ocispec_validate_LDADD = $(TESTS_LDADD)
 
 TESTS = tests/test-1 \
 	tests/test-2 \
