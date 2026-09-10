@@ -13,7 +13,10 @@ SINGLE_RUN_TIME=$(( RUN_TIME / N_TESTS ))
 git config --global --add safe.directory /libocispec
 git clean -fdx
 ./autogen.sh
-./configure HFUZZ_CC_UBSAN=1 HFUZZ_CC_ASAN=1 CC=hfuzz-clang CPPFLAGS="-D FUZZER" CFLAGS="-ggdb3 -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-div,indirect-calls"
+# hfuzz-clang looks these up with getenv(2) as it compiles, so they have to be
+# in the environment of make, not just of configure.
+export HFUZZ_CC_UBSAN=1 HFUZZ_CC_ASAN=1
+./configure CC=hfuzz-clang CPPFLAGS="-D FUZZER" CFLAGS="-ggdb3 -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-div,indirect-calls"
 make -j "$(nproc)"
 
 function run_test {
