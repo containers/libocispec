@@ -72,7 +72,6 @@ src/runtime_spec_stamp: $(STAMP_DEPS)
 
 src/image_spec_stamp: $(STAMP_DEPS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir} --out=${builddir}/src/ocispec ${srcdir}/image-spec/schema
-
 	@touch $@
 
 src/image_manifest_stamp: $(STAMP_DEPS)
