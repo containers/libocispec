@@ -50,6 +50,20 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
     } \
   } while (0)
 
+/* Fields declared as a plain "integer" in the schema but bounded to the 64 bit
+   range: they must be widened to a 64 bit type, not parsed as int (32 bit).  */
+#define CHECK_INT_WIDENED_TO_INT64(field, expected) do { \
+    int64_t _v = (expected); \
+    if (data->field != _v) { \
+      printf (#field ": expected %" PRId64 ", got %" PRId64 "\n", _v, (int64_t)data->field); \
+      exit (1); \
+    } \
+    if (data2->field != _v) { \
+      printf ("round-trip " #field ": expected %" PRId64 ", got %" PRId64 "\n", _v, (int64_t)data2->field); \
+      exit (1); \
+    } \
+  } while (0)
+
 int
 main ()
 {
@@ -121,6 +135,22 @@ main ()
   CHECK_ROUNDTRIP_UINT64 (max_uint64_minus1);
   CHECK_ROUNDTRIP_UINT64 (zero_uint64);
   CHECK_ROUNDTRIP_UINT64 (one_uint64);
+
+  /* Plain integers with 64 bit bounds: widened to int64 by the generator.  */
+  CHECK_INT_WIDENED_TO_INT64 (large_integer_64bit, 73014444032LL);
+  CHECK_INT_WIDENED_TO_INT64 (negative_large_integer_64bit, -73014444032LL);
+
+  /* A plain non-negative integer beyond the int64 range: widened to uint64.  */
+  CHECK_UINT64 (large_unsigned_integer_64bit, UINT64_MAX);
+  CHECK_ROUNDTRIP_UINT64 (large_unsigned_integer_64bit);
+
+  /* A plain integer bounded to the 32 bit range stays int.  */
+  if (data->bounded_integer_32bit != 2147483647 || data2->bounded_integer_32bit != 2147483647)
+    {
+      printf ("bounded_integer_32bit: expected 2147483647, got %d / %d\n",
+              data->bounded_integer_32bit, data2->bounded_integer_32bit);
+      exit (1);
+    }
 
   free (json_buf);
   free_basic_test_int64_values (data);

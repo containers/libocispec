@@ -20,6 +20,7 @@ along with libocispec.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include "ocispec/image_spec_schema_image_manifest_schema.h"
 
 int
@@ -51,6 +52,14 @@ main ()
     exit (5);
   if (manifest->config->size != 1470 || manifest_gen->config->size != 1470)
     exit (5);
+  /* The first layer is bigger than 2 GiB: the descriptor size must be a 64
+     bit type, parsing it through the 32 bit conversion fails with ERANGE.  */
+  if (manifest->layers[0]->size != 4831838208LL || manifest_gen->layers[0]->size != 4831838208LL)
+    {
+      printf ("layers[0]->size: expected 4831838208, got %" PRId64 " / %" PRId64 "\n",
+              (int64_t) manifest->layers[0]->size, (int64_t) manifest_gen->layers[0]->size);
+      exit (6);
+    }
   if (manifest->layers_len != 3 || manifest_gen->layers_len != 3)
     exit (5);
   if (strcmp (manifest->layers[1]->digest, "sha256:2b689805fbd00b2db1df73fae47562faac1a626d5f61744bfe29946ecff5d73d") || \
