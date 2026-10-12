@@ -64,17 +64,53 @@ def free_and_null(c_file, ptr, field, indent=0):
     c_file.append(f"{prefix}{ptr}->{field} = NULL;\n")
 
 
+def fail_return(c_file, var, message, indent=0):
+    """Generate a NULL check that reports an error before returning.
+
+    make_*() returns NULL without touching *err when the value it was given is
+    absent, and callers rely on that to tell an absent optional field from a
+    parse failure.  Every other failure must therefore set *err, otherwise it
+    is mistaken for an absent field and silently ignored.
+
+    Args:
+        c_file: List to append code lines to
+        var: Variable to check (can be expression like 'ret->field' or 'ret->field[i]')
+        message: Error message to report when *err is not set already
+        indent: Number of 2-space indentation levels
+    """
+    prefix = '  ' * indent
+    c_file.append(f"{prefix}if ({var} == NULL)\n")
+    c_file.append(f"{prefix}  {{\n")
+    c_file.append(f"{prefix}    if (*err == NULL)\n")
+    c_file.append(f'{prefix}      *err = strdup ("{message}");\n')
+    c_file.append(f"{prefix}    return NULL;\n")
+    c_file.append(f"{prefix}  }}\n")
+
+
 def null_check_return(c_file, var, indent=0):
-    """Generate NULL check with return NULL.
+    """Generate NULL check for a failed allocation.
 
     Args:
         c_file: List to append code lines to
         var: Variable to check (can be expression like 'ret->field' or 'ret->field[i]')
         indent: Number of 2-space indentation levels
     """
-    prefix = '  ' * indent
-    c_file.append(f"{prefix}if ({var} == NULL)\n")
-    c_file.append(f"{prefix}  return NULL;\n")
+    fail_return(c_file, var, 'error allocating memory', indent=indent)
+
+
+def make_check_return(c_file, var, what, indent=0):
+    """Generate NULL check for the result of a make_*() call.
+
+    A NULL result with no error set means the element was JSON null, which is
+    not a valid value inside an array or a map.
+
+    Args:
+        c_file: List to append code lines to
+        var: Variable to check
+        what: Description of the element, used in the error message
+        indent: Number of 2-space indentation levels
+    """
+    fail_return(c_file, var, f'invalid {what}', indent=indent)
 
 
 def calloc_with_check(c_file, dest, count, sizeof_expr, indent=0):
@@ -89,8 +125,7 @@ def calloc_with_check(c_file, dest, count, sizeof_expr, indent=0):
     """
     prefix = '  ' * indent
     c_file.append(f"{prefix}{dest} = calloc ({count}, sizeof ({sizeof_expr}));\n")
-    c_file.append(f"{prefix}if ({dest} == NULL)\n")
-    c_file.append(f"{prefix}  return NULL;\n")
+    fail_return(c_file, dest, 'error allocating memory', indent=indent)
 
 
 def check_gen_status(c_file, indent=0):
@@ -968,7 +1003,7 @@ class MapStringObjectType(TypeHandler):
                     ret->{child.fixname}[i] = make_{childname} (val, ctx, err);
         ''', indent=3)
 
-        null_check_return(c_file, f'ret->{child.fixname}[i]', indent=3)
+        make_check_return(c_file, f'ret->{child.fixname}[i]', 'value in map', indent=3)
 
         c_file.append('                    i++;\n')
         c_file.append('      }\n')
@@ -1208,7 +1243,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
             emit(c_file, f'''
                             ret->{obj.fixname}[i][j] = make_{typename} ({json_api.array_get('val', 'j')}, ctx, err);
             ''', indent=5)
-            null_check_return(c_file, f'ret->{obj.fixname}[i][j]', indent=5)
+            make_check_return(c_file, f'ret->{obj.fixname}[i][j]', f"element in array '{obj.origname}'", indent=5)
             emit(c_file, f'''
                             ret->{obj.fixname}_item_lens[i] += 1;
                           }};
@@ -1217,7 +1252,7 @@ class ObjectArrayHandler(ArraySubtypeHandler):
             emit(c_file, f'''
                         ret->{obj.fixname}[i] = make_{typename} (val, ctx, err);
             ''', indent=4)
-            null_check_return(c_file, f'ret->{obj.fixname}[i]', indent=4)
+            make_check_return(c_file, f'ret->{obj.fixname}[i]', f"element in array '{obj.origname}'", indent=4)
 
         emit(c_file, '''
                       }
@@ -1631,7 +1666,11 @@ class BasicMapArrayHandler(ArraySubtypeHandler):
                         {json_api.VAL_TYPE} val = {json_api.array_get('tmp', 'i')};
                         ret->{obj.fixname}[i] = make_{map_func} (val, ctx, err);
                         if (ret->{obj.fixname}[i] == NULL)
-                          return NULL;
+                          {{
+                            if (*err == NULL)
+                              *err = strdup ("invalid element in array '{obj.origname}'");
+                            return NULL;
+                          }}
                       }}
                   }}
               }} while (0);
@@ -1898,11 +1937,17 @@ def parse_json_to_c(obj, c_file, prefix):
             __auto_cleanup (free_{typename}) {typename} *ret = NULL;
             *err = NULL;
             (void) ctx; /* Silence compiler warning.  */
+            /* A NULL tree means the value is absent.  This is the only case
+               where NULL is returned without setting *err, and callers rely
+               on it to tell an absent optional field from a failure.  */
             if (tree == NULL)
               return NULL;
             ret = calloc (1, sizeof (*ret));
             if (ret == NULL)
-              return NULL;
+              {{
+                *err = strdup ("error allocating memory");
+                return NULL;
+              }}
     ''', indent=0)
 
     handler = get_type_handler(obj.typ)
@@ -2086,10 +2131,16 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
               return NULL;
             ptr = calloc (1, sizeof ({typename}));
             if (ptr == NULL)
-              return NULL;
+              {{
+                *err = strdup ("error allocating memory");
+                return NULL;
+              }}
             ptr->items = calloc (alen + 1, sizeof (*ptr->items));
             if (ptr->items == NULL)
-              return NULL;
+              {{
+                *err = strdup ("error allocating memory");
+                return NULL;
+              }}
             ptr->len = alen;
     ''', indent=0)
 
@@ -2097,7 +2148,10 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
         emit(c_file, '''
             ptr->subitem_lens = calloc ( alen + 1, sizeof (size_t));
             if (ptr->subitem_lens == NULL)
-              return NULL;
+              {
+                *err = strdup ("error allocating memory");
+                return NULL;
+              }
         ''', indent=1)
 
     emit(c_file, f'''
@@ -2123,7 +2177,11 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
                           {{
                               ptr->items[i][j] = make_{subtypename} ({json_api.array_get('work', 'j')}, ctx, err);
                               if (ptr->items[i][j] == NULL)
-                                return NULL;
+                                {{
+                                  if (*err == NULL)
+                                    *err = strdup ("invalid element in array");
+                                  return NULL;
+                                }}
                               ptr->subitem_lens[i] += 1;
                           }}
             ''', indent=2)
@@ -2131,7 +2189,11 @@ def get_c_epilog_for_array_make_parse(c_file, prefix, typ, obj):
             emit(c_file, f'''
                         ptr->items[i] = make_{subtypename} (work, ctx, err);
                         if (ptr->items[i] == NULL)
-                          return NULL;
+                          {{
+                            if (*err == NULL)
+                              *err = strdup ("invalid element in array");
+                            return NULL;
+                          }}
             ''', indent=2)
     elif obj.subtyp == 'byte':
         if obj.nested_array:
