@@ -3,7 +3,39 @@ name: Test
 on: [push, pull_request]
 
 jobs:
-  build_job:
+  build_native:
+    runs-on: ${{ matrix.runner }}
+    name: Build on ${{ matrix.runner }}
+
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04-arm]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          set-safe-directory: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q -y
+          sudo apt-get install -q -y automake libtool autotools-dev libjson-c-dev
+
+      - name: Build
+        run: &build |
+          find $(pwd) -name '.git' -exec bash -c 'git config --global --add safe.directory ${0%/.git}' {} \;
+          ./autogen.sh
+          ./configure CFLAGS='-Wall -Wextra -Werror'
+          # Run make check first to catch test failures with accessible logs
+          make -j $(nproc)
+          make check || (cat test-suite.log 2>/dev/null; exit 1)
+          # Now run distcheck for distribution validation
+          make -j $(nproc) distcheck
+          # check that the working dir is clean
+          git describe --broken --dirty --all | grep -qv dirty
+          make clean
+
+  build_emulated:
     runs-on: ubuntu-latest
     name: Build on ${{ matrix.arch }}
 
@@ -11,8 +43,6 @@ jobs:
       matrix:
         include:
           - arch: armv7
-            distro: ubuntu24.04
-          - arch: aarch64
             distro: ubuntu24.04
           - arch: s390x
             distro: ubuntu24.04
@@ -40,18 +70,7 @@ jobs:
             apt-get update -q -y
             apt-get install -q -y python3 automake libtool autotools-dev git make pkg-config gcc wget xz-utils libjson-c-dev
 
-          run: |
-            find $(pwd) -name '.git' -exec bash -c 'git config --global --add safe.directory ${0%/.git}' {} \;
-            ./autogen.sh
-            ./configure CFLAGS='-Wall -Wextra -Werror'
-            # Run make check first to catch test failures with accessible logs
-            make -j $(nproc)
-            make check || (cat test-suite.log 2>/dev/null; exit 1)
-            # Now run distcheck for distribution validation
-            make -j $(nproc) distcheck
-            # check that the working dir is clean
-            git describe --broken --dirty --all | grep -qv dirty
-            make clean
+          run: *build
 
   fuzzing:
     runs-on: ubuntu-latest
