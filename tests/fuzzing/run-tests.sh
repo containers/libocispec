@@ -5,22 +5,46 @@ set -xeu
 TIMEOUT=${TIMEOUT:=10}
 RUN_TIME=${RUN_TIME:=600}
 VERBOSITY=${VERBOSITY:=}
+# Seed corpus, and where honggfuzz stores the units it discovers.
+CORPUS=${CORPUS:=/tmp/corpus}
+# Extra corpus to seed from, cloned unless empty.
+CORPUS_REPO=${CORPUS_REPO:=https://github.com/giuseppe/containers-fuzzing-corpus}
+
+SRCDIR=/libocispec
+# The build happens on a private copy: the fuzzing build is not one to leave
+# behind in the tree the caller mounted, and the tree may well be a checkout
+# that is being worked on.
+WORKDIR=/tmp/libocispec
 
 N_TESTS=7
 
 SINGLE_RUN_TIME=$(( RUN_TIME / N_TESTS ))
 
-git config --global --add safe.directory /libocispec
+rm -rf "$WORKDIR"
+cp -a "$SRCDIR" "$WORKDIR"
+cd "$WORKDIR"
+git config --global --add safe.directory "$WORKDIR"
 git clean -fdx
+
+mkdir -p "$CORPUS"
+cp -n tests/data/*.json "$CORPUS" || true
+if test -n "$CORPUS_REPO"; then
+    git clone --depth 1 "$CORPUS_REPO" /tmp/extra-corpus
+    cp -n /tmp/extra-corpus/config-json/* "$CORPUS" || true
+fi
+
 ./autogen.sh
-./configure HFUZZ_CC_UBSAN=1 HFUZZ_CC_ASAN=1 CC=hfuzz-clang CPPFLAGS="-D FUZZER" CFLAGS="-ggdb3 -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-div,indirect-calls"
+# hfuzz-clang looks these up with getenv(2) as it compiles, so they have to be
+# in the environment of make, not just of configure.
+export HFUZZ_CC_UBSAN=1 HFUZZ_CC_ASAN=1
+./configure CC=hfuzz-clang CPPFLAGS="-D FUZZER" CFLAGS="-ggdb3 -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-div,indirect-calls"
 make -j "$(nproc)"
 
 function run_test {
     export FUZZING_MODE=$1
 
     # shellcheck disable=SC2086
-    result=$(honggfuzz --exit_upon_crash $VERBOSITY --run_time "$SINGLE_RUN_TIME" --timeout "$TIMEOUT" -T -i tests/data -- src/ocispec/validate 2>&1 | tail -n 2)
+    result=$(honggfuzz --exit_upon_crash $VERBOSITY --run_time "$SINGLE_RUN_TIME" --timeout "$TIMEOUT" -T -i "$CORPUS" -- src/ocispec/validate 2>&1 | tail -n 2)
     echo "$result"
     echo "$result" | grep -q crashes_count:0
 }
