@@ -26,7 +26,6 @@ jobs:
 
       - name: Build
         run: &build |
-          find $(pwd) -name '.git' -exec bash -c 'git config --global --add safe.directory ${0%/.git}' {} \;
           ./configure CFLAGS='-Wall -Wextra -Werror'
           # Run make check first to catch test failures with accessible logs
           make -j $(nproc)
@@ -78,7 +77,7 @@ jobs:
 
           install: |
             apt-get update -q -y
-            apt-get install -q -y python3 git make pkg-config gcc wget xz-utils libjson-c-dev
+            apt-get install -q -y --no-install-recommends python3 make pkg-config gcc libc6-dev libjson-c-dev
 
           run: *build
 
