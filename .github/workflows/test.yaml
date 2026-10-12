@@ -30,8 +30,12 @@ jobs:
           ./configure CFLAGS='-Wall -Wextra -Werror'
           # Run make check first to catch test failures with accessible logs
           make -j $(nproc)
-          make check || (cat test-suite.log 2>/dev/null; exit 1)
-          # Now run distcheck for distribution validation
+          make -j $(nproc) check || (cat test-suite.log 2>/dev/null; exit 1)
+
+      # Distribution validation does not depend on the architecture,
+      # so only do it here and not in (slow) emulated builds.
+      - name: Distcheck
+        run: |
           make -j $(nproc) distcheck
           # check that the working dir is clean
           git describe --broken --dirty --all | grep -qv dirty
