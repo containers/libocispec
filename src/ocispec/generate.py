@@ -176,6 +176,43 @@ BASIC_TYPES = (
 )
 
 
+INT32_MIN = -2 ** 31
+INT32_MAX = 2 ** 31 - 1
+# JSON schema files are often written with tools that serialize 2**63 as
+# 9223372036854776000 (rounded), and the image-spec itself uses such rounded
+# values as the bounds of its own "int64" and "uint64" definitions: treat
+# them as in range.
+INT64_MIN = -9223372036854776000
+INT64_MAX = 9223372036854776000
+UINT64_MAX = 18446744073709552000
+
+
+def widen_integer_type(cur, typ):
+    """
+    Description: Widen a plain "integer" to a wider basic type when the schema
+    declares bounds that do not fit into an int (32 bit), so that values like
+    a content descriptor size > 2 GiB can be parsed instead of failing with
+    ERANGE in common_safe_int.  Integer bounds within the 32 bit range (e.g.
+    schemaVersion or the runtime-spec "percent" definition) are kept as int,
+    and so is an integer with no bounds at all.
+    Interface: cur is the (already $ref resolved) schema node
+    History: 2026-10-12
+    """
+    if typ != "integer":
+        return typ
+    # A missing bound does not ask for a wider type.
+    minimum = cur.get("minimum", 0)
+    maximum = cur.get("maximum", 0)
+    if INT32_MIN <= minimum and maximum <= INT32_MAX:
+        return typ
+    if INT64_MIN <= minimum and maximum <= INT64_MAX:
+        return "int64"
+    # Only an explicitly non-negative range may become unsigned.
+    if "minimum" in cur and minimum >= 0 and maximum <= UINT64_MAX:
+        return "uint64"
+    return typ
+
+
 def judge_support_type(typ):
     """
     Description: generate c language for parse json map string object
@@ -492,7 +529,7 @@ def get_typ_notoneof(schema_info, src, cur, curfile):
     else:
         typ = "object"
 
-    return typ
+    return widen_integer_type(cur, typ)
 
 
 def resolve_type(schema_info, name, src, cur, curfile):
@@ -515,7 +552,7 @@ def resolve_type(schema_info, name, src, cur, curfile):
         if '$ref' in cur:
             return resolve_type(schema_info, name, src, cur, curfile)
         else:
-            typ = cur['type']
+            typ = widen_integer_type(cur, cur['type'])
     else:
         typ = get_typ_notoneof(schema_info, src, cur, curfile)
 

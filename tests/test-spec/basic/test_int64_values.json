@@ -50,6 +50,25 @@
     },
     "neg_two_int64": {
       "type": "int64"
+    },
+    "large_integer_64bit": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854776000
+    },
+    "negative_large_integer_64bit": {
+      "type": "integer",
+      "minimum": -9223372036854776000
+    },
+    "large_unsigned_integer_64bit": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709552000
+    },
+    "bounded_integer_32bit": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
     }
   }
 }

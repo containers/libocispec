@@ -14,5 +14,9 @@
   "one_int64": 1,
   "neg_one_int64": -1,
   "one_uint64": 1,
-  "neg_two_int64": -2
+  "neg_two_int64": -2,
+  "large_integer_64bit": 73014444032,
+  "negative_large_integer_64bit": -73014444032,
+  "large_unsigned_integer_64bit": 18446744073709551615,
+  "bounded_integer_32bit": 2147483647
 }
