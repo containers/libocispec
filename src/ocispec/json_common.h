@@ -128,6 +128,8 @@ json_object *get_val (json_object *tree, const char *name, int type);
 
 char *safe_strdup (const char *src);
 
+char *dup_json_string (json_object *val, const char *key, parser_error *err);
+
 void *safe_malloc (size_t size);
 
 int common_safe_double (const char *numstr, double *converted);
