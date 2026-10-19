@@ -135,7 +135,8 @@ TESTS = tests/test-1 \
 	tests/test-13 \
 	tests/test-14 \
 	tests/test-15 \
-	tests/test-16
+	tests/test-16 \
+	tests/test-17
 
 noinst_PROGRAMS = src/ocispec/validate $(TESTS)
 

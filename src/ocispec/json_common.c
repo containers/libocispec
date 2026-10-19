@@ -495,6 +495,31 @@ safe_strdup (const char *src)
   return dst;
 }
 
+/* Return a copy of the JSON string VAL, or NULL with *ERR set.  A JSON string
+   can contain a NUL character (\u0000) but a C string cannot, so reject it
+   rather than silently truncating the value at that point.  */
+char *
+dup_json_string (json_object *val, const char *key, parser_error *err)
+{
+  const char *str = json_object_get_string (val);
+  char *ret;
+
+  if (str == NULL)
+    str = "";
+  else if (json_object_is_type (val, json_type_string)
+           && strlen (str) != (size_t) json_object_get_string_len (val))
+    {
+      if (*err == NULL && asprintf (err, "Invalid NUL character in value for key '%s'", key) < 0)
+        *err = strdup ("error allocating memory");
+      return NULL;
+    }
+
+  ret = strdup (str);
+  if (ret == NULL && *err == NULL)
+    *err = strdup ("error allocating memory");
+  return ret;
+}
+
 void *
 safe_malloc (size_t size)
 {
@@ -1243,7 +1268,6 @@ make_json_map_int_string (json_object *src, const struct parser_context *ctx, pa
 
       if (srcval != NULL)
         {
-          const char *str;
           if (! json_object_is_type (srcval, json_type_string))
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'string' for key '%s'", srckey) < 0)
@@ -1252,8 +1276,9 @@ make_json_map_int_string (json_object *src, const struct parser_context *ctx, pa
                 }
               return NULL;
             }
-          str = json_object_get_string (srcval);
-          ret->values[i] = strdup (str ? str : "");
+          ret->values[i] = dup_json_string (srcval, srckey, err);
+          if (ret->values[i] == NULL)
+            return NULL;
         }
       i++;
     }
@@ -1886,7 +1911,6 @@ make_json_map_string_string (json_object *src, const struct parser_context *ctx,
         }
       if (srcval != NULL)
         {
-          const char *str;
           if (! json_object_is_type (srcval, json_type_string))
             {
               if (*err == NULL && asprintf (err, "Invalid value with type 'string' for key '%s'", srckey) < 0)
@@ -1896,9 +1920,7 @@ make_json_map_string_string (json_object *src, const struct parser_context *ctx,
               return NULL;
             }
 
-          str = json_object_get_string (srcval);
-
-          ret->values[i] = strdup (str ? str : "");
+          ret->values[i] = dup_json_string (srcval, srckey, err);
           if (ret->values[i] == NULL)
             {
               return NULL;

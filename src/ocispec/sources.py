@@ -473,8 +473,7 @@ class StringType(TypeHandler):
             {json_api.VAL_TYPE} val = {src};
             if (val != NULL)
               {{
-                const char *str = {json_api.get_string('val')};
-                {dest} = strdup (str ? str : "");
+                {dest} = dup_json_string (val, "{keyname}", err);
                 if ({dest} == NULL)
                   return NULL;
               }}
