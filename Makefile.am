@@ -75,19 +75,24 @@ GENERATOR_FILES = \
 
 STAMP_DEPS = src/ocispec/json_common.h src/ocispec/json_common.c $(GENERATOR_FILES)
 
-src/runtime_spec_stamp: $(STAMP_DEPS)
+RUNTIME_SPEC_SCHEMAS = $(wildcard $(srcdir)/runtime-spec/schema/*.json)
+IMAGE_SPEC_SCHEMAS = $(wildcard $(srcdir)/image-spec/schema/*.json)
+IMAGE_MANIFEST_SCHEMAS = $(wildcard $(srcdir)/tests/test-spec/imageManifestItems/*.json)
+BASIC_TEST_SCHEMAS = $(wildcard $(srcdir)/tests/test-spec/basic/*.json)
+
+src/runtime_spec_stamp: $(STAMP_DEPS) $(RUNTIME_SPEC_SCHEMAS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir} --out=${builddir}/src/ocispec ${srcdir}/runtime-spec/schema
 	@touch $@
 
-src/image_spec_stamp: $(STAMP_DEPS)
+src/image_spec_stamp: $(STAMP_DEPS) $(IMAGE_SPEC_SCHEMAS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir} --out=${builddir}/src/ocispec ${srcdir}/image-spec/schema
 	@touch $@
 
-src/image_manifest_stamp: $(STAMP_DEPS)
+src/image_manifest_stamp: $(STAMP_DEPS) $(IMAGE_MANIFEST_SCHEMAS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${builddir}/src/ocispec ${srcdir}/tests/test-spec/imageManifestItems
 	@touch $@
 
-src/basic-test_stamp: $(STAMP_DEPS)
+src/basic-test_stamp: $(STAMP_DEPS) $(BASIC_TEST_SCHEMAS)
 	$(PYTHON) $(srcdir)/src/ocispec/generate.py --gen-ref --root=${srcdir}/tests/test-spec --out=${builddir}/src/ocispec ${srcdir}/tests/test-spec/basic
 	@touch $@
 
